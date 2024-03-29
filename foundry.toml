@@ -1,0 +1,27 @@
+[profile.default]
+    src = "src"
+    out = "out"
+    libs = ["lib"]
+    solc = "0.8.23"
+
+    # Gives access to deploy script to read/write to filesystem
+    fs_permissions = [{ access = "read-write", path = "./"}]
+
+
+[fmt]
+    line_length = 79
+
+
+[rpc_endpoints]
+ethereum-holesky-testnet = "https://api-eu1.tatum.io/v3/blockchain/node/ethereum-holesky/${TATUM_API_KEY}"
+bnb-testnet = "https://api-eu1.tatum.io/v3/blockchain/node/BSC/${TATUM_API_KEY}"
+avax-testnet = "https://api-eu1.tatum.io/v3/blockchain/node/AVAX/${TATUM_API_KEY}"
+polygon-testnet = "https://api-eu1.tatum.io/v3/blockchain/node/MATIC/${TATUM_API_KEY}"
+cronos-testnet = "https://api-eu1.tatum.io/v3/blockchain/node/CRO/${TATUM_API_KEY}"
+fantom-testnet = "https://api-eu1.tatum.io/v3/blockchain/node/FTM/${TATUM_API_KEY}"
+celo-testnet = "https://api-eu1.tatum.io/v3/blockchain/node/CELO/${TATUM_API_KEY}"
+local-8545 = "http://127.0.0.1:8545"
+local-8546 = "http://127.0.0.1:8546"
+
+
+# See more config options https://github.com/foundry-rs/foundry/blob/master/crates/config/README.md#all-options

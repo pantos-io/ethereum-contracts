@@ -1,0 +1,17 @@
+# directories
+broadcast
+cache
+coverage
+node_modules
+out
+addresses
+.vscode
+.venv
+
+# files
+*.env
+*.log
+*.py
+*.json
+*.md
+*.yaml

@@ -1,0 +1,28 @@
+# Compiler files
+cache/
+out/
+
+# Ignores development broadcast logs
+!/broadcast
+/broadcast/*/31337/
+/broadcast/**/dry-run/
+
+# Docs
+docs/
+
+# Dotenv file
+.env
+
+# Dependencies
+/.venv/
+/node_modules/
+/.idea/
+/package-lock.json
+/.vscode/
+
+# Foundry default broadcasting
+/broadcast/
+
+# Development tool files
+*.swp
+find.sh

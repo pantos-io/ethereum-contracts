@@ -1,0 +1,2921 @@
+// SPDX-License-Identifier: GPL-3.0
+pragma solidity 0.8.23;
+
+/* solhint-disable no-console*/
+
+import "forge-std/console2.sol";
+
+import "../src/contracts/PantosHub.sol";
+import "../src/interfaces/PantosTypes.sol";
+
+import "./PantosBaseTest.t.sol";
+
+contract PantosHubTest is PantosBaseTest {
+    bool initialized = false;
+    PantosHub public pantosHubProxy;
+    address constant PANTOS_FORWARDER_ADDRESS =
+        address(uint160(uint256(keccak256("PantosForwarderAddress"))));
+    address constant PANTOS_TOKEN_ADDRESS =
+        address(uint160(uint256(keccak256("PantosTokenAddress"))));
+    address constant SERVICE_NODE_UNSTAKING_ADDRESS =
+        address(uint160(uint256(keccak256("ServiceNodeUnstakingAddress"))));
+    address constant TRANSFER_SENDER =
+        address(uint160(uint256(keccak256("TransferSender"))));
+
+    function setUp() public {
+        vm.warp(BLOCK_TIMESTAMP);
+        deployPantosHub();
+    }
+
+    function test_SetUpState() external {
+        PantosTypes.BlockchainRecord
+            memory thisBlockchainRecord = pantosHubProxy.getBlockchainRecord(
+                uint256(thisBlockchain.blockchainId)
+            );
+        PantosTypes.ValidatorFeeRecord
+            memory thisBlockchainValidatorFeeRecord = pantosHubProxy
+                .getValidatorFeeRecord(uint256(thisBlockchain.blockchainId));
+
+        assertTrue(pantosHubProxy.paused());
+        assertEq(thisBlockchainRecord.name, thisBlockchain.name);
+        assertEq(thisBlockchainRecord.active, true);
+        assertEq(
+            pantosHubProxy.getCurrentBlockchainId(),
+            uint256(thisBlockchain.blockchainId)
+        );
+        assertEq(pantosHubProxy.getNumberBlockchains(), 1);
+        assertEq(pantosHubProxy.getNumberActiveBlockchains(), 1);
+        assertEq(
+            thisBlockchainValidatorFeeRecord.newFactor,
+            thisBlockchain.feeFactor
+        );
+        assertEq(thisBlockchainValidatorFeeRecord.oldFactor, 0);
+        assertEq(
+            thisBlockchainValidatorFeeRecord.validFrom,
+            FEE_FACTOR_VALID_FROM
+        );
+        assertEq(pantosHubProxy.getMinimumTokenStake(), MINIMUM_TOKEN_STAKE);
+        assertEq(
+            pantosHubProxy.getMinimumServiceNodeStake(),
+            MINIMUM_SERVICE_NODE_STAKE
+        );
+        assertEq(
+            pantosHubProxy.getUnbondingPeriodServiceNodeStake(),
+            SERVICE_NODE_STAKE_UNBONDING_PERIOD
+        );
+        assertEq(pantosHubProxy.getNextTransferId(), 0);
+    }
+
+    function test_pause_AfterInitialization() external {
+        initializePantosHub();
+
+        pantosHubProxy.pause();
+
+        assertTrue(pantosHubProxy.paused());
+    }
+
+    function test_pause_WhenPaused() external {
+        bytes memory calldata_ = abi.encodeWithSelector(
+            PantosHub.pause.selector
+        );
+
+        whenNotPausedTest(address(pantosHubProxy), calldata_);
+    }
+
+    function test_pause_ByNonOwner() external {
+        initializePantosHub();
+        bytes memory calldata_ = abi.encodeWithSelector(
+            PantosHub.pause.selector
+        );
+
+        onlyOwnerTest(address(pantosHubProxy), calldata_);
+    }
+
+    function test_unpause_AfterDeploy() external {
+        initializePantosHub();
+
+        assertFalse(pantosHubProxy.paused());
+    }
+
+    function test_unpause_WhenNotPaused() external {
+        initializePantosHub();
+        bytes memory calldata_ = abi.encodeWithSelector(
+            PantosHub.unpause.selector
+        );
+
+        whenPausedTest(address(pantosHubProxy), calldata_);
+    }
+
+    function test_unpause_ByNonOwner() external {
+        pantosHubProxy.setPantosForwarder(PANTOS_FORWARDER_ADDRESS);
+        bytes memory calldata_ = abi.encodeWithSelector(
+            PantosHub.unpause.selector
+        );
+
+        onlyOwnerTest(address(pantosHubProxy), calldata_);
+    }
+
+    function test_unpause_WithNoForwarderSet() external {
+        vm.expectRevert(
+            abi.encodePacked("PantosHub: PantosForwarder has not been set")
+        );
+
+        pantosHubProxy.unpause();
+    }
+
+    function test_unpause_WithNoPantosTokenSet() external {
+        pantosHubProxy.setPantosForwarder(PANTOS_FORWARDER_ADDRESS);
+        vm.expectRevert(
+            abi.encodePacked("PantosHub: PantosToken has not been set")
+        );
+
+        pantosHubProxy.unpause();
+    }
+
+    function test_unpause_WithNoPrimaryValidatorNodeSet() external {
+        pantosHubProxy.setPantosForwarder(PANTOS_FORWARDER_ADDRESS);
+        mockPandasToken_getOwner(PANTOS_TOKEN_ADDRESS, deployer());
+        pantosHubProxy.setPantosToken(PANTOS_TOKEN_ADDRESS);
+        vm.expectRevert(
+            abi.encodePacked(
+                "PantosHub: primary validator node has not been set"
+            )
+        );
+
+        pantosHubProxy.unpause();
+    }
+
+    function test_setPantosForwarder() external {
+        vm.expectEmit(address(pantosHubProxy));
+        emit IPantosHub.PantosForwarderSet(PANTOS_FORWARDER_ADDRESS);
+
+        pantosHubProxy.setPantosForwarder(PANTOS_FORWARDER_ADDRESS);
+
+        assertEq(
+            pantosHubProxy.getPantosForwarder(),
+            PANTOS_FORWARDER_ADDRESS
+        );
+    }
+
+    function test_setPantosForwarder_WhenNotPaused() public {
+        initializePantosHub();
+        bytes memory calldata_ = abi.encodeWithSelector(
+            PantosHub.setPantosForwarder.selector,
+            PANTOS_FORWARDER_ADDRESS
+        );
+
+        whenPausedTest(address(pantosHubProxy), calldata_);
+    }
+
+    function test_setPantosForwarder_ByNonOwner() external {
+        bytes memory calldata_ = abi.encodeWithSelector(
+            PantosHub.setPantosForwarder.selector,
+            PANTOS_FORWARDER_ADDRESS
+        );
+
+        onlyOwnerTest(address(pantosHubProxy), calldata_);
+    }
+
+    function test_setPantosForwarder_WithForwarderAddress0() external {
+        vm.expectRevert(
+            abi.encodePacked(
+                "PantosHub: PantosForwarder must not be the zero account"
+            )
+        );
+
+        pantosHubProxy.setPantosForwarder(ADDRESS_ZERO);
+    }
+
+    function test_setPantosToken() external {
+        mockPandasToken_getOwner(PANTOS_TOKEN_ADDRESS, deployer());
+        vm.expectEmit(address(pantosHubProxy));
+        emit IPantosHub.PantosTokenSet(PANTOS_TOKEN_ADDRESS);
+
+        pantosHubProxy.setPantosToken(PANTOS_TOKEN_ADDRESS);
+
+        assertEq(pantosHubProxy.getPantosToken(), PANTOS_TOKEN_ADDRESS);
+    }
+
+    function test_setPantosToken_WhenNotPaused() external {
+        initializePantosHub();
+        bytes memory calldata_ = abi.encodeWithSelector(
+            PantosHub.setPantosToken.selector,
+            PANTOS_TOKEN_ADDRESS
+        );
+
+        whenPausedTest(address(pantosHubProxy), calldata_);
+    }
+
+    function test_setPantosToken_ByNonOwner() external {
+        bytes memory calldata_ = abi.encodeWithSelector(
+            PantosHub.setPantosToken.selector,
+            PANTOS_TOKEN_ADDRESS
+        );
+
+        onlyOwnerTest(address(pantosHubProxy), calldata_);
+    }
+
+    function test_setPantosToken_WithPantosToken0() external {
+        vm.expectRevert("PantosHub: PantosToken must not be the zero account");
+
+        pantosHubProxy.setPantosToken(ADDRESS_ZERO);
+    }
+
+    function test_setPantosToken_AlreadySet() external {
+        mockPandasToken_getOwner(PANTOS_TOKEN_ADDRESS, deployer());
+        pantosHubProxy.setPantosToken(PANTOS_TOKEN_ADDRESS);
+        vm.expectRevert("PantosHub: PantosToken already set");
+
+        pantosHubProxy.setPantosToken(PANTOS_TOKEN_ADDRESS);
+    }
+
+    function test_setPrimaryValidatorNode() external {
+        vm.expectEmit(address(pantosHubProxy));
+        emit IPantosHub.PrimaryValidatorNodeUpdated(validatorAddress);
+
+        pantosHubProxy.setPrimaryValidatorNode(validatorAddress);
+
+        assertEq(pantosHubProxy.getPrimaryValidatorNode(), validatorAddress);
+    }
+
+    function test_setPrimaryValidatorNode_WhenNotPaused() public {
+        initializePantosHub();
+        bytes memory calldata_ = abi.encodeWithSelector(
+            PantosHub.setPrimaryValidatorNode.selector,
+            validatorAddress
+        );
+
+        whenPausedTest(address(pantosHubProxy), calldata_);
+    }
+
+    function test_setPrimaryValidatorNode_ByNonOwner() external {
+        bytes memory calldata_ = abi.encodeWithSelector(
+            PantosHub.setPrimaryValidatorNode.selector,
+            validatorAddress
+        );
+
+        onlyOwnerTest(address(pantosHubProxy), calldata_);
+    }
+
+    function test_registerBlockchain() external {
+        vm.expectEmit();
+        emit IPantosHub.BlockchainRegistered(
+            uint256(otherBlockchain.blockchainId)
+        );
+
+        registerOtherBlockchainAtPantosHub();
+
+        PantosTypes.BlockchainRecord
+            memory otherBlockchainRecord = pantosHubProxy.getBlockchainRecord(
+                uint256(otherBlockchain.blockchainId)
+            );
+        PantosTypes.ValidatorFeeRecord
+            memory otherBlockchainValidatorFeeRecord = pantosHubProxy
+                .getValidatorFeeRecord(uint256(otherBlockchain.blockchainId));
+        assertEq(otherBlockchainRecord.name, otherBlockchain.name);
+        assertEq(otherBlockchainRecord.active, true);
+        assertEq(pantosHubProxy.getNumberBlockchains(), 2);
+        assertEq(pantosHubProxy.getNumberActiveBlockchains(), 2);
+        assertEq(
+            otherBlockchainValidatorFeeRecord.newFactor,
+            otherBlockchain.feeFactor
+        );
+        assertEq(otherBlockchainValidatorFeeRecord.oldFactor, 0);
+        assertEq(
+            otherBlockchainValidatorFeeRecord.validFrom,
+            FEE_FACTOR_VALID_FROM
+        );
+    }
+
+    function test_registerBlockchain_AgainAfterUnregistration() external {
+        registerOtherBlockchainAtPantosHub();
+        pantosHubProxy.unregisterBlockchain(
+            uint256(otherBlockchain.blockchainId)
+        );
+        vm.expectEmit();
+        emit IPantosHub.BlockchainRegistered(
+            uint256(otherBlockchain.blockchainId)
+        );
+
+        registerOtherBlockchainAtPantosHub();
+
+        PantosTypes.BlockchainRecord
+            memory otherBlockchainRecord = pantosHubProxy.getBlockchainRecord(
+                uint256(otherBlockchain.blockchainId)
+            );
+        PantosTypes.ValidatorFeeRecord
+            memory otherBlockchainValidatorFeeRecord = pantosHubProxy
+                .getValidatorFeeRecord(uint256(otherBlockchain.blockchainId));
+        assertEq(otherBlockchainRecord.name, otherBlockchain.name);
+        assertEq(otherBlockchainRecord.active, true);
+        assertEq(pantosHubProxy.getNumberBlockchains(), 2);
+        assertEq(pantosHubProxy.getNumberActiveBlockchains(), 2);
+        assertEq(
+            otherBlockchainValidatorFeeRecord.newFactor,
+            otherBlockchain.feeFactor
+        );
+        assertEq(otherBlockchainValidatorFeeRecord.oldFactor, 0);
+        assertEq(
+            otherBlockchainValidatorFeeRecord.validFrom,
+            FEE_FACTOR_VALID_FROM
+        );
+    }
+
+    function test_registerBlockchain_ByNonOwner() external {
+        bytes memory calldata_ = abi.encodeWithSelector(
+            PantosHub.registerBlockchain.selector,
+            uint256(otherBlockchain.blockchainId),
+            otherBlockchain.name,
+            otherBlockchain.feeFactor,
+            FEE_FACTOR_VALID_FROM
+        );
+
+        onlyOwnerTest(address(pantosHubProxy), calldata_);
+    }
+
+    function test_registerBlockchain_WithEmptyName() external {
+        vm.expectRevert("PantosHub: blockchain name must not be empty");
+
+        pantosHubProxy.registerBlockchain(
+            uint256(otherBlockchain.blockchainId),
+            "",
+            otherBlockchain.feeFactor,
+            FEE_FACTOR_VALID_FROM
+        );
+    }
+
+    function test_registerBlockchain_AlreadyRegistered() external {
+        registerOtherBlockchainAtPantosHub();
+        vm.expectRevert("PantosHub: blockchain already registered");
+
+        registerOtherBlockchainAtPantosHub();
+    }
+
+    function test_unregisterBlockchain() external {
+        registerOtherBlockchainAtPantosHub();
+        vm.expectEmit();
+        emit IPantosHub.BlockchainUnregistered(
+            uint256(otherBlockchain.blockchainId)
+        );
+
+        pantosHubProxy.unregisterBlockchain(
+            uint256(otherBlockchain.blockchainId)
+        );
+
+        PantosTypes.BlockchainRecord
+            memory otherBlockchainRecord = pantosHubProxy.getBlockchainRecord(
+                uint256(otherBlockchain.blockchainId)
+            );
+        assertEq(pantosHubProxy.getNumberActiveBlockchains(), 1);
+        assertEq(pantosHubProxy.getNumberBlockchains(), 2);
+        assertEq(otherBlockchainRecord.name, otherBlockchain.name);
+        assertEq(otherBlockchainRecord.active, false);
+    }
+
+    function test_unregisterBlockchain_ByNonOwner() external {
+        bytes memory calldata_ = abi.encodeWithSelector(
+            PantosHub.unregisterBlockchain.selector,
+            uint256(otherBlockchain.blockchainId)
+        );
+
+        onlyOwnerTest(address(pantosHubProxy), calldata_);
+    }
+
+    function test_unregisterBlockchain_WithCurrentBlockchain() external {
+        vm.expectRevert(
+            "PantosHub: blockchain ID must not be the current blockchain ID"
+        );
+
+        pantosHubProxy.unregisterBlockchain(
+            uint256(thisBlockchain.blockchainId)
+        );
+    }
+
+    function test_unregisterBlockchain_WhenBlockchainNotRegistered() external {
+        vm.expectRevert("PantosHub: blockchain must be active");
+
+        pantosHubProxy.unregisterBlockchain(
+            uint256(type(BlockchainId).max) + 1
+        );
+    }
+
+    function test_unregisterBlockchain_AlreadyUnregistered() external {
+        registerOtherBlockchainAtPantosHub();
+        pantosHubProxy.unregisterBlockchain(
+            uint256(otherBlockchain.blockchainId)
+        );
+        vm.expectRevert("PantosHub: blockchain must be active");
+
+        pantosHubProxy.unregisterBlockchain(
+            uint256(otherBlockchain.blockchainId)
+        );
+    }
+
+    function test_updateBlockchainName() external {
+        string memory newBlockchainName = "new name";
+        vm.expectEmit();
+        emit IPantosHub.BlockchainNameUpdated(
+            uint256(thisBlockchain.blockchainId)
+        );
+
+        pantosHubProxy.updateBlockchainName(
+            uint256(thisBlockchain.blockchainId),
+            newBlockchainName
+        );
+
+        assertEq(
+            pantosHubProxy
+                .getBlockchainRecord(uint256(thisBlockchain.blockchainId))
+                .name,
+            newBlockchainName
+        );
+    }
+
+    function test_updateBlockchainName_WhenNotPaused() external {
+        initializePantosHub();
+        bytes memory calldata_ = abi.encodeWithSelector(
+            PantosHub.updateBlockchainName.selector,
+            uint256(thisBlockchain.blockchainId),
+            "new name"
+        );
+
+        whenPausedTest(address(pantosHubProxy), calldata_);
+    }
+
+    function test_updateBlockchainName_ByNonOwner() external {
+        bytes memory calldata_ = abi.encodeWithSelector(
+            PantosHub.updateBlockchainName.selector,
+            uint256(thisBlockchain.blockchainId),
+            "new name"
+        );
+
+        onlyOwnerTest(address(pantosHubProxy), calldata_);
+    }
+
+    function test_updateBlockchainName_WithEmptyName() external {
+        vm.expectRevert("PantosHub: blockchain name must not be empty");
+
+        pantosHubProxy.updateBlockchainName(
+            uint256(thisBlockchain.blockchainId),
+            ""
+        );
+    }
+
+    function test_updateBlockchainName_WhenBlockchainNotRegistered() external {
+        vm.expectRevert("PantosHub: blockchain must be active");
+
+        pantosHubProxy.updateBlockchainName(
+            uint256(type(BlockchainId).max) + 1,
+            "new name"
+        );
+    }
+
+    function test_updateBlockchainName_WhenBlockchainUnregistered() external {
+        registerOtherBlockchainAtPantosHub();
+        pantosHubProxy.unregisterBlockchain(
+            uint256(otherBlockchain.blockchainId)
+        );
+        vm.expectRevert("PantosHub: blockchain must be active");
+
+        pantosHubProxy.updateBlockchainName(
+            uint256(otherBlockchain.blockchainId),
+            "new name"
+        );
+    }
+
+    function test_updateFeeFactor_oldFactorNotValidYet() external {
+        initializePantosHub();
+        uint256 thisBlockchainId = uint256(thisBlockchain.blockchainId);
+        uint256 newFactor = thisBlockchain.feeFactor + 100;
+        uint256 validFrom = FEE_FACTOR_VALID_FROM + 100;
+        pantosHubProxy.updateFeeFactor(thisBlockchainId, newFactor, validFrom);
+        vm.expectEmit();
+        emit IPantosHub.ValidatorFeeUpdated(
+            thisBlockchainId,
+            0,
+            newFactor,
+            validFrom
+        );
+
+        pantosHubProxy.updateFeeFactor(thisBlockchainId, newFactor, validFrom);
+
+        PantosTypes.ValidatorFeeRecord
+            memory validatorFeeRecord = pantosHubProxy.getValidatorFeeRecord(
+                thisBlockchainId
+            );
+        assertEq(validatorFeeRecord.newFactor, newFactor);
+        assertEq(validatorFeeRecord.oldFactor, 0);
+        assertEq(validatorFeeRecord.validFrom, validFrom);
+    }
+
+    function test_updateFeeFactor_oldFactorValid() external {
+        vm.warp(FEE_FACTOR_VALID_FROM);
+        initializePantosHub();
+        uint256 thisBlockchainId = uint256(thisBlockchain.blockchainId);
+        uint256 newFactor = thisBlockchain.feeFactor + 100;
+        uint256 validFrom = FEE_FACTOR_VALID_FROM + 100;
+        pantosHubProxy.updateFeeFactor(thisBlockchainId, newFactor, validFrom);
+        vm.expectEmit();
+        emit IPantosHub.ValidatorFeeUpdated(
+            thisBlockchainId,
+            thisBlockchain.feeFactor,
+            newFactor,
+            validFrom
+        );
+
+        pantosHubProxy.updateFeeFactor(thisBlockchainId, newFactor, validFrom);
+
+        PantosTypes.ValidatorFeeRecord
+            memory validatorFeeRecord = pantosHubProxy.getValidatorFeeRecord(
+                thisBlockchainId
+            );
+        assertEq(validatorFeeRecord.newFactor, newFactor);
+        assertEq(validatorFeeRecord.oldFactor, thisBlockchain.feeFactor);
+        assertEq(validatorFeeRecord.validFrom, validFrom);
+    }
+
+    function test_updateFeeFactor_ByNonOwner() external {
+        bytes memory calldata_ = abi.encodeWithSelector(
+            PantosHub.updateFeeFactor.selector,
+            uint256(thisBlockchain.blockchainId),
+            0,
+            0
+        );
+
+        onlyOwnerTest(address(pantosHubProxy), calldata_);
+    }
+
+    function test_updateFeeFactor_WithUnsupportedBlockchain() external {
+        initializePantosHub();
+        vm.expectRevert("PantosHub: blockchain ID not supported");
+
+        pantosHubProxy.updateFeeFactor(
+            uint256(type(BlockchainId).max) + 1,
+            0,
+            0
+        );
+    }
+
+    function test_updateFeeFactor_WithFeeFactor1() external {
+        initializePantosHub();
+        vm.expectRevert("PantosHub: newFactor must be >= 1");
+
+        pantosHubProxy.updateFeeFactor(
+            uint256(thisBlockchain.blockchainId),
+            0,
+            0
+        );
+    }
+
+    function test_updateFeeFactor_ValidFromNotLargeEnough() external {
+        initializePantosHub();
+        vm.expectRevert(
+            "PantosHub: validFrom must be larger than "
+            "(block timestamp + minimum update period)"
+        );
+
+        pantosHubProxy.updateFeeFactor(
+            uint256(thisBlockchain.blockchainId),
+            1,
+            block.timestamp - 1
+        );
+    }
+
+    function test_setMinimumTokenStake() external {
+        uint256 minimumTokenStake = 1;
+        vm.expectEmit();
+        emit IPantosHub.MinimumTokenStakeUpdated(minimumTokenStake);
+
+        pantosHubProxy.setMinimumTokenStake(minimumTokenStake);
+
+        assertEq(pantosHubProxy.getMinimumTokenStake(), minimumTokenStake);
+    }
+
+    function test_setMinimumTokenStake_WhenNotPaused() external {
+        initializePantosHub();
+        bytes memory calldata_ = abi.encodeWithSelector(
+            PantosHub.setMinimumTokenStake.selector,
+            1
+        );
+
+        whenPausedTest(address(pantosHubProxy), calldata_);
+    }
+
+    function test_setMinimumTokenStake_ByNonOwner() external {
+        bytes memory calldata_ = abi.encodeWithSelector(
+            PantosHub.setMinimumTokenStake.selector,
+            1
+        );
+
+        onlyOwnerTest(address(pantosHubProxy), calldata_);
+    }
+
+    function test_setUnbondingPeriodServiceNodeStake() external {
+        uint256 unbondingPeriodServiceNodeStake = 1;
+        vm.expectEmit();
+        emit IPantosHub.UnbondingPeriodServiceNodeStakeUpdated(
+            unbondingPeriodServiceNodeStake
+        );
+
+        pantosHubProxy.setUnbondingPeriodServiceNodeStake(
+            unbondingPeriodServiceNodeStake
+        );
+
+        assertEq(
+            pantosHubProxy.getUnbondingPeriodServiceNodeStake(),
+            unbondingPeriodServiceNodeStake
+        );
+    }
+
+    function test_setUnbondingPeriodServiceNodeStake_ByNonOwner() external {
+        bytes memory calldata_ = abi.encodeWithSelector(
+            PantosHub.setUnbondingPeriodServiceNodeStake.selector,
+            1
+        );
+
+        onlyOwnerTest(address(pantosHubProxy), calldata_);
+    }
+
+    function test_setMinimumServiceNodeStake() external {
+        uint256 minimumServiceNodeStake = 1;
+        vm.expectEmit();
+        emit IPantosHub.MinimumServiceNodeStakeUpdated(
+            minimumServiceNodeStake
+        );
+
+        pantosHubProxy.setMinimumServiceNodeStake(minimumServiceNodeStake);
+
+        assertEq(
+            pantosHubProxy.getMinimumServiceNodeStake(),
+            minimumServiceNodeStake
+        );
+    }
+
+    function test_setMinimumServiceNodeStake_WhenNotPaused() external {
+        initializePantosHub();
+        bytes memory calldata_ = abi.encodeWithSelector(
+            PantosHub.setMinimumServiceNodeStake.selector,
+            1
+        );
+
+        whenPausedTest(address(pantosHubProxy), calldata_);
+    }
+
+    function test_setMinimumServiceNodeStake_ByNonOwner() external {
+        bytes memory calldata_ = abi.encodeWithSelector(
+            PantosHub.setMinimumServiceNodeStake.selector,
+            1
+        );
+
+        onlyOwnerTest(address(pantosHubProxy), calldata_);
+    }
+
+    function test_setMinimumValidatorFeeUpdatePeriod() external {
+        uint256 minimumValidatorFeeUpdatePeriod = 1;
+
+        pantosHubProxy.setMinimumValidatorFeeUpdatePeriod(
+            minimumValidatorFeeUpdatePeriod
+        );
+
+        assertEq(
+            pantosHubProxy.getMinimumValidatorFeeUpdatePeriod(),
+            minimumValidatorFeeUpdatePeriod
+        );
+    }
+
+    function test_setMinimumValidatorFeeUpdatePeriod_ByNonOwner() external {
+        bytes memory calldata_ = abi.encodeWithSelector(
+            PantosHub.setMinimumValidatorFeeUpdatePeriod.selector,
+            1
+        );
+
+        onlyOwnerTest(address(pantosHubProxy), calldata_);
+    }
+
+    function test_registerToken() external {
+        initializePantosHub();
+        mockIerc20_transferFrom(
+            PANTOS_TOKEN_ADDRESS,
+            deployer(),
+            address(pantosHubProxy),
+            MINIMUM_TOKEN_STAKE,
+            true
+        );
+        mockPandasToken_getOwner(PANDAS_TOKEN_ADDRESS, deployer());
+        vm.expectEmit();
+        emit IPantosHub.TokenRegistered(PANDAS_TOKEN_ADDRESS);
+        vm.expectCall(
+            PANTOS_TOKEN_ADDRESS,
+            abi.encodeWithSelector(
+                IERC20.transferFrom.selector,
+                deployer(),
+                address(pantosHubProxy),
+                MINIMUM_TOKEN_STAKE
+            )
+        );
+
+        pantosHubProxy.registerToken(
+            PANDAS_TOKEN_ADDRESS,
+            MINIMUM_TOKEN_STAKE
+        );
+
+        PantosTypes.TokenRecord memory tokenRecord = pantosHubProxy
+            .getTokenRecord(PANDAS_TOKEN_ADDRESS);
+        assertTrue(tokenRecord.active);
+        assertEq(tokenRecord.stake, MINIMUM_TOKEN_STAKE);
+    }
+
+    function test_registerToken_ByNonOwnerAndPaused() external {
+        vm.prank(address(111));
+        vm.expectRevert(
+            "PantosHub: caller is not the owner and contract is paused"
+        );
+
+        pantosHubProxy.registerToken(
+            PANDAS_TOKEN_ADDRESS,
+            MINIMUM_TOKEN_STAKE
+        );
+    }
+
+    function test_registerToken_WithToken0() external {
+        initializePantosHub();
+        vm.expectRevert("PantosHub: token must not be the zero account");
+
+        pantosHubProxy.registerToken(ADDRESS_ZERO, MINIMUM_TOKEN_STAKE);
+    }
+
+    function test_registerToken_ByNonTokenOwner() external {
+        initializePantosHub();
+        mockPandasToken_getOwner(PANDAS_TOKEN_ADDRESS, address(111));
+
+        vm.expectRevert("PantosHub: caller is not the token owner");
+
+        pantosHubProxy.registerToken(
+            PANDAS_TOKEN_ADDRESS,
+            MINIMUM_TOKEN_STAKE
+        );
+    }
+
+    function test_registerToken_WithNotEnoughStake() external {
+        initializePantosHub();
+        mockPandasToken_getOwner(PANDAS_TOKEN_ADDRESS, deployer());
+        vm.expectRevert("PantosHub: stake must be >= minimum token stake");
+
+        pantosHubProxy.registerToken(
+            PANDAS_TOKEN_ADDRESS,
+            MINIMUM_TOKEN_STAKE - 1
+        );
+    }
+
+    function test_registerToken_WhenTokenAlreadyRegistered() external {
+        registerToken();
+        vm.expectRevert("PantosHub: token must not be active");
+
+        pantosHubProxy.registerToken(
+            PANDAS_TOKEN_ADDRESS,
+            MINIMUM_TOKEN_STAKE
+        );
+    }
+
+    function test_unregisterToken() external {
+        registerTokenAndExternalToken();
+        mockPandasToken_getOwner(PANDAS_TOKEN_ADDRESS, deployer());
+        mockIerc20_transfer(
+            PANTOS_TOKEN_ADDRESS,
+            deployer(),
+            MINIMUM_TOKEN_STAKE,
+            true
+        );
+        vm.expectEmit();
+        emit IPantosHub.ExternalTokenUnregistered(
+            PANDAS_TOKEN_ADDRESS,
+            uint256(otherBlockchain.blockchainId)
+        );
+        vm.expectEmit();
+        emit IPantosHub.TokenUnregistered(PANDAS_TOKEN_ADDRESS);
+        vm.expectCall(
+            PANTOS_TOKEN_ADDRESS,
+            abi.encodeWithSelector(
+                IERC20.transfer.selector,
+                deployer(),
+                MINIMUM_TOKEN_STAKE
+            )
+        );
+
+        pantosHubProxy.unregisterToken(PANDAS_TOKEN_ADDRESS);
+
+        PantosTypes.TokenRecord memory tokenRecord = pantosHubProxy
+            .getTokenRecord(PANDAS_TOKEN_ADDRESS);
+        PantosTypes.ExternalTokenRecord
+            memory externalTokenRecord = pantosHubProxy.getExternalTokenRecord(
+                PANDAS_TOKEN_ADDRESS,
+                uint256(otherBlockchain.blockchainId)
+            );
+        address[] memory tokens = pantosHubProxy.getTokens();
+        assertEq(tokens.length, 1);
+        assertEq(tokens[0], PANTOS_TOKEN_ADDRESS);
+        assertFalse(tokenRecord.active);
+        assertEq(tokenRecord.stake, 0);
+        assertFalse(externalTokenRecord.active);
+    }
+
+    function test_unregisterToken_ByNonOwnerAndPaused() external {
+        vm.prank(address(111));
+        vm.expectRevert(
+            "PantosHub: caller is not the owner and contract is paused"
+        );
+
+        pantosHubProxy.unregisterToken(PANDAS_TOKEN_ADDRESS);
+    }
+
+    function test_unregisterToken_WhenTokenNotRegistered() external {
+        vm.expectRevert("PantosHub: token must be active");
+
+        pantosHubProxy.unregisterToken(PANDAS_TOKEN_ADDRESS);
+    }
+
+    function test_unregisterToken_WhenTokenAlreadyUnRegistered() external {
+        registerToken();
+        mockPandasToken_getOwner(PANDAS_TOKEN_ADDRESS, deployer());
+        mockIerc20_transfer(
+            PANTOS_TOKEN_ADDRESS,
+            deployer(),
+            MINIMUM_TOKEN_STAKE,
+            true
+        );
+        pantosHubProxy.unregisterToken(PANDAS_TOKEN_ADDRESS);
+        vm.expectRevert("PantosHub: token must be active");
+
+        pantosHubProxy.unregisterToken(PANDAS_TOKEN_ADDRESS);
+    }
+
+    function test_unregisterToken_ByNonTokenOwner() external {
+        registerToken();
+        mockPandasToken_getOwner(PANDAS_TOKEN_ADDRESS, address(123));
+
+        vm.expectRevert("PantosHub: caller is not the token owner");
+
+        pantosHubProxy.unregisterToken(PANDAS_TOKEN_ADDRESS);
+    }
+
+    function test_registerExternalToken() external {
+        registerToken();
+
+        pantosHubProxy.registerExternalToken(
+            PANDAS_TOKEN_ADDRESS,
+            uint256(otherBlockchain.blockchainId),
+            EXTERNAL_PANDAS_TOKEN_ADDRESS
+        );
+
+        PantosTypes.ExternalTokenRecord
+            memory externalTokenRecord = pantosHubProxy.getExternalTokenRecord(
+                PANDAS_TOKEN_ADDRESS,
+                uint256(otherBlockchain.blockchainId)
+            );
+        assertTrue(externalTokenRecord.active);
+        assertEq(
+            externalTokenRecord.externalToken,
+            EXTERNAL_PANDAS_TOKEN_ADDRESS
+        );
+    }
+
+    function test_registerExternalToken_ByNonOwnerAndPaused() external {
+        vm.prank(address(111));
+        vm.expectRevert(
+            "PantosHub: caller is not the owner and contract is paused"
+        );
+
+        pantosHubProxy.registerExternalToken(
+            PANDAS_TOKEN_ADDRESS,
+            uint256(otherBlockchain.blockchainId),
+            EXTERNAL_PANDAS_TOKEN_ADDRESS
+        );
+    }
+
+    function test_registerExternalToken_WithCurrentBlockchainId() external {
+        initializePantosHub();
+        vm.expectRevert(
+            "PantosHub: blockchain must not be the current blockchain"
+        );
+
+        pantosHubProxy.registerExternalToken(
+            PANDAS_TOKEN_ADDRESS,
+            uint256(thisBlockchain.blockchainId),
+            EXTERNAL_PANDAS_TOKEN_ADDRESS
+        );
+    }
+
+    function test_registerExternalToken_WithInactiveBlockchainId() external {
+        initializePantosHub();
+        vm.expectRevert(
+            "PantosHub: blockchain of external token must be active"
+        );
+
+        pantosHubProxy.registerExternalToken(
+            PANDAS_TOKEN_ADDRESS,
+            uint256(type(BlockchainId).max) + 1,
+            EXTERNAL_PANDAS_TOKEN_ADDRESS
+        );
+    }
+
+    function test_registerExternalToken_WithEmptyAddress() external {
+        initializePantosHub();
+        vm.expectRevert("PantosHub: external token address must not be empty");
+
+        pantosHubProxy.registerExternalToken(
+            PANDAS_TOKEN_ADDRESS,
+            uint256(otherBlockchain.blockchainId),
+            ""
+        );
+    }
+
+    function test_registerExternalToken_WithInactiveToken() external {
+        initializePantosHub();
+        vm.expectRevert("PantosHub: token must be active");
+
+        pantosHubProxy.registerExternalToken(
+            PANDAS_TOKEN_ADDRESS,
+            uint256(otherBlockchain.blockchainId),
+            EXTERNAL_PANDAS_TOKEN_ADDRESS
+        );
+    }
+
+    function test_registerExternalToken_ByNonTokenOwner() external {
+        registerToken();
+        vm.mockCall(
+            PANDAS_TOKEN_ADDRESS,
+            abi.encodeWithSelector(PantosBaseToken.getOwner.selector),
+            abi.encode(address(321))
+        );
+        vm.expectRevert("PantosHub: caller is not the token owner");
+
+        pantosHubProxy.registerExternalToken(
+            PANDAS_TOKEN_ADDRESS,
+            uint256(otherBlockchain.blockchainId),
+            EXTERNAL_PANDAS_TOKEN_ADDRESS
+        );
+    }
+
+    function test_registerExternalToken_WithNotEnoughTokenStake() external {
+        registerToken();
+        pantosHubProxy.pause();
+        pantosHubProxy.setMinimumTokenStake(MINIMUM_TOKEN_STAKE + 1);
+        vm.expectRevert(
+            "PantosHub: token stake must be >= minimum token stake"
+        );
+
+        pantosHubProxy.registerExternalToken(
+            PANDAS_TOKEN_ADDRESS,
+            uint256(otherBlockchain.blockchainId),
+            EXTERNAL_PANDAS_TOKEN_ADDRESS
+        );
+    }
+
+    function test_registerExternalToken_WhenAlreadyRegistered() external {
+        registerTokenAndExternalToken();
+        vm.expectRevert("PantosHub: external token must not be active");
+
+        pantosHubProxy.registerExternalToken(
+            PANDAS_TOKEN_ADDRESS,
+            uint256(otherBlockchain.blockchainId),
+            EXTERNAL_PANDAS_TOKEN_ADDRESS
+        );
+    }
+
+    function test_unregisterExternalToken() external {
+        registerTokenAndExternalToken();
+        vm.expectEmit();
+        emit IPantosHub.ExternalTokenUnregistered(
+            PANDAS_TOKEN_ADDRESS,
+            uint256(otherBlockchain.blockchainId)
+        );
+
+        pantosHubProxy.unregisterExternalToken(
+            PANDAS_TOKEN_ADDRESS,
+            uint256(otherBlockchain.blockchainId)
+        );
+
+        PantosTypes.ExternalTokenRecord
+            memory externalTokenRecord = pantosHubProxy.getExternalTokenRecord(
+                PANDAS_TOKEN_ADDRESS,
+                uint256(otherBlockchain.blockchainId)
+            );
+        assertFalse(externalTokenRecord.active);
+    }
+
+    function test_unregisterExternalToken_ByNonOwnerAndPaused() external {
+        vm.prank(address(111));
+        vm.expectRevert(
+            "PantosHub: caller is not the owner and contract is paused"
+        );
+
+        pantosHubProxy.unregisterExternalToken(
+            PANDAS_TOKEN_ADDRESS,
+            uint256(otherBlockchain.blockchainId)
+        );
+    }
+
+    function test_unregisterExternalToken_WithInactiveToken() external {
+        initializePantosHub();
+        vm.prank(address(111));
+        vm.expectRevert("PantosHub: token must be active");
+
+        pantosHubProxy.unregisterExternalToken(
+            PANDAS_TOKEN_ADDRESS,
+            uint256(otherBlockchain.blockchainId)
+        );
+    }
+
+    function test_unregisterExternalToken_ByNonTokenOwner() external {
+        registerTokenAndExternalToken();
+        vm.mockCall(
+            PANDAS_TOKEN_ADDRESS,
+            abi.encodeWithSelector(PantosBaseToken.getOwner.selector),
+            abi.encode(address(321))
+        );
+        vm.expectRevert("PantosHub: caller is not the token owner");
+
+        pantosHubProxy.unregisterExternalToken(
+            PANDAS_TOKEN_ADDRESS,
+            uint256(otherBlockchain.blockchainId)
+        );
+    }
+
+    function test_unregisterExternalToken_WithInactiveExternalToken()
+        external
+    {
+        registerToken();
+        vm.expectRevert("PantosHub: external token must be active");
+
+        pantosHubProxy.unregisterExternalToken(
+            PANDAS_TOKEN_ADDRESS,
+            uint256(otherBlockchain.blockchainId)
+        );
+    }
+
+    function test_increaseTokenStake() external {
+        registerToken();
+        mockPandasToken_getOwner(PANDAS_TOKEN_ADDRESS, deployer());
+        mockIerc20_transferFrom(
+            PANTOS_TOKEN_ADDRESS,
+            deployer(),
+            address(pantosHubProxy),
+            1,
+            true
+        );
+        vm.expectCall(
+            PANTOS_TOKEN_ADDRESS,
+            abi.encodeWithSelector(
+                IERC20.transferFrom.selector,
+                deployer(),
+                address(pantosHubProxy),
+                1
+            )
+        );
+
+        pantosHubProxy.increaseTokenStake(PANDAS_TOKEN_ADDRESS, 1);
+
+        PantosTypes.TokenRecord memory tokenRecord = pantosHubProxy
+            .getTokenRecord(PANDAS_TOKEN_ADDRESS);
+        assertTrue(tokenRecord.active);
+        assertEq(tokenRecord.stake, MINIMUM_TOKEN_STAKE + 1);
+    }
+
+    function test_increaseTokenStake_ByNonTokenOwner() external {
+        registerToken();
+        mockPandasToken_getOwner(PANDAS_TOKEN_ADDRESS, deployer());
+        vm.prank(address(123));
+        vm.expectRevert("PantosHub: caller is not the token owner");
+
+        pantosHubProxy.increaseTokenStake(PANDAS_TOKEN_ADDRESS, 1);
+    }
+
+    function test_increaseTokenStake_WithStake0() external {
+        mockPandasToken_getOwner(PANTOS_TOKEN_ADDRESS, deployer());
+        mockPandasToken_getOwner(PANDAS_TOKEN_ADDRESS, deployer());
+        vm.expectRevert("PantosHub: additional stake must be greater than 0");
+
+        pantosHubProxy.increaseTokenStake(PANDAS_TOKEN_ADDRESS, 0);
+    }
+
+    function test_increaseTokenStake_WithNonActiveToken() external {
+        mockPandasToken_getOwner(PANTOS_TOKEN_ADDRESS, deployer());
+        mockPandasToken_getOwner(PANDAS_TOKEN_ADDRESS, deployer());
+        vm.expectRevert("PantosHub: token must be active");
+
+        pantosHubProxy.increaseTokenStake(PANDAS_TOKEN_ADDRESS, 1);
+    }
+
+    function test_increaseTokenStake_WithNotEnoughStake() external {
+        registerToken();
+        pantosHubProxy.pause();
+        pantosHubProxy.setMinimumTokenStake(MINIMUM_TOKEN_STAKE + 2);
+        mockPandasToken_getOwner(PANTOS_TOKEN_ADDRESS, deployer());
+        mockPandasToken_getOwner(PANDAS_TOKEN_ADDRESS, deployer());
+        vm.expectRevert(
+            "PantosHub: new stake must be at least the minimum token stake"
+        );
+
+        pantosHubProxy.increaseTokenStake(PANDAS_TOKEN_ADDRESS, 1);
+    }
+
+    function test_decreaseTokenStake() external {
+        registerToken();
+        pantosHubProxy.pause();
+        pantosHubProxy.setMinimumTokenStake(MINIMUM_TOKEN_STAKE - 1);
+        mockPandasToken_getOwner(PANDAS_TOKEN_ADDRESS, deployer());
+        mockIerc20_transfer(PANTOS_TOKEN_ADDRESS, deployer(), 1, true);
+
+        pantosHubProxy.decreaseTokenStake(PANDAS_TOKEN_ADDRESS, 1);
+
+        PantosTypes.TokenRecord memory tokenRecord = pantosHubProxy
+            .getTokenRecord(PANDAS_TOKEN_ADDRESS);
+        assertTrue(tokenRecord.active);
+        assertEq(tokenRecord.stake, MINIMUM_TOKEN_STAKE - 1);
+    }
+
+    function test_decreaseTokenStake_ByNonTokenOwner() external {
+        registerToken();
+        mockPandasToken_getOwner(PANDAS_TOKEN_ADDRESS, deployer());
+        mockIerc20_transfer(PANDAS_TOKEN_ADDRESS, deployer(), 1, true);
+        vm.prank(address(123));
+        vm.expectRevert("PantosHub: caller is not the token owner");
+
+        pantosHubProxy.decreaseTokenStake(PANDAS_TOKEN_ADDRESS, 1);
+    }
+
+    function test_decreaseTokenStake_WithStake0() external {
+        mockIerc20_transfer(PANDAS_TOKEN_ADDRESS, deployer(), 0, true);
+        mockPandasToken_getOwner(PANDAS_TOKEN_ADDRESS, deployer());
+        vm.expectRevert("PantosHub: reduced stake must be greater than 0");
+
+        pantosHubProxy.decreaseTokenStake(PANDAS_TOKEN_ADDRESS, 0);
+    }
+
+    function test_decreaseTokenStake_WithNonActiveToken() external {
+        mockIerc20_transfer(PANDAS_TOKEN_ADDRESS, deployer(), 1, true);
+        mockPandasToken_getOwner(PANDAS_TOKEN_ADDRESS, deployer());
+        vm.expectRevert("PantosHub: token must be active");
+
+        pantosHubProxy.decreaseTokenStake(PANDAS_TOKEN_ADDRESS, 1);
+    }
+
+    function test_decreaseTokenStake_WithNotEnoughStake() external {
+        registerToken();
+        mockPandasToken_getOwner(PANDAS_TOKEN_ADDRESS, deployer());
+
+        mockIerc20_transfer(PANDAS_TOKEN_ADDRESS, deployer(), 1, true);
+        vm.expectRevert(
+            "PantosHub: new stake must be at least the minimum token stake"
+        );
+
+        pantosHubProxy.decreaseTokenStake(PANDAS_TOKEN_ADDRESS, 1);
+    }
+
+    function test_registerServiceNode() external {
+        initializePantosHub();
+        mockIerc20_transferFrom(
+            PANTOS_TOKEN_ADDRESS,
+            SERVICE_NODE_ADDRESS,
+            address(pantosHubProxy),
+            MINIMUM_SERVICE_NODE_STAKE,
+            true
+        );
+        vm.prank(SERVICE_NODE_ADDRESS);
+        vm.expectEmit();
+        emit IPantosHub.ServiceNodeRegistered(SERVICE_NODE_ADDRESS);
+        vm.expectCall(
+            PANTOS_TOKEN_ADDRESS,
+            abi.encodeWithSelector(
+                IERC20.transferFrom.selector,
+                SERVICE_NODE_ADDRESS,
+                address(pantosHubProxy),
+                MINIMUM_SERVICE_NODE_STAKE
+            )
+        );
+
+        pantosHubProxy.registerServiceNode(
+            SERVICE_NODE_ADDRESS,
+            SERVICE_NODE_URL,
+            MINIMUM_SERVICE_NODE_STAKE,
+            SERVICE_NODE_UNSTAKING_ADDRESS
+        );
+
+        PantosTypes.ServiceNodeRecord memory serviceNodeRecord = pantosHubProxy
+            .getServiceNodeRecord(SERVICE_NODE_ADDRESS);
+        address[] memory serviceNodes = pantosHubProxy.getServiceNodes();
+        assertTrue(serviceNodeRecord.active);
+        assertEq(serviceNodeRecord.url, SERVICE_NODE_URL);
+        assertEq(serviceNodeRecord.freeStake, MINIMUM_SERVICE_NODE_STAKE);
+        assertEq(serviceNodeRecord.lockedStake, 0);
+        assertEq(
+            serviceNodeRecord.unstakingAddress,
+            SERVICE_NODE_UNSTAKING_ADDRESS
+        );
+        assertEq(serviceNodeRecord.unregisterTime, 0);
+        assertEq(serviceNodes.length, 1);
+        assertEq(serviceNodes[0], SERVICE_NODE_ADDRESS);
+    }
+
+    function test_registerServiceNode_WhenPaused() external {
+        bytes memory calldata_ = abi.encodeWithSelector(
+            PantosHub.registerServiceNode.selector,
+            SERVICE_NODE_ADDRESS,
+            SERVICE_NODE_URL,
+            MINIMUM_SERVICE_NODE_STAKE,
+            SERVICE_NODE_UNSTAKING_ADDRESS
+        );
+
+        whenNotPausedTest(address(pantosHubProxy), calldata_);
+    }
+
+    function test_registerServiceNode_ByUnauthorizedAddress() external {
+        initializePantosHub();
+        vm.prank(address(123));
+        vm.expectRevert(
+            "PantosHub: caller is not the service "
+            "node or the unstaking address"
+        );
+
+        pantosHubProxy.registerServiceNode(
+            SERVICE_NODE_ADDRESS,
+            SERVICE_NODE_URL,
+            MINIMUM_SERVICE_NODE_STAKE,
+            SERVICE_NODE_UNSTAKING_ADDRESS
+        );
+    }
+
+    function test_registerServiceNode_WithEmptyUrl() external {
+        initializePantosHub();
+        vm.prank(SERVICE_NODE_ADDRESS);
+        vm.expectRevert("PantosHub: service node URL must not be empty");
+
+        pantosHubProxy.registerServiceNode(
+            SERVICE_NODE_ADDRESS,
+            "",
+            MINIMUM_SERVICE_NODE_STAKE,
+            SERVICE_NODE_UNSTAKING_ADDRESS
+        );
+    }
+
+    function test_registerServiceNode_WithNotUniqueUrl() external {
+        registerServiceNode();
+        address newSERVICE_NODE_ADDRESS = address(123);
+        vm.prank(newSERVICE_NODE_ADDRESS);
+        vm.expectRevert("PantosHub: service node URL must be unique");
+
+        pantosHubProxy.registerServiceNode(
+            newSERVICE_NODE_ADDRESS,
+            SERVICE_NODE_URL,
+            MINIMUM_SERVICE_NODE_STAKE,
+            newSERVICE_NODE_ADDRESS
+        );
+    }
+
+    function test_registerServiceNode_WithNotEnoughStake() external {
+        initializePantosHub();
+        vm.prank(SERVICE_NODE_ADDRESS);
+        vm.expectRevert(
+            "PantosHub: stake must be >= minimum service node stake"
+        );
+
+        pantosHubProxy.registerServiceNode(
+            SERVICE_NODE_ADDRESS,
+            SERVICE_NODE_URL,
+            MINIMUM_SERVICE_NODE_STAKE - 1,
+            SERVICE_NODE_UNSTAKING_ADDRESS
+        );
+    }
+
+    function test_registerServiceNode_WhenServiceNodeAlreadyRegistered()
+        external
+    {
+        registerServiceNode();
+        vm.prank(SERVICE_NODE_ADDRESS);
+        vm.expectRevert("PantosHub: service node already registered");
+
+        pantosHubProxy.registerServiceNode(
+            SERVICE_NODE_ADDRESS,
+            string.concat(SERVICE_NODE_URL, "/new/path/"),
+            MINIMUM_SERVICE_NODE_STAKE,
+            SERVICE_NODE_UNSTAKING_ADDRESS
+        );
+    }
+
+    function test_registerServiceNode_WhenUnregisteredButStakeIsNotWithdrawn()
+        external
+    {
+        registerServiceNode();
+        vm.prank(SERVICE_NODE_ADDRESS);
+        pantosHubProxy.unregisterServiceNode(SERVICE_NODE_ADDRESS);
+        vm.prank(SERVICE_NODE_ADDRESS);
+        vm.expectRevert(
+            "PantosHub: service node must withdraw its "
+            "stake or cancel the unregistration"
+        );
+
+        pantosHubProxy.registerServiceNode(
+            SERVICE_NODE_ADDRESS,
+            SERVICE_NODE_URL,
+            MINIMUM_SERVICE_NODE_STAKE,
+            SERVICE_NODE_UNSTAKING_ADDRESS
+        );
+    }
+
+    function test_unregisterServiceNode() external {
+        registerServiceNode();
+        vm.expectEmit();
+        emit IPantosHub.ServiceNodeUnregistered(SERVICE_NODE_ADDRESS);
+        vm.prank(SERVICE_NODE_ADDRESS);
+
+        pantosHubProxy.unregisterServiceNode(SERVICE_NODE_ADDRESS);
+
+        PantosTypes.ServiceNodeRecord memory serviceNodeRecord = pantosHubProxy
+            .getServiceNodeRecord(SERVICE_NODE_ADDRESS);
+        address[] memory serviceNodes = pantosHubProxy.getServiceNodes();
+        assertFalse(serviceNodeRecord.active);
+        assertEq(serviceNodeRecord.unregisterTime, BLOCK_TIMESTAMP);
+        assertEq(serviceNodeRecord.freeStake, MINIMUM_SERVICE_NODE_STAKE);
+        assertEq(serviceNodes.length, 0);
+    }
+
+    function test_unregisterServiceNode_WhenPaused() external {
+        bytes memory calldata_ = abi.encodeWithSelector(
+            PantosHub.unregisterServiceNode.selector,
+            SERVICE_NODE_ADDRESS
+        );
+
+        whenNotPausedTest(address(pantosHubProxy), calldata_);
+    }
+
+    function test_unregisterServiceNode_ByUnauthorizedAddress() external {
+        initializePantosHub();
+        vm.prank(address(123));
+        vm.expectRevert(
+            "PantosHub: caller is not the service "
+            "node or the unstaking address"
+        );
+
+        pantosHubProxy.unregisterServiceNode(SERVICE_NODE_ADDRESS);
+    }
+
+    function test_unregisterServiceNode_WhenItWasNeverRegistered() external {
+        initializePantosHub();
+        vm.prank(SERVICE_NODE_ADDRESS);
+        vm.expectRevert("PantosHub: service node must be active");
+
+        pantosHubProxy.unregisterServiceNode(SERVICE_NODE_ADDRESS);
+    }
+
+    function test_withdrawServiceNodeStake_ByUnstakingAddress() external {
+        registerServiceNode();
+        unregisterServicenode();
+        mockIerc20_transfer(
+            PANTOS_TOKEN_ADDRESS,
+            SERVICE_NODE_UNSTAKING_ADDRESS,
+            MINIMUM_SERVICE_NODE_STAKE,
+            true
+        );
+        vm.warp(BLOCK_TIMESTAMP + SERVICE_NODE_STAKE_UNBONDING_PERIOD);
+        vm.prank(SERVICE_NODE_UNSTAKING_ADDRESS);
+        vm.expectCall(
+            PANTOS_TOKEN_ADDRESS,
+            abi.encodeWithSelector(
+                IERC20.transfer.selector,
+                SERVICE_NODE_UNSTAKING_ADDRESS,
+                MINIMUM_SERVICE_NODE_STAKE
+            )
+        );
+
+        pantosHubProxy.withdrawServiceNodeStake(SERVICE_NODE_ADDRESS);
+
+        PantosTypes.ServiceNodeRecord memory serviceNodeRecord = pantosHubProxy
+            .getServiceNodeRecord(SERVICE_NODE_ADDRESS);
+        assertEq(serviceNodeRecord.unregisterTime, 0);
+        assertEq(serviceNodeRecord.freeStake, 0);
+    }
+
+    function test_withdrawServiceNodeStake_ByServiceNode() external {
+        registerServiceNode();
+        unregisterServicenode();
+        mockIerc20_transfer(
+            PANTOS_TOKEN_ADDRESS,
+            SERVICE_NODE_UNSTAKING_ADDRESS,
+            MINIMUM_SERVICE_NODE_STAKE,
+            true
+        );
+        vm.warp(BLOCK_TIMESTAMP + SERVICE_NODE_STAKE_UNBONDING_PERIOD);
+        vm.prank(SERVICE_NODE_ADDRESS);
+        vm.expectCall(
+            PANTOS_TOKEN_ADDRESS,
+            abi.encodeWithSelector(
+                IERC20.transfer.selector,
+                SERVICE_NODE_UNSTAKING_ADDRESS,
+                MINIMUM_SERVICE_NODE_STAKE
+            )
+        );
+
+        pantosHubProxy.withdrawServiceNodeStake(SERVICE_NODE_ADDRESS);
+
+        PantosTypes.ServiceNodeRecord memory serviceNodeRecord = pantosHubProxy
+            .getServiceNodeRecord(SERVICE_NODE_ADDRESS);
+        assertEq(serviceNodeRecord.unregisterTime, 0);
+        assertEq(serviceNodeRecord.freeStake, 0);
+    }
+
+    function test_withdrawServiceNodeStake_WhenAlreadyWithdrawn() external {
+        registerServiceNode();
+        unregisterServicenode();
+        mockIerc20_transfer(
+            PANTOS_TOKEN_ADDRESS,
+            SERVICE_NODE_UNSTAKING_ADDRESS,
+            MINIMUM_SERVICE_NODE_STAKE,
+            true
+        );
+        vm.warp(BLOCK_TIMESTAMP + SERVICE_NODE_STAKE_UNBONDING_PERIOD);
+        vm.prank(SERVICE_NODE_ADDRESS);
+        pantosHubProxy.withdrawServiceNodeStake(SERVICE_NODE_ADDRESS);
+        vm.expectRevert("PantosHub: service node has no stake to withdraw");
+
+        pantosHubProxy.withdrawServiceNodeStake(SERVICE_NODE_ADDRESS);
+    }
+
+    function test_withdrawServiceNodeStake_ByUnauthorizedParty() external {
+        registerServiceNode();
+        unregisterServicenode();
+        vm.warp(BLOCK_TIMESTAMP + SERVICE_NODE_STAKE_UNBONDING_PERIOD);
+        vm.prank(address(123));
+        vm.expectRevert(
+            "PantosHub: caller is not the service node or the "
+            "unstaking address"
+        );
+
+        pantosHubProxy.withdrawServiceNodeStake(SERVICE_NODE_ADDRESS);
+    }
+
+    function test_withdrawServiceNodeStake_WhenUnbondingPeriodIsNotElapsed()
+        external
+    {
+        registerServiceNode();
+        unregisterServicenode();
+        vm.prank(SERVICE_NODE_ADDRESS);
+        vm.expectRevert("PantosHub: the unbonding period has not elapsed");
+
+        pantosHubProxy.withdrawServiceNodeStake(SERVICE_NODE_ADDRESS);
+    }
+
+    function test_cancelServiceNodeUnregistration_ByUnstakingAddress()
+        external
+    {
+        registerServiceNode();
+        unregisterServicenode();
+        vm.prank(SERVICE_NODE_UNSTAKING_ADDRESS);
+
+        pantosHubProxy.cancelServiceNodeUnregistration(SERVICE_NODE_ADDRESS);
+
+        PantosTypes.ServiceNodeRecord memory serviceNodeRecord = pantosHubProxy
+            .getServiceNodeRecord(SERVICE_NODE_ADDRESS);
+        address[] memory serviceNodes = pantosHubProxy.getServiceNodes();
+        assertTrue(serviceNodeRecord.active);
+        assertEq(serviceNodeRecord.url, SERVICE_NODE_URL);
+        assertEq(serviceNodeRecord.freeStake, MINIMUM_SERVICE_NODE_STAKE);
+        assertEq(serviceNodeRecord.lockedStake, 0);
+        assertEq(
+            serviceNodeRecord.unstakingAddress,
+            SERVICE_NODE_UNSTAKING_ADDRESS
+        );
+        assertEq(serviceNodeRecord.unregisterTime, 0);
+        assertEq(serviceNodes.length, 1);
+        assertEq(serviceNodes[0], SERVICE_NODE_ADDRESS);
+    }
+
+    function test_cancelServiceNodeUnregistration_ByServiceNode() external {
+        registerServiceNode();
+        unregisterServicenode();
+        vm.prank(SERVICE_NODE_ADDRESS);
+
+        pantosHubProxy.cancelServiceNodeUnregistration(SERVICE_NODE_ADDRESS);
+
+        PantosTypes.ServiceNodeRecord memory serviceNodeRecord = pantosHubProxy
+            .getServiceNodeRecord(SERVICE_NODE_ADDRESS);
+        address[] memory serviceNodes = pantosHubProxy.getServiceNodes();
+        assertTrue(serviceNodeRecord.active);
+        assertEq(serviceNodeRecord.url, SERVICE_NODE_URL);
+        assertEq(serviceNodeRecord.freeStake, MINIMUM_SERVICE_NODE_STAKE);
+        assertEq(serviceNodeRecord.lockedStake, 0);
+        assertEq(
+            serviceNodeRecord.unstakingAddress,
+            SERVICE_NODE_UNSTAKING_ADDRESS
+        );
+        assertEq(serviceNodeRecord.unregisterTime, 0);
+        assertEq(serviceNodes.length, 1);
+        assertEq(serviceNodes[0], SERVICE_NODE_ADDRESS);
+    }
+
+    function test_cancelServiceNodeUnregistration_WhenServiceNodeNotUnbonding()
+        external
+    {
+        registerServiceNode();
+        vm.prank(SERVICE_NODE_ADDRESS);
+        vm.expectRevert(
+            "PantosHub: service node is not in the unbonding period"
+        );
+
+        pantosHubProxy.cancelServiceNodeUnregistration(SERVICE_NODE_ADDRESS);
+    }
+
+    function test_cancelServiceNodeUnregistration_ByUnauthorizedParty()
+        external
+    {
+        registerServiceNode();
+        unregisterServicenode();
+        vm.expectRevert(
+            "PantosHub: caller is not the service node or the "
+            "unstaking address"
+        );
+
+        pantosHubProxy.cancelServiceNodeUnregistration(SERVICE_NODE_ADDRESS);
+    }
+
+    function test_increaseServiceNodeStake_ByUnstakingAddress() external {
+        registerServiceNode();
+        mockIerc20_transferFrom(
+            PANTOS_TOKEN_ADDRESS,
+            SERVICE_NODE_UNSTAKING_ADDRESS,
+            address(pantosHubProxy),
+            1,
+            true
+        );
+        vm.prank(SERVICE_NODE_UNSTAKING_ADDRESS);
+        vm.expectCall(
+            PANTOS_TOKEN_ADDRESS,
+            abi.encodeWithSelector(
+                IERC20.transferFrom.selector,
+                SERVICE_NODE_UNSTAKING_ADDRESS,
+                address(pantosHubProxy),
+                1
+            )
+        );
+
+        pantosHubProxy.increaseServiceNodeStake(SERVICE_NODE_ADDRESS, 1);
+
+        PantosTypes.ServiceNodeRecord memory serviceNodeRecord = pantosHubProxy
+            .getServiceNodeRecord(SERVICE_NODE_ADDRESS);
+        assertEq(serviceNodeRecord.freeStake, MINIMUM_SERVICE_NODE_STAKE + 1);
+    }
+
+    function test_increaseServiceNodeStake_ByServiceNode() external {
+        registerServiceNode();
+        mockIerc20_transferFrom(
+            PANTOS_TOKEN_ADDRESS,
+            SERVICE_NODE_ADDRESS,
+            address(pantosHubProxy),
+            1,
+            true
+        );
+        vm.prank(SERVICE_NODE_ADDRESS);
+        vm.expectCall(
+            PANTOS_TOKEN_ADDRESS,
+            abi.encodeWithSelector(
+                IERC20.transferFrom.selector,
+                SERVICE_NODE_ADDRESS,
+                address(pantosHubProxy),
+                1
+            )
+        );
+
+        pantosHubProxy.increaseServiceNodeStake(SERVICE_NODE_ADDRESS, 1);
+
+        PantosTypes.ServiceNodeRecord memory serviceNodeRecord = pantosHubProxy
+            .getServiceNodeRecord(SERVICE_NODE_ADDRESS);
+        assertEq(serviceNodeRecord.freeStake, MINIMUM_SERVICE_NODE_STAKE + 1);
+    }
+
+    function test_increaseServiceNodeStake_ByUnauthorizedParty() external {
+        registerServiceNode();
+        vm.expectRevert(
+            "PantosHub: caller is not the service node or the "
+            "unstaking address"
+        );
+
+        pantosHubProxy.increaseServiceNodeStake(SERVICE_NODE_ADDRESS, 1);
+    }
+
+    function test_increaseServiceNodeStake_WhenServiceNodeNotActive()
+        external
+    {
+        registerServiceNode();
+        unregisterServicenode();
+        vm.prank(SERVICE_NODE_ADDRESS);
+        vm.expectRevert("PantosHub: service node must be active");
+
+        pantosHubProxy.increaseServiceNodeStake(SERVICE_NODE_ADDRESS, 1);
+    }
+
+    function test_increaseServiceNodeStake_WithStake0() external {
+        registerServiceNode();
+        vm.prank(SERVICE_NODE_ADDRESS);
+        vm.expectRevert("PantosHub: additional stake must be greater than 0");
+
+        pantosHubProxy.increaseServiceNodeStake(SERVICE_NODE_ADDRESS, 0);
+    }
+
+    function test_increaseServiceNodeStake_WithNotEnoughStake() external {
+        registerServiceNode();
+        pantosHubProxy.pause();
+        pantosHubProxy.setMinimumServiceNodeStake(
+            MINIMUM_SERVICE_NODE_STAKE + 2
+        );
+        vm.prank(SERVICE_NODE_ADDRESS);
+        vm.expectRevert(
+            "PantosHub: new stake must be at least the minimum "
+            "service node stake"
+        );
+
+        pantosHubProxy.increaseServiceNodeStake(SERVICE_NODE_ADDRESS, 1);
+    }
+
+    function test_decreaseServiceNodeStake_ByUnstakingAddress() external {
+        registerServiceNode();
+        mockIerc20_transfer(
+            PANTOS_TOKEN_ADDRESS,
+            SERVICE_NODE_UNSTAKING_ADDRESS,
+            1,
+            true
+        );
+        pantosHubProxy.pause();
+        pantosHubProxy.setMinimumServiceNodeStake(
+            MINIMUM_SERVICE_NODE_STAKE - 1
+        );
+        vm.prank(SERVICE_NODE_UNSTAKING_ADDRESS);
+        vm.expectCall(
+            PANTOS_TOKEN_ADDRESS,
+            abi.encodeWithSelector(
+                IERC20.transfer.selector,
+                SERVICE_NODE_UNSTAKING_ADDRESS,
+                1
+            )
+        );
+
+        pantosHubProxy.decreaseServiceNodeStake(SERVICE_NODE_ADDRESS, 1);
+
+        PantosTypes.ServiceNodeRecord memory serviceNodeRecord = pantosHubProxy
+            .getServiceNodeRecord(SERVICE_NODE_ADDRESS);
+        assertEq(serviceNodeRecord.freeStake, MINIMUM_SERVICE_NODE_STAKE - 1);
+    }
+
+    function test_decreaseServiceNodeStake_ByServiceNode() external {
+        registerServiceNode();
+        mockIerc20_transfer(
+            PANTOS_TOKEN_ADDRESS,
+            SERVICE_NODE_UNSTAKING_ADDRESS,
+            1,
+            true
+        );
+        pantosHubProxy.pause();
+        pantosHubProxy.setMinimumServiceNodeStake(
+            MINIMUM_SERVICE_NODE_STAKE - 1
+        );
+        vm.prank(SERVICE_NODE_ADDRESS);
+        vm.expectCall(
+            PANTOS_TOKEN_ADDRESS,
+            abi.encodeWithSelector(
+                IERC20.transfer.selector,
+                SERVICE_NODE_UNSTAKING_ADDRESS,
+                1
+            )
+        );
+
+        pantosHubProxy.decreaseServiceNodeStake(SERVICE_NODE_ADDRESS, 1);
+
+        PantosTypes.ServiceNodeRecord memory serviceNodeRecord = pantosHubProxy
+            .getServiceNodeRecord(SERVICE_NODE_ADDRESS);
+        assertEq(serviceNodeRecord.freeStake, MINIMUM_SERVICE_NODE_STAKE - 1);
+    }
+
+    function test_decreaseServiceNodeStake_ByUnauthorizedParty() external {
+        registerServiceNode();
+        vm.expectRevert(
+            "PantosHub: caller is not the service node or the "
+            "unstaking address"
+        );
+
+        pantosHubProxy.decreaseServiceNodeStake(SERVICE_NODE_ADDRESS, 1);
+    }
+
+    function test_decreaseServiceNodeStake_WhenServiceNodeNotActive()
+        external
+    {
+        registerServiceNode();
+        unregisterServicenode();
+        vm.prank(SERVICE_NODE_ADDRESS);
+        vm.expectRevert("PantosHub: service node must be active");
+
+        pantosHubProxy.decreaseServiceNodeStake(SERVICE_NODE_ADDRESS, 1);
+    }
+
+    function test_decreaseServiceNodeStake_WithStake0() external {
+        registerServiceNode();
+        vm.prank(SERVICE_NODE_ADDRESS);
+        vm.expectRevert("PantosHub: reduced stake must be greater than 0");
+
+        pantosHubProxy.decreaseServiceNodeStake(SERVICE_NODE_ADDRESS, 0);
+    }
+
+    function test_decreaseServiceNodeStake_WithNotEnoughStake() external {
+        registerServiceNode();
+        vm.prank(SERVICE_NODE_ADDRESS);
+        vm.expectRevert(
+            "PantosHub: new stake must be at least the minimum "
+            "service node stake"
+        );
+
+        pantosHubProxy.decreaseServiceNodeStake(SERVICE_NODE_ADDRESS, 1);
+    }
+
+    function test_updateServiceNodeUrl() external {
+        string memory newSERVICE_NODE_URL = "new service node url";
+        registerServiceNode();
+        vm.prank(SERVICE_NODE_ADDRESS);
+        vm.expectEmit();
+        emit IPantosHub.ServiceNodeUrlUpdated(SERVICE_NODE_ADDRESS);
+
+        pantosHubProxy.updateServiceNodeUrl(newSERVICE_NODE_URL);
+
+        PantosTypes.ServiceNodeRecord memory serviceNodeRecord = pantosHubProxy
+            .getServiceNodeRecord(SERVICE_NODE_ADDRESS);
+        assertEq(serviceNodeRecord.url, newSERVICE_NODE_URL);
+    }
+
+    function test_updateServiceNodeUrl_WhenPaused() external {
+        bytes memory calldata_ = abi.encodeWithSelector(
+            PantosHub.updateServiceNodeUrl.selector,
+            "new service node url"
+        );
+
+        whenNotPausedTest(address(pantosHubProxy), calldata_);
+    }
+
+    function test_updateServiceNodeUrlL_WithEmptyUrl() external {
+        registerServiceNode();
+        vm.expectRevert("PantosHub: service node URL must not be empty");
+
+        pantosHubProxy.updateServiceNodeUrl("");
+    }
+
+    function test_updateServiceNodeUrl_WithNonUniqueUrl() external {
+        registerServiceNode();
+        vm.expectRevert("PantosHub: service node URL must be unique");
+
+        pantosHubProxy.updateServiceNodeUrl(SERVICE_NODE_URL);
+    }
+
+    function test_updateServiceNodeUrl_WhenServiceNodeNotActive() external {
+        registerServiceNode();
+        unregisterServicenode();
+        vm.expectRevert("PantosHub: service node must be active");
+
+        pantosHubProxy.updateServiceNodeUrl(SERVICE_NODE_URL);
+    }
+
+    function test_transfer() external {
+        registerToken();
+        registerServiceNode();
+        mockPandasToken_getPantosForwarder(
+            PANDAS_TOKEN_ADDRESS,
+            PANTOS_FORWARDER_ADDRESS
+        );
+        mockPantosForwarder_verifyAndForwardTransfer(
+            PANTOS_FORWARDER_ADDRESS,
+            transferRequest(),
+            ""
+        );
+        vm.expectEmit();
+        emit IPantosHub.Transfer(
+            NEXT_TRANSFER_ID,
+            transferSender,
+            TRANSFER_RECIPIENT,
+            PANDAS_TOKEN_ADDRESS,
+            TRANSFER_AMOUNT,
+            TRANSFER_FEE,
+            SERVICE_NODE_ADDRESS
+        );
+        vm.prank(SERVICE_NODE_ADDRESS);
+        vm.expectCall(
+            PANTOS_FORWARDER_ADDRESS,
+            abi.encodeWithSelector(
+                IPantosForwarder.verifyAndForwardTransfer.selector,
+                transferRequest(),
+                ""
+            )
+        );
+
+        uint256 transferId = pantosHubProxy.transfer(transferRequest(), "");
+        assertEq(transferId, NEXT_TRANSFER_ID);
+        assertEq(pantosHubProxy.getNextTransferId(), NEXT_TRANSFER_ID + 1);
+    }
+
+    function test_transfer_ByUnauthorizedParty() external {
+        initializePantosHub();
+        vm.expectRevert("PantosHub: caller must be the service node");
+
+        pantosHubProxy.transfer(transferRequest(), "");
+    }
+
+    function test_transferFrom_WithOldFactors() external {
+        registerTokenAndExternalToken();
+        registerServiceNode();
+        mockPandasToken_getPantosForwarder(
+            PANDAS_TOKEN_ADDRESS,
+            PANTOS_FORWARDER_ADDRESS
+        );
+        mockPantosForwarder_verifyAndForwardTransferFrom(
+            PANTOS_FORWARDER_ADDRESS,
+            transferFromRequest(),
+            ""
+        );
+        vm.expectEmit();
+        emit IPantosHub.TransferFrom(
+            NEXT_TRANSFER_ID,
+            uint256(otherBlockchain.blockchainId),
+            transferSender,
+            vm.toString(TRANSFER_RECIPIENT),
+            PANDAS_TOKEN_ADDRESS,
+            EXTERNAL_PANDAS_TOKEN_ADDRESS,
+            TRANSFER_AMOUNT,
+            TRANSFER_FEE,
+            SERVICE_NODE_ADDRESS
+        );
+        vm.prank(SERVICE_NODE_ADDRESS);
+        vm.expectCall(
+            PANTOS_FORWARDER_ADDRESS,
+            abi.encodeWithSelector(
+                IPantosForwarder.verifyAndForwardTransferFrom.selector,
+                0,
+                0,
+                transferFromRequest(),
+                ""
+            )
+        );
+
+        uint256 transferId = pantosHubProxy.transferFrom(
+            transferFromRequest(),
+            ""
+        );
+        assertEq(transferId, NEXT_TRANSFER_ID);
+        assertEq(pantosHubProxy.getNextTransferId(), NEXT_TRANSFER_ID + 1);
+    }
+
+    function test_transferFrom_WithNewFactors() external {
+        registerTokenAndExternalToken();
+        registerServiceNode();
+        mockPandasToken_getPantosForwarder(
+            PANDAS_TOKEN_ADDRESS,
+            PANTOS_FORWARDER_ADDRESS
+        );
+        mockPantosForwarder_verifyAndForwardTransferFrom(
+            PANTOS_FORWARDER_ADDRESS,
+            transferFromRequest(),
+            ""
+        );
+        vm.expectEmit();
+        emit IPantosHub.TransferFrom(
+            NEXT_TRANSFER_ID,
+            uint256(otherBlockchain.blockchainId),
+            transferSender,
+            vm.toString(TRANSFER_RECIPIENT),
+            PANDAS_TOKEN_ADDRESS,
+            EXTERNAL_PANDAS_TOKEN_ADDRESS,
+            TRANSFER_AMOUNT,
+            TRANSFER_FEE,
+            SERVICE_NODE_ADDRESS
+        );
+        vm.prank(SERVICE_NODE_ADDRESS);
+        vm.warp(FEE_FACTOR_VALID_FROM);
+        vm.expectCall(
+            PANTOS_FORWARDER_ADDRESS,
+            abi.encodeWithSelector(
+                IPantosForwarder.verifyAndForwardTransferFrom.selector,
+                thisBlockchain.feeFactor,
+                otherBlockchain.feeFactor,
+                transferFromRequest(),
+                ""
+            )
+        );
+
+        uint256 transferId = pantosHubProxy.transferFrom(
+            transferFromRequest(),
+            ""
+        );
+        assertEq(transferId, NEXT_TRANSFER_ID);
+        assertEq(pantosHubProxy.getNextTransferId(), NEXT_TRANSFER_ID + 1);
+    }
+
+    function test_transferFrom_ByUnauthorizedParty() external {
+        initializePantosHub();
+        vm.expectRevert("PantosHub: caller must be the service node");
+
+        pantosHubProxy.transferFrom(transferFromRequest(), "");
+    }
+
+    function test_transferTo_WhenSourceAndDestinatioBlockchainsDiffer()
+        external
+    {
+        registerTokenAndExternalToken();
+        registerServiceNode();
+        mockPandasToken_getPantosForwarder(
+            PANDAS_TOKEN_ADDRESS,
+            PANTOS_FORWARDER_ADDRESS
+        );
+        mockPantosForwarder_verifyAndForwardTransferTo(
+            PANTOS_FORWARDER_ADDRESS,
+            transferToRequest(),
+            new address[](0),
+            new bytes[](0)
+        );
+        vm.expectEmit();
+        emit IPantosHub.TransferTo(
+            uint256(otherBlockchain.blockchainId),
+            OTHER_BLOCKCHAIN_TRANSFER_ID,
+            OTHER_BLOCKCHAIN_TRANSACTION_ID,
+            NEXT_TRANSFER_ID,
+            vm.toString(transferSender),
+            TRANSFER_RECIPIENT,
+            EXTERNAL_PANDAS_TOKEN_ADDRESS,
+            PANDAS_TOKEN_ADDRESS,
+            TRANSFER_AMOUNT,
+            TRANSFER_NONCE,
+            new address[](0),
+            new bytes[](0)
+        );
+        vm.prank(validatorAddress);
+        vm.expectCall(
+            PANTOS_FORWARDER_ADDRESS,
+            abi.encodeWithSelector(
+                IPantosForwarder.verifyAndForwardTransferTo.selector,
+                transferToRequest(),
+                new address[](0),
+                new bytes[](0)
+            )
+        );
+
+        uint256 transferId = pantosHubProxy.transferTo(
+            transferToRequest(),
+            new address[](0),
+            new bytes[](0)
+        );
+        assertEq(transferId, NEXT_TRANSFER_ID);
+        assertEq(pantosHubProxy.getNextTransferId(), NEXT_TRANSFER_ID + 1);
+    }
+
+    function test_transferTo_WhenSourceAndDestinatioBlockchainAreEqual()
+        external
+    {
+        registerTokenAndExternalToken();
+        registerServiceNode();
+        mockPandasToken_getPantosForwarder(
+            PANDAS_TOKEN_ADDRESS,
+            PANTOS_FORWARDER_ADDRESS
+        );
+        mockPantosForwarder_verifyAndForwardTransferTo(
+            PANTOS_FORWARDER_ADDRESS,
+            transferToRequest(),
+            new address[](0),
+            new bytes[](0)
+        );
+        PantosTypes.TransferToRequest
+            memory transferToRequest_ = transferToRequest();
+        transferToRequest_.sourceBlockchainId = uint256(
+            thisBlockchain.blockchainId
+        );
+        vm.expectEmit();
+        emit IPantosHub.TransferTo(
+            uint256(thisBlockchain.blockchainId),
+            OTHER_BLOCKCHAIN_TRANSFER_ID,
+            OTHER_BLOCKCHAIN_TRANSACTION_ID,
+            NEXT_TRANSFER_ID,
+            vm.toString(transferSender),
+            TRANSFER_RECIPIENT,
+            EXTERNAL_PANDAS_TOKEN_ADDRESS,
+            PANDAS_TOKEN_ADDRESS,
+            TRANSFER_AMOUNT,
+            TRANSFER_NONCE,
+            new address[](0),
+            new bytes[](0)
+        );
+        vm.prank(validatorAddress);
+        vm.expectCall(
+            PANTOS_FORWARDER_ADDRESS,
+            abi.encodeWithSelector(
+                IPantosForwarder.verifyAndForwardTransferTo.selector,
+                transferToRequest_,
+                new address[](0),
+                new bytes[](0)
+            )
+        );
+
+        uint256 transferId = pantosHubProxy.transferTo(
+            transferToRequest_,
+            new address[](0),
+            new bytes[](0)
+        );
+        assertEq(transferId, NEXT_TRANSFER_ID);
+        assertEq(pantosHubProxy.getNextTransferId(), NEXT_TRANSFER_ID + 1);
+    }
+
+    function test_transferTo_ByUnauthorizedParty() external {
+        initializePantosHub();
+        vm.expectRevert("PantosHub: caller is not the primary validator node");
+
+        pantosHubProxy.transferTo(
+            transferToRequest(),
+            new address[](0),
+            new bytes[](0)
+        );
+    }
+
+    function test_isServiceNodeInTheUnbondingPeriod_WhenInUnbondingPeriod()
+        external
+    {
+        registerServiceNode();
+        unregisterServicenode();
+
+        assertTrue(
+            pantosHubProxy.isServiceNodeInTheUnbondingPeriod(
+                SERVICE_NODE_ADDRESS
+            )
+        );
+    }
+
+    function test_isServiceNodeInTheUnbondingPeriod_WhenAlreadyWithdrawn()
+        external
+    {
+        registerServiceNode();
+        unregisterServicenode();
+        mockIerc20_transfer(
+            PANTOS_TOKEN_ADDRESS,
+            SERVICE_NODE_UNSTAKING_ADDRESS,
+            MINIMUM_SERVICE_NODE_STAKE,
+            true
+        );
+        vm.warp(BLOCK_TIMESTAMP + SERVICE_NODE_STAKE_UNBONDING_PERIOD);
+        vm.prank(SERVICE_NODE_UNSTAKING_ADDRESS);
+        pantosHubProxy.withdrawServiceNodeStake(SERVICE_NODE_ADDRESS);
+
+        assertFalse(
+            pantosHubProxy.isServiceNodeInTheUnbondingPeriod(
+                SERVICE_NODE_ADDRESS
+            )
+        );
+    }
+
+    function test_isServiceNodeInTheUnbondingPeriod_WhenNeverRegistered()
+        external
+    {
+        assertFalse(
+            pantosHubProxy.isServiceNodeInTheUnbondingPeriod(
+                SERVICE_NODE_ADDRESS
+            )
+        );
+    }
+
+    function test_isValidValidatorNodeNonce_WhenValid() external {
+        initializePantosHub();
+        mockPantosForwarder_isValidValidatorNodeNonce(
+            PANTOS_FORWARDER_ADDRESS,
+            0,
+            true
+        );
+
+        assertTrue(pantosHubProxy.isValidValidatorNodeNonce(0));
+    }
+
+    function test_isValidValidatorNodeNonce_WhenNotValid() external {
+        initializePantosHub();
+        vm.mockCall(
+            PANTOS_FORWARDER_ADDRESS,
+            abi.encodeWithSelector(
+                PantosForwarder.isValidValidatorNodeNonce.selector
+            ),
+            abi.encode(false)
+        );
+
+        assertFalse(pantosHubProxy.isValidValidatorNodeNonce(0));
+    }
+
+    function test_isValidSenderNodeNonce_WhenValid() external {
+        initializePantosHub();
+        mockPantosForwarder_isValidSenderNonce(
+            PANTOS_FORWARDER_ADDRESS,
+            transferSender,
+            0,
+            true
+        );
+
+        assertTrue(pantosHubProxy.isValidSenderNonce(transferSender, 0));
+    }
+
+    function test_isValidSenderNodeNonce_WhenNotValid() external {
+        initializePantosHub();
+        vm.mockCall(
+            PANTOS_FORWARDER_ADDRESS,
+            abi.encodeWithSelector(
+                PantosForwarder.isValidSenderNonce.selector
+            ),
+            abi.encode(false)
+        );
+
+        assertFalse(pantosHubProxy.isValidSenderNonce(transferSender, 0));
+    }
+
+    function test_verifyTransfer() external {
+        registerToken();
+        registerServiceNode();
+        mockPandasToken_getPantosForwarder(
+            PANDAS_TOKEN_ADDRESS,
+            PANTOS_FORWARDER_ADDRESS
+        );
+        mockIerc20_balanceOf(
+            PANDAS_TOKEN_ADDRESS,
+            transferSender,
+            TRANSFER_AMOUNT
+        );
+        mockIerc20_balanceOf(
+            PANTOS_TOKEN_ADDRESS,
+            transferSender,
+            TRANSFER_FEE
+        );
+        mockPantosForwarder_verifyTransfer(
+            PANTOS_FORWARDER_ADDRESS,
+            transferRequest(),
+            ""
+        );
+
+        pantosHubProxy.verifyTransfer(transferRequest(), "");
+    }
+
+    function test_verifyTransfer_WhenTokenNotRegistered() external {
+        vm.expectRevert("PantosHub: token must be registered");
+
+        pantosHubProxy.verifyTransfer(transferRequest(), "");
+    }
+
+    function test_verifyTransfer_WhenTokenHasNotSetTheRightForwarder()
+        external
+    {
+        registerToken();
+        mockPandasToken_getPantosForwarder(PANDAS_TOKEN_ADDRESS, address(123));
+        vm.expectRevert(
+            "PantosHub: Forwarder of Hub and transferred token must match"
+        );
+
+        pantosHubProxy.verifyTransfer(transferRequest(), "");
+    }
+
+    function test_verifyTransfer_WhenServiceNodeIsNotRegistered() external {
+        registerToken();
+        mockPandasToken_getPantosForwarder(
+            PANDAS_TOKEN_ADDRESS,
+            PANTOS_FORWARDER_ADDRESS
+        );
+        vm.expectRevert("PantosHub: service node must be registered");
+
+        pantosHubProxy.verifyTransfer(transferRequest(), "");
+    }
+
+    function test_verifyTransfer_WhenServiceNodeHasNotEnoughStake() external {
+        registerToken();
+        registerServiceNode();
+        mockPandasToken_getPantosForwarder(
+            PANDAS_TOKEN_ADDRESS,
+            PANTOS_FORWARDER_ADDRESS
+        );
+        pantosHubProxy.pause();
+        pantosHubProxy.setMinimumServiceNodeStake(
+            MINIMUM_SERVICE_NODE_STAKE + 1
+        );
+        vm.expectRevert("PantosHub: service node must have enough free stake");
+
+        pantosHubProxy.verifyTransfer(transferRequest(), "");
+    }
+
+    function test_verifyTransfer_WithPAN_WhenInsufficientPANbalance()
+        external
+    {
+        registerToken();
+        registerServiceNode();
+        PantosTypes.TransferRequest
+            memory transferRequest_ = transferRequest();
+        transferRequest_.token = PANTOS_TOKEN_ADDRESS;
+        mockPandasToken_getPantosForwarder(
+            PANTOS_TOKEN_ADDRESS,
+            PANTOS_FORWARDER_ADDRESS
+        );
+        mockPantosForwarder_verifyTransfer(
+            PANTOS_FORWARDER_ADDRESS,
+            transferRequest(),
+            ""
+        );
+        mockIerc20_balanceOf(
+            PANTOS_TOKEN_ADDRESS,
+            transferSender,
+            TRANSFER_AMOUNT + TRANSFER_FEE - 1
+        );
+        vm.expectRevert("PantosHub: insufficient balance of sender");
+
+        pantosHubProxy.verifyTransfer(transferRequest_, "");
+    }
+
+    function test_verifyTransfer_WithPANDAS_WhenInsufficientPANbalance()
+        external
+    {
+        registerToken();
+        registerServiceNode();
+        mockPandasToken_getPantosForwarder(
+            PANDAS_TOKEN_ADDRESS,
+            PANTOS_FORWARDER_ADDRESS
+        );
+        mockPantosForwarder_verifyTransfer(
+            PANTOS_FORWARDER_ADDRESS,
+            transferRequest(),
+            ""
+        );
+        mockIerc20_balanceOf(
+            PANDAS_TOKEN_ADDRESS,
+            transferSender,
+            TRANSFER_AMOUNT
+        );
+        mockIerc20_balanceOf(
+            PANTOS_TOKEN_ADDRESS,
+            transferSender,
+            TRANSFER_FEE - 1
+        );
+        vm.expectRevert(
+            "PantosHub: insufficient balance of sender for fee payment"
+        );
+
+        pantosHubProxy.verifyTransfer(transferRequest(), "");
+    }
+
+    function test_verifyTransfer_WithPANDAS_WhenInsufficientPANDASbalance()
+        external
+    {
+        registerToken();
+        registerServiceNode();
+        mockPandasToken_getPantosForwarder(
+            PANDAS_TOKEN_ADDRESS,
+            PANTOS_FORWARDER_ADDRESS
+        );
+        mockPantosForwarder_verifyTransfer(
+            PANTOS_FORWARDER_ADDRESS,
+            transferRequest(),
+            ""
+        );
+        mockIerc20_balanceOf(
+            PANDAS_TOKEN_ADDRESS,
+            transferSender,
+            TRANSFER_AMOUNT - 1
+        );
+        vm.expectRevert("PantosHub: insufficient balance of sender");
+
+        pantosHubProxy.verifyTransfer(transferRequest(), "");
+    }
+
+    function test_verifyTransferFrom() external {
+        registerTokenAndExternalToken();
+        registerServiceNode();
+        mockPandasToken_getPantosForwarder(
+            PANDAS_TOKEN_ADDRESS,
+            PANTOS_FORWARDER_ADDRESS
+        );
+        mockIerc20_balanceOf(
+            PANDAS_TOKEN_ADDRESS,
+            transferSender,
+            TRANSFER_AMOUNT
+        );
+        mockIerc20_balanceOf(
+            PANTOS_TOKEN_ADDRESS,
+            transferSender,
+            TRANSFER_FEE
+        );
+        mockPantosForwarder_verifyTransferFrom(
+            PANTOS_FORWARDER_ADDRESS,
+            transferFromRequest(),
+            ""
+        );
+
+        pantosHubProxy.verifyTransferFrom(transferFromRequest(), "");
+    }
+
+    function test_verifyTransferFrom_WithSameSourceAndDestinationBlockchain()
+        external
+    {
+        registerTokenAndExternalToken();
+        registerServiceNode();
+        PantosTypes.TransferFromRequest
+            memory transferFromRequest_ = transferFromRequest();
+        transferFromRequest_.destinationBlockchainId = uint256(
+            thisBlockchain.blockchainId
+        );
+        vm.expectRevert(
+            "PantosHub: source and destination blockchains must not be equal"
+        );
+
+        pantosHubProxy.verifyTransferFrom(transferFromRequest_, "");
+    }
+
+    function test_verifyTransferFrom_WithInactiveDestinationBlockchain()
+        external
+    {
+        registerTokenAndExternalToken();
+        registerServiceNode();
+        pantosHubProxy.unregisterBlockchain(
+            uint256(otherBlockchain.blockchainId)
+        );
+        vm.expectRevert("PantosHub: blockchain must be active");
+
+        pantosHubProxy.verifyTransferFrom(transferFromRequest(), "");
+    }
+
+    function test_verifyTransferFrom_WithNotRegisteredExternalToken()
+        external
+    {
+        registerToken();
+        registerServiceNode();
+        mockPandasToken_getPantosForwarder(
+            PANDAS_TOKEN_ADDRESS,
+            PANTOS_FORWARDER_ADDRESS
+        );
+        vm.expectRevert("PantosHub: external token must be registered");
+
+        pantosHubProxy.verifyTransferFrom(transferFromRequest(), "");
+    }
+
+    function test_verifyTransferFrom_WithUnmatchingExternalToken() external {
+        registerTokenAndExternalToken();
+        registerServiceNode();
+        PantosTypes.TransferFromRequest
+            memory transferFromRequest_ = transferFromRequest();
+        transferFromRequest_.destinationToken = "123";
+        mockPandasToken_getPantosForwarder(
+            PANDAS_TOKEN_ADDRESS,
+            PANTOS_FORWARDER_ADDRESS
+        );
+        vm.expectRevert("PantosHub: incorrect external token");
+
+        pantosHubProxy.verifyTransferFrom(transferFromRequest_, "");
+    }
+
+    function test_verifyTransferTo_WhenSourceAndDestinatioBlockchainsDiffer()
+        external
+    {
+        registerTokenAndExternalToken();
+        registerServiceNode();
+        mockPandasToken_getPantosForwarder(
+            PANDAS_TOKEN_ADDRESS,
+            PANTOS_FORWARDER_ADDRESS
+        );
+        mockPantosForwarder_verifyTransferTo(
+            PANTOS_FORWARDER_ADDRESS,
+            transferToRequest(),
+            new address[](0),
+            new bytes[](0)
+        );
+
+        pantosHubProxy.verifyTransferTo(
+            transferToRequest(),
+            new address[](0),
+            new bytes[](0)
+        );
+    }
+
+    function test_verifyTransferTo_WhenSourceAndDestinatioBlockchainAreEqual()
+        external
+    {
+        registerTokenAndExternalToken();
+        registerServiceNode();
+        PantosTypes.TransferToRequest
+            memory transferToRequest_ = transferToRequest();
+        transferToRequest_.sourceBlockchainId = uint256(
+            thisBlockchain.blockchainId
+        );
+        mockPandasToken_getPantosForwarder(
+            PANDAS_TOKEN_ADDRESS,
+            PANTOS_FORWARDER_ADDRESS
+        );
+        mockPantosForwarder_verifyTransferTo(
+            PANTOS_FORWARDER_ADDRESS,
+            transferToRequest(),
+            new address[](0),
+            new bytes[](0)
+        );
+
+        pantosHubProxy.verifyTransferTo(
+            transferToRequest_,
+            new address[](0),
+            new bytes[](0)
+        );
+    }
+
+    function test_verifyTransferTo_WhenSourceTransferIdAlreadyUsed() external {
+        registerTokenAndExternalToken();
+        registerServiceNode();
+        mockPandasToken_getPantosForwarder(
+            PANDAS_TOKEN_ADDRESS,
+            PANTOS_FORWARDER_ADDRESS
+        );
+        mockPantosForwarder_verifyTransferTo(
+            PANTOS_FORWARDER_ADDRESS,
+            transferToRequest(),
+            new address[](0),
+            new bytes[](0)
+        );
+        vm.prank(validatorAddress);
+        pantosHubProxy.transferTo(
+            transferToRequest(),
+            new address[](0),
+            new bytes[](0)
+        );
+        vm.expectRevert("PantosHub: source transfer ID already used");
+
+        pantosHubProxy.verifyTransferTo(
+            transferToRequest(),
+            new address[](0),
+            new bytes[](0)
+        );
+    }
+
+    function test_getPantosForwarder() external {
+        initializePantosHub();
+
+        assertEq(
+            PANTOS_FORWARDER_ADDRESS,
+            pantosHubProxy.getPantosForwarder()
+        );
+    }
+
+    function test_getPantosToken() external {
+        initializePantosHub();
+
+        assertEq(PANTOS_TOKEN_ADDRESS, pantosHubProxy.getPantosToken());
+    }
+
+    function test_getPrimaryValidatorNode() external {
+        initializePantosHub();
+
+        assertEq(validatorAddress, pantosHubProxy.getPrimaryValidatorNode());
+    }
+
+    function test_getNumberBlockchains() external {
+        assertEq(
+            uint256(type(BlockchainId).max),
+            pantosHubProxy.getNumberBlockchains()
+        );
+    }
+
+    function test_getNumberActiveBlockchains() external {
+        assertEq(
+            uint256(type(BlockchainId).max),
+            pantosHubProxy.getNumberActiveBlockchains()
+        );
+    }
+
+    function test_getCurrentBlockchainId() external {
+        assertEq(
+            uint256(thisBlockchain.blockchainId),
+            pantosHubProxy.getCurrentBlockchainId()
+        );
+    }
+
+    function test_getBlockchainRecord() external {
+        PantosTypes.BlockchainRecord
+            memory thisBlockchainRecord = pantosHubProxy.getBlockchainRecord(
+                uint256(thisBlockchain.blockchainId)
+            );
+
+        assertEq(thisBlockchainRecord.name, thisBlockchain.name);
+        assertEq(thisBlockchainRecord.active, true);
+    }
+
+    function test_getMinimumTokenStake() external {
+        assertEq(MINIMUM_TOKEN_STAKE, pantosHubProxy.getMinimumTokenStake());
+    }
+
+    function test_getMinimumServiceNodeStake() external {
+        assertEq(
+            MINIMUM_SERVICE_NODE_STAKE,
+            pantosHubProxy.getMinimumServiceNodeStake()
+        );
+    }
+
+    function test_getUnbondingPeriodServiceNodeStake() external {
+        assertEq(
+            SERVICE_NODE_STAKE_UNBONDING_PERIOD,
+            pantosHubProxy.getUnbondingPeriodServiceNodeStake()
+        );
+    }
+
+    function test_getTokens_WhenOnlyPantosTokenRegistered() external {
+        initializePantosHub();
+
+        address[] memory tokens = pantosHubProxy.getTokens();
+
+        assertEq(tokens.length, 1);
+        assertEq(tokens[0], PANTOS_TOKEN_ADDRESS);
+    }
+
+    function test_getTokens_WhenPandasTokenRegistered() external {
+        registerToken();
+
+        address[] memory tokens = pantosHubProxy.getTokens();
+
+        assertEq(tokens.length, 2);
+        assertEq(tokens[0], PANTOS_TOKEN_ADDRESS);
+        assertEq(tokens[1], PANDAS_TOKEN_ADDRESS);
+    }
+
+    function test_getTokenRecord_WhenTokenRegistered() external {
+        registerToken();
+
+        PantosTypes.TokenRecord memory tokenRecord = pantosHubProxy
+            .getTokenRecord(PANDAS_TOKEN_ADDRESS);
+
+        assertTrue(tokenRecord.active);
+        assertEq(tokenRecord.stake, MINIMUM_TOKEN_STAKE);
+    }
+
+    function test_getTokenRecord_WhenTokenNotRegistered() external {
+        PantosTypes.TokenRecord memory tokenRecord = pantosHubProxy
+            .getTokenRecord(address(123));
+
+        assertFalse(tokenRecord.active);
+        assertEq(tokenRecord.stake, 0);
+    }
+
+    function test_getExternalTokenRecord_WhenExternalTokenRegistered()
+        external
+    {
+        registerTokenAndExternalToken();
+
+        PantosTypes.ExternalTokenRecord
+            memory externalTokenRecord = pantosHubProxy.getExternalTokenRecord(
+                PANDAS_TOKEN_ADDRESS,
+                uint256(otherBlockchain.blockchainId)
+            );
+
+        assertTrue(externalTokenRecord.active);
+        assertEq(
+            externalTokenRecord.externalToken,
+            EXTERNAL_PANDAS_TOKEN_ADDRESS
+        );
+    }
+
+    function test_getExternalTokenRecord_WhenExternalTokenNotRegistered()
+        external
+    {
+        PantosTypes.ExternalTokenRecord
+            memory externalTokenRecord = pantosHubProxy.getExternalTokenRecord(
+                address(123),
+                uint256(otherBlockchain.blockchainId)
+            );
+
+        assertFalse(externalTokenRecord.active);
+        assertEq(externalTokenRecord.externalToken, "");
+    }
+
+    function test_getServiceNodes__WhenServiceNodeRegistered() external {
+        registerServiceNode();
+
+        address[] memory serviceNodes = pantosHubProxy.getServiceNodes();
+
+        assertEq(serviceNodes.length, 1);
+        assertEq(serviceNodes[0], SERVICE_NODE_ADDRESS);
+    }
+
+    function test_getServiceNodes__WhenServiceNodeNotRegistered() external {
+        address[] memory serviceNodes = pantosHubProxy.getServiceNodes();
+
+        assertEq(serviceNodes.length, 0);
+    }
+
+    function test_getServiceNodeRecord_WhenServiceNodeRegistered() external {
+        registerServiceNode();
+
+        PantosTypes.ServiceNodeRecord memory serviceNodeRecord = pantosHubProxy
+            .getServiceNodeRecord(SERVICE_NODE_ADDRESS);
+
+        assertTrue(serviceNodeRecord.active);
+        assertEq(serviceNodeRecord.url, SERVICE_NODE_URL);
+        assertEq(serviceNodeRecord.freeStake, MINIMUM_SERVICE_NODE_STAKE);
+        assertEq(serviceNodeRecord.lockedStake, 0);
+        assertEq(
+            serviceNodeRecord.unstakingAddress,
+            SERVICE_NODE_UNSTAKING_ADDRESS
+        );
+        assertEq(serviceNodeRecord.unregisterTime, 0);
+    }
+
+    function test_getServiceNodeRecord_WhenServiceNodeNotRegistered()
+        external
+    {
+        PantosTypes.ServiceNodeRecord memory serviceNodeRecord = pantosHubProxy
+            .getServiceNodeRecord(address(123));
+
+        assertFalse(serviceNodeRecord.active);
+        assertEq(serviceNodeRecord.url, "");
+        assertEq(serviceNodeRecord.freeStake, 0);
+        assertEq(serviceNodeRecord.lockedStake, 0);
+        assertEq(serviceNodeRecord.unstakingAddress, ADDRESS_ZERO);
+        assertEq(serviceNodeRecord.unregisterTime, 0);
+    }
+
+    function test_getNextTransferId() external {
+        assertEq(pantosHubProxy.getNextTransferId(), 0);
+    }
+
+    function test_getValidatorFeeRecord() external {
+        PantosTypes.ValidatorFeeRecord
+            memory thisBlockchainValidatorFeeRecord = pantosHubProxy
+                .getValidatorFeeRecord(uint256(thisBlockchain.blockchainId));
+
+        assertEq(
+            thisBlockchainValidatorFeeRecord.newFactor,
+            thisBlockchain.feeFactor
+        );
+        assertEq(thisBlockchainValidatorFeeRecord.oldFactor, 0);
+        assertEq(
+            thisBlockchainValidatorFeeRecord.validFrom,
+            FEE_FACTOR_VALID_FROM
+        );
+    }
+
+    function test_getMinimumValidatorFeeUpdatePeriod_WhenSet() external {
+        pantosHubProxy.setMinimumValidatorFeeUpdatePeriod(1);
+
+        assertEq(pantosHubProxy.getMinimumValidatorFeeUpdatePeriod(), 1);
+    }
+
+    function test_getMinimumValidatorFeeUpdatePeriod_WhenNotSet() external {
+        assertEq(pantosHubProxy.getMinimumValidatorFeeUpdatePeriod(), 0);
+    }
+
+    function mockPandasToken_getPantosForwarder(
+        address tokenAddress,
+        address pantosForwarderAddress
+    ) public {
+        vm.mockCall(
+            tokenAddress,
+            abi.encodeWithSelector(
+                PantosBaseToken.getPantosForwarder.selector
+            ),
+            abi.encode(pantosForwarderAddress)
+        );
+    }
+
+    function mockPandasToken_getOwner(
+        address tokenAddress,
+        address owner
+    ) public {
+        vm.mockCall(
+            tokenAddress,
+            abi.encodeWithSelector(PantosBaseToken.getOwner.selector),
+            abi.encode(owner)
+        );
+    }
+
+    function mockPantosForwarder_verifyTransfer(
+        address pantosForwarder,
+        PantosTypes.TransferRequest memory request,
+        bytes memory signature
+    ) public {
+        vm.mockCall(
+            pantosForwarder,
+            abi.encodeWithSelector(
+                PantosForwarder.verifyTransfer.selector,
+                request,
+                signature
+            ),
+            abi.encode()
+        );
+    }
+
+    function mockPantosForwarder_verifyTransferFrom(
+        address pantosForwarder,
+        PantosTypes.TransferFromRequest memory request,
+        bytes memory signature
+    ) public {
+        vm.mockCall(
+            pantosForwarder,
+            abi.encodeWithSelector(
+                PantosForwarder.verifyTransferFrom.selector,
+                request,
+                signature
+            ),
+            abi.encode()
+        );
+    }
+
+    function mockPantosForwarder_verifyTransferTo(
+        address pantosForwarder,
+        PantosTypes.TransferToRequest memory request,
+        address[] memory signerAddresses,
+        bytes[] memory signatures
+    ) public {
+        vm.mockCall(
+            pantosForwarder,
+            abi.encodeWithSelector(
+                PantosForwarder.verifyTransferTo.selector,
+                request,
+                signerAddresses,
+                signatures
+            ),
+            abi.encode()
+        );
+    }
+
+    function mockPantosForwarder_verifyAndForwardTransfer(
+        address pantosForwarder,
+        PantosTypes.TransferRequest memory request,
+        bytes memory signature
+    ) public {
+        vm.mockCall(
+            pantosForwarder,
+            abi.encodeWithSelector(
+                PantosForwarder.verifyAndForwardTransfer.selector,
+                request,
+                signature
+            ),
+            abi.encode()
+        );
+    }
+
+    function mockPantosForwarder_verifyAndForwardTransferFrom(
+        address pantosForwarder,
+        PantosTypes.TransferFromRequest memory request,
+        bytes memory signature
+    ) public {
+        vm.mockCall(
+            pantosForwarder,
+            abi.encodeWithSelector(
+                PantosForwarder.verifyAndForwardTransferFrom.selector,
+                request,
+                signature
+            ),
+            abi.encode()
+        );
+    }
+
+    function mockPantosForwarder_verifyAndForwardTransferTo(
+        address pantosForwarder,
+        PantosTypes.TransferToRequest memory request,
+        address[] memory signerAddresses,
+        bytes[] memory signatures
+    ) public {
+        vm.mockCall(
+            pantosForwarder,
+            abi.encodeWithSelector(
+                PantosForwarder.verifyAndForwardTransferTo.selector,
+                request,
+                signerAddresses,
+                signatures
+            ),
+            abi.encode()
+        );
+    }
+
+    function mockPantosForwarder_isValidValidatorNodeNonce(
+        address pantosForwarder,
+        uint256 nonce,
+        bool success
+    ) public {
+        vm.mockCall(
+            pantosForwarder,
+            abi.encodeWithSelector(
+                PantosForwarder.isValidValidatorNodeNonce.selector,
+                nonce
+            ),
+            abi.encode(success)
+        );
+    }
+
+    function mockPantosForwarder_isValidSenderNonce(
+        address pantosForwarder,
+        address sender,
+        uint256 nonce,
+        bool success
+    ) public {
+        vm.mockCall(
+            pantosForwarder,
+            abi.encodeWithSelector(
+                PantosForwarder.isValidSenderNonce.selector,
+                sender,
+                nonce
+            ),
+            abi.encode(success)
+        );
+    }
+
+    function registerToken() public {
+        initializePantosHub();
+        mockIerc20_transferFrom(
+            PANTOS_TOKEN_ADDRESS,
+            deployer(),
+            address(pantosHubProxy),
+            MINIMUM_TOKEN_STAKE,
+            true
+        );
+        mockPandasToken_getOwner(PANDAS_TOKEN_ADDRESS, deployer());
+        pantosHubProxy.registerToken(
+            PANDAS_TOKEN_ADDRESS,
+            MINIMUM_TOKEN_STAKE
+        );
+    }
+
+    function registerTokenAndExternalToken() public {
+        registerToken();
+        pantosHubProxy.registerExternalToken(
+            PANDAS_TOKEN_ADDRESS,
+            uint256(otherBlockchain.blockchainId),
+            EXTERNAL_PANDAS_TOKEN_ADDRESS
+        );
+    }
+
+    function registerServiceNode() public {
+        initializePantosHub();
+        mockIerc20_transferFrom(
+            PANTOS_TOKEN_ADDRESS,
+            SERVICE_NODE_ADDRESS,
+            address(pantosHubProxy),
+            MINIMUM_SERVICE_NODE_STAKE,
+            true
+        );
+        vm.prank(SERVICE_NODE_ADDRESS);
+        pantosHubProxy.registerServiceNode(
+            SERVICE_NODE_ADDRESS,
+            SERVICE_NODE_URL,
+            MINIMUM_SERVICE_NODE_STAKE,
+            SERVICE_NODE_UNSTAKING_ADDRESS
+        );
+    }
+
+    function unregisterServicenode() public {
+        initializePantosHub();
+        vm.prank(SERVICE_NODE_ADDRESS);
+        pantosHubProxy.unregisterServiceNode(SERVICE_NODE_ADDRESS);
+    }
+
+    function deployPantosHub() public {
+        ProxyAdmin proxyAdmin = new ProxyAdmin();
+        PantosHub pantosHubLogic = new PantosHub();
+
+        bytes memory initializerData = abi.encodeCall(
+            PantosHub.initialize,
+            (
+                uint256(thisBlockchain.blockchainId),
+                thisBlockchain.name,
+                MINIMUM_TOKEN_STAKE,
+                MINIMUM_SERVICE_NODE_STAKE,
+                SERVICE_NODE_STAKE_UNBONDING_PERIOD,
+                thisBlockchain.feeFactor,
+                FEE_FACTOR_VALID_FROM,
+                NEXT_TRANSFER_ID
+            )
+        );
+
+        // deploy proxy contract and point it to implementation
+        TransparentUpgradeableProxy transparentProxy = new TransparentUpgradeableProxy(
+                address(pantosHubLogic),
+                address(proxyAdmin),
+                initializerData
+            );
+
+        // wrap in ABI to support easier calls
+        pantosHubProxy = PantosHub(address(transparentProxy));
+    }
+
+    function registerOtherBlockchainAtPantosHub() public {
+        pantosHubProxy.registerBlockchain(
+            uint256(otherBlockchain.blockchainId),
+            otherBlockchain.name,
+            otherBlockchain.feeFactor,
+            FEE_FACTOR_VALID_FROM
+        );
+    }
+
+    function initializePantosHub() public {
+        if (!initialized) {
+            mockPandasToken_getOwner(PANTOS_TOKEN_ADDRESS, deployer());
+
+            // Set the forwarder, PAN token, and primary validator addresses
+            pantosHubProxy.setPantosForwarder(PANTOS_FORWARDER_ADDRESS);
+            pantosHubProxy.setPantosToken(PANTOS_TOKEN_ADDRESS);
+            pantosHubProxy.setPrimaryValidatorNode(validatorAddress);
+
+            registerOtherBlockchainAtPantosHub();
+
+            // Unpause the hub contract after initialization
+            pantosHubProxy.unpause();
+            initialized = true;
+        }
+    }
+}
