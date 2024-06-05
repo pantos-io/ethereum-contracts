@@ -5,7 +5,7 @@ pragma abicoder v2;
 
 import "@openzeppelin/contracts/token/ERC20/extensions/ERC20Pausable.sol";
 
-import "../interfaces/IPantosWrapper.sol";
+import "./interfaces/IPantosWrapper.sol";
 import "./PantosBaseToken.sol";
 
 /**

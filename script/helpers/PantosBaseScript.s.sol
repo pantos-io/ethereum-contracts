@@ -110,13 +110,14 @@ abstract contract PantosBaseScript is Script {
         _chainIdToPantosBlockchainIdMapping[43113] = BlockchainId.AVALANCHE; // Avax testnet
 
         _chainIdToPantosBlockchainIdMapping[137] = BlockchainId.POLYGON; // Polygon mainnet
-        _chainIdToPantosBlockchainIdMapping[80001] = BlockchainId.POLYGON; // Polygon testnet
+        _chainIdToPantosBlockchainIdMapping[80001] = BlockchainId.POLYGON; // Polygon mumbai testnet
+        _chainIdToPantosBlockchainIdMapping[80002] = BlockchainId.POLYGON; // Polygon amoy testnet
 
         _chainIdToPantosBlockchainIdMapping[25] = BlockchainId.CRONOS; // Cronos mainnet
         _chainIdToPantosBlockchainIdMapping[338] = BlockchainId.CRONOS; // Cronos testnet
 
-        _chainIdToPantosBlockchainIdMapping[250] = BlockchainId.FANTOM; // Polygon mainnet
-        _chainIdToPantosBlockchainIdMapping[4002] = BlockchainId.FANTOM; // Polygon testnet
+        _chainIdToPantosBlockchainIdMapping[250] = BlockchainId.FANTOM; // FANTOM mainnet
+        _chainIdToPantosBlockchainIdMapping[4002] = BlockchainId.FANTOM; // FANTOM testnet
 
         _chainIdToPantosBlockchainIdMapping[42220] = BlockchainId.CELO; // Celo mainnet
         _chainIdToPantosBlockchainIdMapping[44787] = BlockchainId.CELO; // Celo testnet

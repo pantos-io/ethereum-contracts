@@ -5,14 +5,12 @@ pragma solidity 0.8.23;
 
 import "forge-std/console2.sol";
 
-import "../src/contracts/PantosToken.sol";
+import "../src/PantosToken.sol";
 
-import "./PantosBaseTest.t.sol";
+import "./PantosBaseToken.t.sol";
 
-contract PantosTokenTest is PantosBaseTest {
+contract PantosTokenTest is PantosBaseTokenTest {
     PantosTokenHarness public pantosToken;
-    address public pantosForwarderAddress =
-        address(uint160(uint256(keccak256("PantosForwarderAddress"))));
 
     function setUp() public {
         pantosToken = new PantosTokenHarness(INITIAL_SUPPLY_PAN);
@@ -25,7 +23,7 @@ contract PantosTokenTest is PantosBaseTest {
     }
 
     function test_pause_AfterInitialization() external {
-        initializePantosToken();
+        initializeToken();
 
         pantosToken.pause();
 
@@ -33,7 +31,7 @@ contract PantosTokenTest is PantosBaseTest {
     }
 
     function test_pause_WhenPaused() external {
-        pantosToken.setPantosForwarder(pantosForwarderAddress);
+        pantosToken.setPantosForwarder(PANTOS_FORWARDER_ADDRESS);
         bytes memory calldata_ = abi.encodeWithSelector(
             PantosToken.pause.selector
         );
@@ -42,7 +40,7 @@ contract PantosTokenTest is PantosBaseTest {
     }
 
     function test_pause_ByNonOwner() external {
-        initializePantosToken();
+        initializeToken();
         bytes memory calldata_ = abi.encodeWithSelector(
             PantosToken.pause.selector
         );
@@ -51,13 +49,13 @@ contract PantosTokenTest is PantosBaseTest {
     }
 
     function test_unpause_AfterDeploy() external {
-        initializePantosToken();
+        initializeToken();
 
         assertFalse(pantosToken.paused());
     }
 
     function test_unpause_WhenNotpaused() external {
-        initializePantosToken();
+        initializeToken();
         bytes memory calldata_ = abi.encodeWithSelector(
             PantosToken.unpause.selector
         );
@@ -66,7 +64,7 @@ contract PantosTokenTest is PantosBaseTest {
     }
 
     function test_unpause_ByNonOwner() external {
-        pantosToken.setPantosForwarder(pantosForwarderAddress);
+        pantosToken.setPantosForwarder(PANTOS_FORWARDER_ADDRESS);
         bytes memory calldata_ = abi.encodeWithSelector(
             PantosToken.unpause.selector
         );
@@ -83,16 +81,16 @@ contract PantosTokenTest is PantosBaseTest {
     }
 
     function test_setPantosForwarder() external {
-        initializePantosToken();
+        initializeToken();
 
-        assertEq(pantosToken.getPantosForwarder(), pantosForwarderAddress);
+        assertEq(pantosToken.getPantosForwarder(), PANTOS_FORWARDER_ADDRESS);
     }
 
     function test_setPantosForwarder_WhenNotpaused() external {
-        initializePantosToken();
+        initializeToken();
         bytes memory calldata_ = abi.encodeWithSelector(
             PantosToken.setPantosForwarder.selector,
-            pantosForwarderAddress
+            PANTOS_FORWARDER_ADDRESS
         );
 
         whenPausedTest(address(pantosToken), calldata_);
@@ -101,7 +99,7 @@ contract PantosTokenTest is PantosBaseTest {
     function test_setPantosForwarder_ByNonOwner() external {
         bytes memory calldata_ = abi.encodeWithSelector(
             PantosToken.setPantosForwarder.selector,
-            pantosForwarderAddress
+            PANTOS_FORWARDER_ADDRESS
         );
 
         onlyOwnerTest(address(pantosToken), calldata_);
@@ -119,57 +117,8 @@ contract PantosTokenTest is PantosBaseTest {
         assertEq("Pantos", pantosToken.name());
     }
 
-    function test_pantosTransferTo() external {
-        initializePantosToken();
-        address receiver = address(2);
-        uint256 amount = 1_000;
-        uint256 receiverBalanceBefore = pantosToken.balanceOf(receiver);
-
-        vm.prank(pantosForwarderAddress);
-        pantosToken.pantosTransferTo(receiver, amount);
-
-        uint256 receiverBalanceAfter = pantosToken.balanceOf(receiver);
-        assertEq(receiverBalanceBefore + amount, receiverBalanceAfter);
-    }
-
-    function test_pantosTransferFrom() external {
-        initializePantosToken();
-        address sender = address(1);
-        uint256 amount = 1_000_000;
-        // topup sender balance
-        vm.prank(pantosForwarderAddress);
-        pantosToken.pantosTransferTo(sender, amount);
-        uint256 senderBalanceBefore = pantosToken.balanceOf(sender);
-
-        vm.prank(pantosForwarderAddress);
-        pantosToken.pantosTransferFrom(sender, amount);
-
-        uint256 senderBalanceAfter = pantosToken.balanceOf(sender);
-        assertEq(senderBalanceBefore - amount, senderBalanceAfter);
-    }
-
-    function test_pantosTransfer() external {
-        initializePantosToken();
-        address sender = address(1);
-        address receiver = address(2);
-        uint256 amount = 1_000_000;
-        // topup sender balance
-        vm.prank(pantosForwarderAddress);
-        pantosToken.pantosTransferTo(sender, amount);
-        uint256 senderBalanceBefore = pantosToken.balanceOf(sender);
-        uint256 receiverBalanceBefore = pantosToken.balanceOf(receiver);
-
-        vm.prank(pantosForwarderAddress);
-        pantosToken.pantosTransfer(sender, receiver, amount);
-
-        uint256 receiverBalanceAfter = pantosToken.balanceOf(receiver);
-        uint256 senderBalanceAfter = pantosToken.balanceOf(sender);
-        assertEq(receiverBalanceBefore + amount, receiverBalanceAfter);
-        assertEq(senderBalanceBefore - amount, senderBalanceAfter);
-    }
-
     function test_unsetPantosForwarder() external {
-        initializePantosToken();
+        initializeToken();
         vm.expectEmit();
         emit IPantosToken.PantosForwarderUnset();
 
@@ -178,15 +127,22 @@ contract PantosTokenTest is PantosBaseTest {
         assertEq(pantosToken.getPantosForwarder(), ADDRESS_ZERO);
     }
 
-    function test_getOwner() external {
-        initializePantosToken();
-
-        assertEq(pantosToken.getOwner(), deployer());
+    function initializeToken() public override {
+        pantosToken.setPantosForwarder(PANTOS_FORWARDER_ADDRESS);
+        pantosToken.unpause();
     }
 
-    function initializePantosToken() public {
-        pantosToken.setPantosForwarder(pantosForwarderAddress);
-        pantosToken.unpause();
+    function token() public view override returns (PantosBaseToken) {
+        return pantosToken;
+    }
+
+    function tokenRevertMsgPrefix()
+        public
+        pure
+        override
+        returns (string memory)
+    {
+        return "PantosToken:";
     }
 }
 

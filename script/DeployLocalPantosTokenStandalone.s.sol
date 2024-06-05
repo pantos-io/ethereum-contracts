@@ -2,7 +2,7 @@
 pragma solidity 0.8.23;
 pragma abicoder v2;
 
-import "../src/contracts/PantosToken.sol";
+import "../src/PantosToken.sol";
 
 import "./helpers/PantosTokenDeployer.s.sol";
 import "./helpers/Constants.s.sol";

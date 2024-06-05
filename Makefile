@@ -49,5 +49,5 @@ analyze-mythril:
        . ./.venv/bin/activate; \
 	   pip install --upgrade pip; \
        pip install mythril; \
-       myth analyze src/contracts/PantosToken.sol --solc-json mythril.config.json; \
+       myth analyze src/PantosToken.sol --solc-json mythril.config.json; \
     )

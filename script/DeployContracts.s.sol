@@ -2,12 +2,17 @@
 pragma solidity 0.8.23;
 pragma abicoder v2;
 
-import "./helpers/Constants.s.sol";
-import "./helpers/PantosHubDeployer.s.sol";
-import "./helpers/PantosForwarderDeployer.s.sol";
-import "./helpers/PantosWrapperDeployer.s.sol";
-import "./helpers/PantosTokenDeployer.s.sol";
-import "./helpers/BitpandaEcosystemTokenDeployer.s.sol";
+import {IPantosHub} from "../src/interfaces/IPantosHub.sol";
+import {PantosForwarder} from "../src/PantosForwarder.sol";
+import {PantosToken} from "../src/PantosToken.sol";
+import {BitpandaEcosystemToken} from "../src/BitpandaEcosystemToken.sol";
+
+import {Constants} from "./helpers/Constants.s.sol";
+import {PantosHubDeployer, DeployedFacets} from "./helpers/PantosHubDeployer.s.sol";
+import {PantosForwarderDeployer} from "./helpers/PantosForwarderDeployer.s.sol";
+import {PantosWrapperDeployer} from "./helpers/PantosWrapperDeployer.s.sol";
+import {PantosTokenDeployer} from "./helpers/PantosTokenDeployer.s.sol";
+import {BitpandaEcosystemTokenDeployer} from "./helpers/BitpandaEcosystemTokenDeployer.s.sol";
 
 /**
  * @title DeployContracts
@@ -28,9 +33,7 @@ contract DeployContracts is
     PantosTokenDeployer,
     BitpandaEcosystemTokenDeployer
 {
-    ProxyAdmin public proxyAdmin;
-    PantosHub public pantosHubProxy;
-    PantosHub public pantosHubLogic;
+    IPantosHub public pantosHubProxy;
     PantosForwarder public pantosForwarder;
     PantosToken public pantosToken;
     BitpandaEcosystemToken public bitpandaEcosystemToken;
@@ -55,8 +58,6 @@ contract DeployContracts is
         }
 
         vm.serializeAddress(addresses, "hub_proxy", address(pantosHubProxy));
-        vm.serializeAddress(addresses, "hub_logic", address(pantosHubLogic));
-        vm.serializeAddress(addresses, "hub_proxy_admin", address(proxyAdmin));
         vm.serializeAddress(addresses, "forwarder", address(pantosForwarder));
         vm.serializeAddress(addresses, "pan", address(pantosToken));
         addresses = vm.serializeAddress(
@@ -75,9 +76,7 @@ contract DeployContracts is
     ) public {
         vm.startBroadcast();
 
-        (proxyAdmin, pantosHubProxy, pantosHubLogic) = deployPantosHub(
-            nextTransferId
-        );
+        (pantosHubProxy, ) = deployPantosHub(nextTransferId);
 
         pantosForwarder = deployPantosForwarder();
         pantosToken = deployPantosToken(panSupply);

@@ -4,8 +4,8 @@ pragma abicoder v2;
 
 /* solhint-disable no-console*/
 
-import "../../src/contracts/PantosForwarder.sol";
-import "../../src/contracts/PantosToken.sol";
+import "../../src/PantosForwarder.sol";
+import "../../src/PantosToken.sol";
 
 import "./Constants.s.sol";
 import "./PantosBaseScript.s.sol";

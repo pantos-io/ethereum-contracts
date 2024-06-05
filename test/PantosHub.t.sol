@@ -3,71 +3,38 @@ pragma solidity 0.8.23;
 
 /* solhint-disable no-console*/
 
-import "forge-std/console2.sol";
+import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import {console2} from "forge-std/console2.sol";
+import {IERC173} from "@diamond/interfaces/IERC173.sol";
 
-import "../src/contracts/PantosHub.sol";
-import "../src/interfaces/PantosTypes.sol";
+import {PantosTypes} from "../src/interfaces/PantosTypes.sol";
+import {IPantosForwarder} from "../src/interfaces/IPantosForwarder.sol";
+import {IPantosRegistry} from "../src/interfaces/IPantosRegistry.sol";
+import {IPantosTransfer} from "../src/interfaces/IPantosTransfer.sol";
+import {PantosBaseToken} from "../src/PantosBaseToken.sol";
+import {PantosForwarder} from "../src/PantosForwarder.sol";
 
-import "./PantosBaseTest.t.sol";
+import {PantosHubDeployer} from "./PantosHubDeployer.t.sol";
 
-contract PantosHubTest is PantosBaseTest {
-    bool initialized = false;
-    PantosHub public pantosHubProxy;
-    address constant PANTOS_FORWARDER_ADDRESS =
-        address(uint160(uint256(keccak256("PantosForwarderAddress"))));
-    address constant PANTOS_TOKEN_ADDRESS =
-        address(uint160(uint256(keccak256("PantosTokenAddress"))));
-    address constant SERVICE_NODE_UNSTAKING_ADDRESS =
-        address(uint160(uint256(keccak256("ServiceNodeUnstakingAddress"))));
-    address constant TRANSFER_SENDER =
-        address(uint160(uint256(keccak256("TransferSender"))));
-
+contract PantosHubTest is PantosHubDeployer {
     function setUp() public {
         vm.warp(BLOCK_TIMESTAMP);
         deployPantosHub();
     }
 
     function test_SetUpState() external {
-        PantosTypes.BlockchainRecord
-            memory thisBlockchainRecord = pantosHubProxy.getBlockchainRecord(
-                uint256(thisBlockchain.blockchainId)
-            );
-        PantosTypes.ValidatorFeeRecord
-            memory thisBlockchainValidatorFeeRecord = pantosHubProxy
-                .getValidatorFeeRecord(uint256(thisBlockchain.blockchainId));
+        checkStatePantosHubAfterDeployment();
+    }
 
-        assertTrue(pantosHubProxy.paused());
-        assertEq(thisBlockchainRecord.name, thisBlockchain.name);
-        assertEq(thisBlockchainRecord.active, true);
-        assertEq(
-            pantosHubProxy.getCurrentBlockchainId(),
-            uint256(thisBlockchain.blockchainId)
-        );
-        assertEq(pantosHubProxy.getNumberBlockchains(), 1);
-        assertEq(pantosHubProxy.getNumberActiveBlockchains(), 1);
-        assertEq(
-            thisBlockchainValidatorFeeRecord.newFactor,
-            thisBlockchain.feeFactor
-        );
-        assertEq(thisBlockchainValidatorFeeRecord.oldFactor, 0);
-        assertEq(
-            thisBlockchainValidatorFeeRecord.validFrom,
-            FEE_FACTOR_VALID_FROM
-        );
-        assertEq(pantosHubProxy.getMinimumTokenStake(), MINIMUM_TOKEN_STAKE);
-        assertEq(
-            pantosHubProxy.getMinimumServiceNodeStake(),
-            MINIMUM_SERVICE_NODE_STAKE
-        );
-        assertEq(
-            pantosHubProxy.getUnbondingPeriodServiceNodeStake(),
-            SERVICE_NODE_STAKE_UNBONDING_PERIOD
-        );
-        assertEq(pantosHubProxy.getNextTransferId(), 0);
+    function test_PantosHubInitialization() external {
+        initializePantosHub();
+        checkStatePantosHubAfterInit();
     }
 
     function test_pause_AfterInitialization() external {
         initializePantosHub();
+        vm.expectEmit(address(pantosHubProxy));
+        emit IPantosRegistry.Paused(deployer());
 
         pantosHubProxy.pause();
 
@@ -76,7 +43,7 @@ contract PantosHubTest is PantosBaseTest {
 
     function test_pause_WhenPaused() external {
         bytes memory calldata_ = abi.encodeWithSelector(
-            PantosHub.pause.selector
+            IPantosRegistry.pause.selector
         );
 
         whenNotPausedTest(address(pantosHubProxy), calldata_);
@@ -85,14 +52,18 @@ contract PantosHubTest is PantosBaseTest {
     function test_pause_ByNonOwner() external {
         initializePantosHub();
         bytes memory calldata_ = abi.encodeWithSelector(
-            PantosHub.pause.selector
+            IPantosRegistry.pause.selector
         );
 
         onlyOwnerTest(address(pantosHubProxy), calldata_);
     }
 
     function test_unpause_AfterDeploy() external {
-        initializePantosHub();
+        _initializePantosHubValues();
+        vm.expectEmit(address(pantosHubProxy));
+        emit IPantosRegistry.Unpaused(deployer());
+
+        pantosHubProxy.unpause();
 
         assertFalse(pantosHubProxy.paused());
     }
@@ -100,7 +71,7 @@ contract PantosHubTest is PantosBaseTest {
     function test_unpause_WhenNotPaused() external {
         initializePantosHub();
         bytes memory calldata_ = abi.encodeWithSelector(
-            PantosHub.unpause.selector
+            IPantosRegistry.unpause.selector
         );
 
         whenPausedTest(address(pantosHubProxy), calldata_);
@@ -109,7 +80,7 @@ contract PantosHubTest is PantosBaseTest {
     function test_unpause_ByNonOwner() external {
         pantosHubProxy.setPantosForwarder(PANTOS_FORWARDER_ADDRESS);
         bytes memory calldata_ = abi.encodeWithSelector(
-            PantosHub.unpause.selector
+            IPantosRegistry.unpause.selector
         );
 
         onlyOwnerTest(address(pantosHubProxy), calldata_);
@@ -147,7 +118,7 @@ contract PantosHubTest is PantosBaseTest {
 
     function test_setPantosForwarder() external {
         vm.expectEmit(address(pantosHubProxy));
-        emit IPantosHub.PantosForwarderSet(PANTOS_FORWARDER_ADDRESS);
+        emit IPantosRegistry.PantosForwarderSet(PANTOS_FORWARDER_ADDRESS);
 
         pantosHubProxy.setPantosForwarder(PANTOS_FORWARDER_ADDRESS);
 
@@ -160,7 +131,7 @@ contract PantosHubTest is PantosBaseTest {
     function test_setPantosForwarder_WhenNotPaused() public {
         initializePantosHub();
         bytes memory calldata_ = abi.encodeWithSelector(
-            PantosHub.setPantosForwarder.selector,
+            IPantosRegistry.setPantosForwarder.selector,
             PANTOS_FORWARDER_ADDRESS
         );
 
@@ -169,7 +140,7 @@ contract PantosHubTest is PantosBaseTest {
 
     function test_setPantosForwarder_ByNonOwner() external {
         bytes memory calldata_ = abi.encodeWithSelector(
-            PantosHub.setPantosForwarder.selector,
+            IPantosRegistry.setPantosForwarder.selector,
             PANTOS_FORWARDER_ADDRESS
         );
 
@@ -189,7 +160,7 @@ contract PantosHubTest is PantosBaseTest {
     function test_setPantosToken() external {
         mockPandasToken_getOwner(PANTOS_TOKEN_ADDRESS, deployer());
         vm.expectEmit(address(pantosHubProxy));
-        emit IPantosHub.PantosTokenSet(PANTOS_TOKEN_ADDRESS);
+        emit IPantosRegistry.PantosTokenSet(PANTOS_TOKEN_ADDRESS);
 
         pantosHubProxy.setPantosToken(PANTOS_TOKEN_ADDRESS);
 
@@ -199,7 +170,7 @@ contract PantosHubTest is PantosBaseTest {
     function test_setPantosToken_WhenNotPaused() external {
         initializePantosHub();
         bytes memory calldata_ = abi.encodeWithSelector(
-            PantosHub.setPantosToken.selector,
+            IPantosRegistry.setPantosToken.selector,
             PANTOS_TOKEN_ADDRESS
         );
 
@@ -208,7 +179,7 @@ contract PantosHubTest is PantosBaseTest {
 
     function test_setPantosToken_ByNonOwner() external {
         bytes memory calldata_ = abi.encodeWithSelector(
-            PantosHub.setPantosToken.selector,
+            IPantosRegistry.setPantosToken.selector,
             PANTOS_TOKEN_ADDRESS
         );
 
@@ -231,7 +202,7 @@ contract PantosHubTest is PantosBaseTest {
 
     function test_setPrimaryValidatorNode() external {
         vm.expectEmit(address(pantosHubProxy));
-        emit IPantosHub.PrimaryValidatorNodeUpdated(validatorAddress);
+        emit IPantosRegistry.PrimaryValidatorNodeUpdated(validatorAddress);
 
         pantosHubProxy.setPrimaryValidatorNode(validatorAddress);
 
@@ -241,7 +212,7 @@ contract PantosHubTest is PantosBaseTest {
     function test_setPrimaryValidatorNode_WhenNotPaused() public {
         initializePantosHub();
         bytes memory calldata_ = abi.encodeWithSelector(
-            PantosHub.setPrimaryValidatorNode.selector,
+            IPantosRegistry.setPrimaryValidatorNode.selector,
             validatorAddress
         );
 
@@ -250,7 +221,7 @@ contract PantosHubTest is PantosBaseTest {
 
     function test_setPrimaryValidatorNode_ByNonOwner() external {
         bytes memory calldata_ = abi.encodeWithSelector(
-            PantosHub.setPrimaryValidatorNode.selector,
+            IPantosRegistry.setPrimaryValidatorNode.selector,
             validatorAddress
         );
 
@@ -259,7 +230,7 @@ contract PantosHubTest is PantosBaseTest {
 
     function test_registerBlockchain() external {
         vm.expectEmit();
-        emit IPantosHub.BlockchainRegistered(
+        emit IPantosRegistry.BlockchainRegistered(
             uint256(otherBlockchain.blockchainId)
         );
 
@@ -293,7 +264,7 @@ contract PantosHubTest is PantosBaseTest {
             uint256(otherBlockchain.blockchainId)
         );
         vm.expectEmit();
-        emit IPantosHub.BlockchainRegistered(
+        emit IPantosRegistry.BlockchainRegistered(
             uint256(otherBlockchain.blockchainId)
         );
 
@@ -323,7 +294,7 @@ contract PantosHubTest is PantosBaseTest {
 
     function test_registerBlockchain_ByNonOwner() external {
         bytes memory calldata_ = abi.encodeWithSelector(
-            PantosHub.registerBlockchain.selector,
+            IPantosRegistry.registerBlockchain.selector,
             uint256(otherBlockchain.blockchainId),
             otherBlockchain.name,
             otherBlockchain.feeFactor,
@@ -354,7 +325,7 @@ contract PantosHubTest is PantosBaseTest {
     function test_unregisterBlockchain() external {
         registerOtherBlockchainAtPantosHub();
         vm.expectEmit();
-        emit IPantosHub.BlockchainUnregistered(
+        emit IPantosRegistry.BlockchainUnregistered(
             uint256(otherBlockchain.blockchainId)
         );
 
@@ -374,7 +345,7 @@ contract PantosHubTest is PantosBaseTest {
 
     function test_unregisterBlockchain_ByNonOwner() external {
         bytes memory calldata_ = abi.encodeWithSelector(
-            PantosHub.unregisterBlockchain.selector,
+            IPantosRegistry.unregisterBlockchain.selector,
             uint256(otherBlockchain.blockchainId)
         );
 
@@ -414,7 +385,7 @@ contract PantosHubTest is PantosBaseTest {
     function test_updateBlockchainName() external {
         string memory newBlockchainName = "new name";
         vm.expectEmit();
-        emit IPantosHub.BlockchainNameUpdated(
+        emit IPantosRegistry.BlockchainNameUpdated(
             uint256(thisBlockchain.blockchainId)
         );
 
@@ -434,7 +405,7 @@ contract PantosHubTest is PantosBaseTest {
     function test_updateBlockchainName_WhenNotPaused() external {
         initializePantosHub();
         bytes memory calldata_ = abi.encodeWithSelector(
-            PantosHub.updateBlockchainName.selector,
+            IPantosRegistry.updateBlockchainName.selector,
             uint256(thisBlockchain.blockchainId),
             "new name"
         );
@@ -444,7 +415,7 @@ contract PantosHubTest is PantosBaseTest {
 
     function test_updateBlockchainName_ByNonOwner() external {
         bytes memory calldata_ = abi.encodeWithSelector(
-            PantosHub.updateBlockchainName.selector,
+            IPantosRegistry.updateBlockchainName.selector,
             uint256(thisBlockchain.blockchainId),
             "new name"
         );
@@ -490,7 +461,7 @@ contract PantosHubTest is PantosBaseTest {
         uint256 validFrom = FEE_FACTOR_VALID_FROM + 100;
         pantosHubProxy.updateFeeFactor(thisBlockchainId, newFactor, validFrom);
         vm.expectEmit();
-        emit IPantosHub.ValidatorFeeUpdated(
+        emit IPantosRegistry.ValidatorFeeUpdated(
             thisBlockchainId,
             0,
             newFactor,
@@ -516,7 +487,7 @@ contract PantosHubTest is PantosBaseTest {
         uint256 validFrom = FEE_FACTOR_VALID_FROM + 100;
         pantosHubProxy.updateFeeFactor(thisBlockchainId, newFactor, validFrom);
         vm.expectEmit();
-        emit IPantosHub.ValidatorFeeUpdated(
+        emit IPantosRegistry.ValidatorFeeUpdated(
             thisBlockchainId,
             thisBlockchain.feeFactor,
             newFactor,
@@ -536,7 +507,7 @@ contract PantosHubTest is PantosBaseTest {
 
     function test_updateFeeFactor_ByNonOwner() external {
         bytes memory calldata_ = abi.encodeWithSelector(
-            PantosHub.updateFeeFactor.selector,
+            IPantosRegistry.updateFeeFactor.selector,
             uint256(thisBlockchain.blockchainId),
             0,
             0
@@ -584,7 +555,7 @@ contract PantosHubTest is PantosBaseTest {
     function test_setMinimumTokenStake() external {
         uint256 minimumTokenStake = 1;
         vm.expectEmit();
-        emit IPantosHub.MinimumTokenStakeUpdated(minimumTokenStake);
+        emit IPantosRegistry.MinimumTokenStakeUpdated(minimumTokenStake);
 
         pantosHubProxy.setMinimumTokenStake(minimumTokenStake);
 
@@ -594,7 +565,7 @@ contract PantosHubTest is PantosBaseTest {
     function test_setMinimumTokenStake_WhenNotPaused() external {
         initializePantosHub();
         bytes memory calldata_ = abi.encodeWithSelector(
-            PantosHub.setMinimumTokenStake.selector,
+            IPantosRegistry.setMinimumTokenStake.selector,
             1
         );
 
@@ -603,7 +574,7 @@ contract PantosHubTest is PantosBaseTest {
 
     function test_setMinimumTokenStake_ByNonOwner() external {
         bytes memory calldata_ = abi.encodeWithSelector(
-            PantosHub.setMinimumTokenStake.selector,
+            IPantosRegistry.setMinimumTokenStake.selector,
             1
         );
 
@@ -613,7 +584,7 @@ contract PantosHubTest is PantosBaseTest {
     function test_setUnbondingPeriodServiceNodeStake() external {
         uint256 unbondingPeriodServiceNodeStake = 1;
         vm.expectEmit();
-        emit IPantosHub.UnbondingPeriodServiceNodeStakeUpdated(
+        emit IPantosRegistry.UnbondingPeriodServiceNodeStakeUpdated(
             unbondingPeriodServiceNodeStake
         );
 
@@ -629,7 +600,7 @@ contract PantosHubTest is PantosBaseTest {
 
     function test_setUnbondingPeriodServiceNodeStake_ByNonOwner() external {
         bytes memory calldata_ = abi.encodeWithSelector(
-            PantosHub.setUnbondingPeriodServiceNodeStake.selector,
+            IPantosRegistry.setUnbondingPeriodServiceNodeStake.selector,
             1
         );
 
@@ -639,7 +610,7 @@ contract PantosHubTest is PantosBaseTest {
     function test_setMinimumServiceNodeStake() external {
         uint256 minimumServiceNodeStake = 1;
         vm.expectEmit();
-        emit IPantosHub.MinimumServiceNodeStakeUpdated(
+        emit IPantosRegistry.MinimumServiceNodeStakeUpdated(
             minimumServiceNodeStake
         );
 
@@ -654,7 +625,7 @@ contract PantosHubTest is PantosBaseTest {
     function test_setMinimumServiceNodeStake_WhenNotPaused() external {
         initializePantosHub();
         bytes memory calldata_ = abi.encodeWithSelector(
-            PantosHub.setMinimumServiceNodeStake.selector,
+            IPantosRegistry.setMinimumServiceNodeStake.selector,
             1
         );
 
@@ -663,7 +634,7 @@ contract PantosHubTest is PantosBaseTest {
 
     function test_setMinimumServiceNodeStake_ByNonOwner() external {
         bytes memory calldata_ = abi.encodeWithSelector(
-            PantosHub.setMinimumServiceNodeStake.selector,
+            IPantosRegistry.setMinimumServiceNodeStake.selector,
             1
         );
 
@@ -685,7 +656,7 @@ contract PantosHubTest is PantosBaseTest {
 
     function test_setMinimumValidatorFeeUpdatePeriod_ByNonOwner() external {
         bytes memory calldata_ = abi.encodeWithSelector(
-            PantosHub.setMinimumValidatorFeeUpdatePeriod.selector,
+            IPantosRegistry.setMinimumValidatorFeeUpdatePeriod.selector,
             1
         );
 
@@ -703,7 +674,7 @@ contract PantosHubTest is PantosBaseTest {
         );
         mockPandasToken_getOwner(PANDAS_TOKEN_ADDRESS, deployer());
         vm.expectEmit();
-        emit IPantosHub.TokenRegistered(PANDAS_TOKEN_ADDRESS);
+        emit IPantosRegistry.TokenRegistered(PANDAS_TOKEN_ADDRESS);
         vm.expectCall(
             PANTOS_TOKEN_ADDRESS,
             abi.encodeWithSelector(
@@ -727,9 +698,7 @@ contract PantosHubTest is PantosBaseTest {
 
     function test_registerToken_ByNonOwnerAndPaused() external {
         vm.prank(address(111));
-        vm.expectRevert(
-            "PantosHub: caller is not the owner and contract is paused"
-        );
+        vm.expectRevert("LibDiamond: Must be contract owner");
 
         pantosHubProxy.registerToken(
             PANDAS_TOKEN_ADDRESS,
@@ -787,12 +756,12 @@ contract PantosHubTest is PantosBaseTest {
             true
         );
         vm.expectEmit();
-        emit IPantosHub.ExternalTokenUnregistered(
+        emit IPantosRegistry.ExternalTokenUnregistered(
             PANDAS_TOKEN_ADDRESS,
             uint256(otherBlockchain.blockchainId)
         );
         vm.expectEmit();
-        emit IPantosHub.TokenUnregistered(PANDAS_TOKEN_ADDRESS);
+        emit IPantosRegistry.TokenUnregistered(PANDAS_TOKEN_ADDRESS);
         vm.expectCall(
             PANTOS_TOKEN_ADDRESS,
             abi.encodeWithSelector(
@@ -821,9 +790,7 @@ contract PantosHubTest is PantosBaseTest {
 
     function test_unregisterToken_ByNonOwnerAndPaused() external {
         vm.prank(address(111));
-        vm.expectRevert(
-            "PantosHub: caller is not the owner and contract is paused"
-        );
+        vm.expectRevert("LibDiamond: Must be contract owner");
 
         pantosHubProxy.unregisterToken(PANDAS_TOKEN_ADDRESS);
     }
@@ -881,9 +848,7 @@ contract PantosHubTest is PantosBaseTest {
 
     function test_registerExternalToken_ByNonOwnerAndPaused() external {
         vm.prank(address(111));
-        vm.expectRevert(
-            "PantosHub: caller is not the owner and contract is paused"
-        );
+        vm.expectRevert("LibDiamond: Must be contract owner");
 
         pantosHubProxy.registerExternalToken(
             PANDAS_TOKEN_ADDRESS,
@@ -985,7 +950,7 @@ contract PantosHubTest is PantosBaseTest {
     function test_unregisterExternalToken() external {
         registerTokenAndExternalToken();
         vm.expectEmit();
-        emit IPantosHub.ExternalTokenUnregistered(
+        emit IPantosRegistry.ExternalTokenUnregistered(
             PANDAS_TOKEN_ADDRESS,
             uint256(otherBlockchain.blockchainId)
         );
@@ -1005,9 +970,7 @@ contract PantosHubTest is PantosBaseTest {
 
     function test_unregisterExternalToken_ByNonOwnerAndPaused() external {
         vm.prank(address(111));
-        vm.expectRevert(
-            "PantosHub: caller is not the owner and contract is paused"
-        );
+        vm.expectRevert("LibDiamond: Must be contract owner");
 
         pantosHubProxy.unregisterExternalToken(
             PANDAS_TOKEN_ADDRESS,
@@ -1183,7 +1146,7 @@ contract PantosHubTest is PantosBaseTest {
         );
         vm.prank(SERVICE_NODE_ADDRESS);
         vm.expectEmit();
-        emit IPantosHub.ServiceNodeRegistered(SERVICE_NODE_ADDRESS);
+        emit IPantosRegistry.ServiceNodeRegistered(SERVICE_NODE_ADDRESS);
         vm.expectCall(
             PANTOS_TOKEN_ADDRESS,
             abi.encodeWithSelector(
@@ -1219,7 +1182,7 @@ contract PantosHubTest is PantosBaseTest {
 
     function test_registerServiceNode_WhenPaused() external {
         bytes memory calldata_ = abi.encodeWithSelector(
-            PantosHub.registerServiceNode.selector,
+            IPantosRegistry.registerServiceNode.selector,
             SERVICE_NODE_ADDRESS,
             SERVICE_NODE_URL,
             MINIMUM_SERVICE_NODE_STAKE,
@@ -1302,7 +1265,7 @@ contract PantosHubTest is PantosBaseTest {
         );
     }
 
-    function test_registerServiceNode_WhenUnregisteredButStakeIsNotWithdrawn()
+    function test_registerServiceNode_WithDifferentUrlWhenNotWithdrawn()
         external
     {
         registerServiceNode();
@@ -1316,6 +1279,21 @@ contract PantosHubTest is PantosBaseTest {
 
         pantosHubProxy.registerServiceNode(
             SERVICE_NODE_ADDRESS,
+            string.concat(SERVICE_NODE_URL, "extra"),
+            MINIMUM_SERVICE_NODE_STAKE,
+            SERVICE_NODE_UNSTAKING_ADDRESS
+        );
+    }
+
+    function test_registerServiceNode_WithSameUrlWhenNotWithdrawn() external {
+        registerServiceNode();
+        vm.prank(SERVICE_NODE_ADDRESS);
+        pantosHubProxy.unregisterServiceNode(SERVICE_NODE_ADDRESS);
+        vm.prank(SERVICE_NODE_ADDRESS);
+        vm.expectRevert("PantosHub: service node URL must be unique");
+
+        pantosHubProxy.registerServiceNode(
+            SERVICE_NODE_ADDRESS,
             SERVICE_NODE_URL,
             MINIMUM_SERVICE_NODE_STAKE,
             SERVICE_NODE_UNSTAKING_ADDRESS
@@ -1325,7 +1303,7 @@ contract PantosHubTest is PantosBaseTest {
     function test_unregisterServiceNode() external {
         registerServiceNode();
         vm.expectEmit();
-        emit IPantosHub.ServiceNodeUnregistered(SERVICE_NODE_ADDRESS);
+        emit IPantosRegistry.ServiceNodeUnregistered(SERVICE_NODE_ADDRESS);
         vm.prank(SERVICE_NODE_ADDRESS);
 
         pantosHubProxy.unregisterServiceNode(SERVICE_NODE_ADDRESS);
@@ -1341,7 +1319,7 @@ contract PantosHubTest is PantosBaseTest {
 
     function test_unregisterServiceNode_WhenPaused() external {
         bytes memory calldata_ = abi.encodeWithSelector(
-            PantosHub.unregisterServiceNode.selector,
+            IPantosRegistry.unregisterServiceNode.selector,
             SERVICE_NODE_ADDRESS
         );
 
@@ -1738,7 +1716,7 @@ contract PantosHubTest is PantosBaseTest {
         registerServiceNode();
         vm.prank(SERVICE_NODE_ADDRESS);
         vm.expectEmit();
-        emit IPantosHub.ServiceNodeUrlUpdated(SERVICE_NODE_ADDRESS);
+        emit IPantosRegistry.ServiceNodeUrlUpdated(SERVICE_NODE_ADDRESS);
 
         pantosHubProxy.updateServiceNodeUrl(newSERVICE_NODE_URL);
 
@@ -1749,7 +1727,7 @@ contract PantosHubTest is PantosBaseTest {
 
     function test_updateServiceNodeUrl_WhenPaused() external {
         bytes memory calldata_ = abi.encodeWithSelector(
-            PantosHub.updateServiceNodeUrl.selector,
+            pantosHubProxy.updateServiceNodeUrl.selector,
             "new service node url"
         );
 
@@ -1770,10 +1748,22 @@ contract PantosHubTest is PantosBaseTest {
         pantosHubProxy.updateServiceNodeUrl(SERVICE_NODE_URL);
     }
 
-    function test_updateServiceNodeUrl_WhenServiceNodeNotActive() external {
+    function test_updateServiceNodeUrl_WithDifferentUrlWhenNotActive()
+        external
+    {
         registerServiceNode();
         unregisterServicenode();
         vm.expectRevert("PantosHub: service node must be active");
+
+        pantosHubProxy.updateServiceNodeUrl(
+            string.concat(SERVICE_NODE_URL, "extra")
+        );
+    }
+
+    function test_updateServiceNodeUrl_WithSameUrlWhenNotActive() external {
+        registerServiceNode();
+        unregisterServicenode();
+        vm.expectRevert("PantosHub: service node URL must be unique");
 
         pantosHubProxy.updateServiceNodeUrl(SERVICE_NODE_URL);
     }
@@ -1791,7 +1781,7 @@ contract PantosHubTest is PantosBaseTest {
             ""
         );
         vm.expectEmit();
-        emit IPantosHub.Transfer(
+        emit IPantosTransfer.Transfer(
             NEXT_TRANSFER_ID,
             transferSender,
             TRANSFER_RECIPIENT,
@@ -1835,7 +1825,7 @@ contract PantosHubTest is PantosBaseTest {
             ""
         );
         vm.expectEmit();
-        emit IPantosHub.TransferFrom(
+        emit IPantosTransfer.TransferFrom(
             NEXT_TRANSFER_ID,
             uint256(otherBlockchain.blockchainId),
             transferSender,
@@ -1879,7 +1869,7 @@ contract PantosHubTest is PantosBaseTest {
             ""
         );
         vm.expectEmit();
-        emit IPantosHub.TransferFrom(
+        emit IPantosTransfer.TransferFrom(
             NEXT_TRANSFER_ID,
             uint256(otherBlockchain.blockchainId),
             transferSender,
@@ -1934,7 +1924,7 @@ contract PantosHubTest is PantosBaseTest {
             new bytes[](0)
         );
         vm.expectEmit();
-        emit IPantosHub.TransferTo(
+        emit IPantosTransfer.TransferTo(
             uint256(otherBlockchain.blockchainId),
             OTHER_BLOCKCHAIN_TRANSFER_ID,
             OTHER_BLOCKCHAIN_TRANSACTION_ID,
@@ -1968,7 +1958,7 @@ contract PantosHubTest is PantosBaseTest {
         assertEq(pantosHubProxy.getNextTransferId(), NEXT_TRANSFER_ID + 1);
     }
 
-    function test_transferTo_WhenSourceAndDestinatioBlockchainAreEqual()
+    function test_transferTo_WhenSourceAndDestinationBlockchainAreEqual()
         external
     {
         registerTokenAndExternalToken();
@@ -1989,7 +1979,7 @@ contract PantosHubTest is PantosBaseTest {
             thisBlockchain.blockchainId
         );
         vm.expectEmit();
-        emit IPantosHub.TransferTo(
+        emit IPantosTransfer.TransferTo(
             uint256(thisBlockchain.blockchainId),
             OTHER_BLOCKCHAIN_TRANSFER_ID,
             OTHER_BLOCKCHAIN_TRANSACTION_ID,
@@ -2389,7 +2379,7 @@ contract PantosHubTest is PantosBaseTest {
         );
     }
 
-    function test_verifyTransferTo_WhenSourceAndDestinatioBlockchainAreEqual()
+    function test_verifyTransferTo_WhenSourceAndDestinationBlockchainAreEqual()
         external
     {
         registerTokenAndExternalToken();
@@ -2659,6 +2649,102 @@ contract PantosHubTest is PantosBaseTest {
         assertEq(pantosHubProxy.getMinimumValidatorFeeUpdatePeriod(), 0);
     }
 
+    function test_owner() external {
+        assertEq(pantosHubProxy.owner(), deployer());
+    }
+
+    function test_owner_AfterPantosHubInit() external {
+        initializePantosHub();
+
+        assertEq(pantosHubProxy.owner(), deployer());
+    }
+
+    function test_transferOwnership() external {
+        address newOwner = address(111);
+        vm.expectEmit(address(pantosHubProxy));
+        emit IERC173.OwnershipTransferred(deployer(), newOwner);
+
+        pantosHubProxy.transferOwnership(newOwner);
+
+        assertEq(pantosHubProxy.owner(), newOwner);
+    }
+
+    function test_transferOwnership_AfterPantosHubInit() external {
+        initializePantosHub();
+        address newOwner = address(111);
+        vm.expectEmit(address(pantosHubProxy));
+        emit IERC173.OwnershipTransferred(deployer(), newOwner);
+
+        pantosHubProxy.transferOwnership(newOwner);
+
+        assertEq(pantosHubProxy.owner(), newOwner);
+    }
+
+    function test_transferOwnership_RenounceOwnership() external {
+        vm.expectEmit(address(pantosHubProxy));
+        emit IERC173.OwnershipTransferred(deployer(), address(0));
+
+        pantosHubProxy.transferOwnership(address(0));
+
+        assertEq(pantosHubProxy.owner(), address(0));
+    }
+
+    function test_transferOwnership_ByNonOwner() external {
+        address newOwner = address(111);
+        vm.startPrank(address(123));
+        vm.expectRevert("LibDiamond: Must be contract owner");
+        pantosHubProxy.transferOwnership(newOwner);
+
+        assertEq(pantosHubProxy.owner(), deployer());
+    }
+
+    function test_transferOwnership_AfterReplaceFacets() external {
+        reDeployRegistryAndTransferFacetsAndDiamondCut();
+
+        address newOwner = address(111);
+        vm.expectEmit(address(pantosHubProxy));
+        emit IERC173.OwnershipTransferred(deployer(), newOwner);
+
+        pantosHubProxy.transferOwnership(newOwner);
+
+        assertEq(pantosHubProxy.owner(), newOwner);
+    }
+
+    function test_transferOwnership_ByNonOwnerAfterReplaceFacets() external {
+        reDeployRegistryAndTransferFacetsAndDiamondCut();
+        address newOwner = address(111);
+        vm.startPrank(address(123));
+        vm.expectRevert("LibDiamond: Must be contract owner");
+        pantosHubProxy.transferOwnership(newOwner);
+
+        assertEq(pantosHubProxy.owner(), deployer());
+    }
+
+    function onlyOwnerTest(
+        address callee,
+        bytes memory calldata_
+    ) public override {
+        string memory revertMessage = "LibDiamond: Must be contract owner";
+        vm.startPrank(address(111));
+        modifierTest(callee, calldata_, revertMessage);
+    }
+
+    function whenPausedTest(
+        address callee,
+        bytes memory calldata_
+    ) public override {
+        string memory revertMessage = "PantosHub: not paused";
+        modifierTest(callee, calldata_, revertMessage);
+    }
+
+    function whenNotPausedTest(
+        address callee,
+        bytes memory calldata_
+    ) public override {
+        string memory revertMessage = "PantosHub: paused";
+        modifierTest(callee, calldata_, revertMessage);
+    }
+
     function mockPandasToken_getPantosForwarder(
         address tokenAddress,
         address pantosForwarderAddress
@@ -2669,17 +2755,6 @@ contract PantosHubTest is PantosBaseTest {
                 PantosBaseToken.getPantosForwarder.selector
             ),
             abi.encode(pantosForwarderAddress)
-        );
-    }
-
-    function mockPandasToken_getOwner(
-        address tokenAddress,
-        address owner
-    ) public {
-        vm.mockCall(
-            tokenAddress,
-            abi.encodeWithSelector(PantosBaseToken.getOwner.selector),
-            abi.encode(owner)
         );
     }
 
@@ -2862,60 +2937,5 @@ contract PantosHubTest is PantosBaseTest {
         initializePantosHub();
         vm.prank(SERVICE_NODE_ADDRESS);
         pantosHubProxy.unregisterServiceNode(SERVICE_NODE_ADDRESS);
-    }
-
-    function deployPantosHub() public {
-        ProxyAdmin proxyAdmin = new ProxyAdmin();
-        PantosHub pantosHubLogic = new PantosHub();
-
-        bytes memory initializerData = abi.encodeCall(
-            PantosHub.initialize,
-            (
-                uint256(thisBlockchain.blockchainId),
-                thisBlockchain.name,
-                MINIMUM_TOKEN_STAKE,
-                MINIMUM_SERVICE_NODE_STAKE,
-                SERVICE_NODE_STAKE_UNBONDING_PERIOD,
-                thisBlockchain.feeFactor,
-                FEE_FACTOR_VALID_FROM,
-                NEXT_TRANSFER_ID
-            )
-        );
-
-        // deploy proxy contract and point it to implementation
-        TransparentUpgradeableProxy transparentProxy = new TransparentUpgradeableProxy(
-                address(pantosHubLogic),
-                address(proxyAdmin),
-                initializerData
-            );
-
-        // wrap in ABI to support easier calls
-        pantosHubProxy = PantosHub(address(transparentProxy));
-    }
-
-    function registerOtherBlockchainAtPantosHub() public {
-        pantosHubProxy.registerBlockchain(
-            uint256(otherBlockchain.blockchainId),
-            otherBlockchain.name,
-            otherBlockchain.feeFactor,
-            FEE_FACTOR_VALID_FROM
-        );
-    }
-
-    function initializePantosHub() public {
-        if (!initialized) {
-            mockPandasToken_getOwner(PANTOS_TOKEN_ADDRESS, deployer());
-
-            // Set the forwarder, PAN token, and primary validator addresses
-            pantosHubProxy.setPantosForwarder(PANTOS_FORWARDER_ADDRESS);
-            pantosHubProxy.setPantosToken(PANTOS_TOKEN_ADDRESS);
-            pantosHubProxy.setPrimaryValidatorNode(validatorAddress);
-
-            registerOtherBlockchainAtPantosHub();
-
-            // Unpause the hub contract after initialization
-            pantosHubProxy.unpause();
-            initialized = true;
-        }
     }
 }

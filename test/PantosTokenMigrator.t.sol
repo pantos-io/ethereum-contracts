@@ -5,7 +5,7 @@ pragma solidity 0.8.23;
 
 import "forge-std/console2.sol";
 
-import "../src/contracts/PantosTokenMigrator.sol";
+import "../src/PantosTokenMigrator.sol";
 
 import "./PantosBaseTest.t.sol";
 

@@ -3,10 +3,14 @@ pragma solidity 0.8.23;
 pragma abicoder v2;
 
 /* solhint-disable no-console*/
+import {console2} from "forge-std/console2.sol";
 
-import "../../src/interfaces/PantosTypes.sol";
+import {PantosTypes} from "../../src/interfaces/PantosTypes.sol";
+import {IPantosHub} from "../../src/interfaces/IPantosHub.sol";
+import {PantosToken} from "../../src/PantosToken.sol";
+import {PantosForwarder} from "../../src/PantosForwarder.sol";
 
-import "../helpers/PantosHubDeployer.s.sol";
+import {PantosHubDeployer} from "../helpers/PantosHubDeployer.s.sol";
 
 abstract contract PantosHubRedeployer is PantosHubDeployer {
     bool private _initialized;
@@ -14,7 +18,7 @@ abstract contract PantosHubRedeployer is PantosHubDeployer {
     mapping(address => mapping(BlockchainId => PantosTypes.ExternalTokenRecord))
         private _ownedToExternalTokens;
     PantosToken[] private _ownedTokens;
-    PantosHub private _oldPantosHubProxy;
+    IPantosHub private _oldPantosHubProxy;
     PantosForwarder private _pantosForwarder;
     PantosToken private _pantosToken;
 
@@ -27,7 +31,7 @@ abstract contract PantosHubRedeployer is PantosHubDeployer {
         address oldPantosHubProxyAddress
     ) public {
         _initialized = true;
-        _oldPantosHubProxy = PantosHub(oldPantosHubProxyAddress);
+        _oldPantosHubProxy = IPantosHub(oldPantosHubProxyAddress);
         _pantosForwarder = PantosForwarder(
             _oldPantosHubProxy.getPantosForwarder()
         );
@@ -35,15 +39,13 @@ abstract contract PantosHubRedeployer is PantosHubDeployer {
         readOwnedAndExternalTokens(_oldPantosHubProxy);
     }
 
-    function readOwnedAndExternalTokens(PantosHub pantosHubProxy) public {
+    function readOwnedAndExternalTokens(IPantosHub pantosHubProxy) public {
         Blockchain memory blockchain = determineBlockchain();
         address[] memory tokens = pantosHubProxy.getTokens();
         for (uint256 i = 0; i < tokens.length; i++) {
             PantosToken token = PantosToken(tokens[i]);
-            if (
-                token.owner() == msg.sender &&
-                tokens[i] != address(_pantosToken)
-            ) {
+            if (token.owner() == msg.sender) {
+                console2.log("adding %s to owned tokens", token.symbol());
                 _ownedTokens.push(token);
                 for (
                     uint256 blockchainId;
@@ -69,12 +71,20 @@ abstract contract PantosHubRedeployer is PantosHubDeployer {
                         ] = externalTokenRecord;
                     }
                 }
+            } else {
+                console2.log(
+                    "skipped adding %s to owned tokens; owner: %s;"
+                    " address: %s",
+                    token.symbol(),
+                    token.owner(),
+                    address(token)
+                );
             }
         }
     }
 
     function migrateTokensFromOldHubToNewHub(
-        PantosHub newPantosHubProxy
+        IPantosHub newPantosHubProxy
     ) public onlyPantosHubRedeployerInitialized {
         uint256 minimumTokenStake = newPantosHubProxy.getMinimumTokenStake();
         console2.log(
@@ -86,14 +96,16 @@ abstract contract PantosHubRedeployer is PantosHubDeployer {
         _pantosToken.approve(address(newPantosHubProxy), panTokensToApprove);
         console2.log("PantosToken.approve(%d)", panTokensToApprove);
         for (uint256 i = 0; i < _ownedTokens.length; i++) {
-            newPantosHubProxy.registerToken(
-                address(_ownedTokens[i]),
-                minimumTokenStake
-            );
-            console2.log(
-                "New PantosHub.registerToken(%s)",
-                address(_ownedTokens[i])
-            );
+            if (address(_ownedTokens[i]) != address(_pantosToken)) {
+                newPantosHubProxy.registerToken(
+                    address(_ownedTokens[i]),
+                    minimumTokenStake
+                );
+                console2.log(
+                    "New PantosHub.registerToken(%s)",
+                    address(_ownedTokens[i])
+                );
+            }
             for (
                 uint256 blockchainId;
                 blockchainId < getBlockchainsLength();
@@ -142,7 +154,7 @@ abstract contract PantosHubRedeployer is PantosHubDeployer {
         public
         view
         onlyPantosHubRedeployerInitialized
-        returns (PantosHub)
+        returns (IPantosHub)
     {
         return _oldPantosHubProxy;
     }

@@ -3,9 +3,14 @@ pragma solidity 0.8.23;
 pragma abicoder v2;
 
 /* solhint-disable no-console*/
+import {console2} from "forge-std/console2.sol";
 
-import "../helpers/PantosBaseAddresses.s.sol";
-import "../helpers/PantosForwarderDeployer.s.sol";
+import {IPantosHub} from "../../src/interfaces/IPantosHub.sol";
+import {PantosToken} from "../../src/PantosToken.sol";
+import {PantosForwarder} from "../../src/PantosForwarder.sol";
+
+import {PantosBaseAddresses} from "../helpers/PantosBaseAddresses.s.sol";
+import {PantosForwarderDeployer} from "../helpers/PantosForwarderDeployer.s.sol";
 
 interface IOldPantosForwarder {
     function getPantosValidator() external returns (address);
@@ -16,7 +21,7 @@ abstract contract PantosForwarderRedeployer is
     PantosBaseAddresses
 {
     bool private _initialized;
-    PantosHub private _pantosHubProxy;
+    IPantosHub private _pantosHubProxy;
     PantosToken private _pantosToken;
 
     modifier onlyPantosForwarderRedeployerInitialized() {
@@ -27,7 +32,7 @@ abstract contract PantosForwarderRedeployer is
     function initializePantosForwarderRedeployer(
         address pantosHubProxyAddress
     ) public {
-        _pantosHubProxy = PantosHub(pantosHubProxyAddress);
+        _pantosHubProxy = IPantosHub(pantosHubProxyAddress);
         _pantosToken = PantosToken(_pantosHubProxy.getPantosToken());
         readContractAddresses(determineBlockchain());
         _initialized = true;

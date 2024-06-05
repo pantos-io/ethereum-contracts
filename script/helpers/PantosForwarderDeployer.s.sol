@@ -3,13 +3,14 @@ pragma solidity 0.8.23;
 pragma abicoder v2;
 
 /* solhint-disable no-console*/
+import {console2} from "forge-std/console2.sol";
 
-import "../../src/contracts/PantosHub.sol";
-import "../../src/contracts/PantosForwarder.sol";
-import "../../src/contracts/PantosToken.sol";
+import {IPantosHub} from "../../src/interfaces/IPantosHub.sol";
+import {PantosForwarder} from "../../src/PantosForwarder.sol";
+import {PantosToken} from "../../src/PantosToken.sol";
 
-import "./Constants.s.sol";
-import "./PantosBaseScript.s.sol";
+import {Constants} from "./Constants.s.sol";
+import {PantosBaseScript} from "./PantosBaseScript.s.sol";
 
 abstract contract PantosForwarderDeployer is PantosBaseScript {
     function deployPantosForwarder() public returns (PantosForwarder) {
@@ -24,7 +25,7 @@ abstract contract PantosForwarderDeployer is PantosBaseScript {
 
     function initializePantosForwarder(
         PantosForwarder pantosForwarder,
-        PantosHub pantosHubProxy,
+        IPantosHub pantosHubProxy,
         PantosToken pantosToken,
         address[] memory validatorNodeAddresses
     ) public {

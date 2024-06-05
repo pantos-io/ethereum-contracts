@@ -6,7 +6,7 @@ pragma abicoder v2;
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 
-import "../interfaces/IPantosToken.sol";
+import "./interfaces/IPantosToken.sol";
 
 /**
  * @title Pantos base token

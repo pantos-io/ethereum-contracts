@@ -3,13 +3,14 @@ pragma solidity 0.8.23;
 pragma abicoder v2;
 
 /* solhint-disable no-console*/
+import {console2} from "forge-std/console2.sol";
 
-import "../../src/contracts/PantosHub.sol";
-import "../../src/contracts/PantosForwarder.sol";
-import "../../src/contracts/BitpandaEcosystemToken.sol";
+import {IPantosHub} from "../../src/interfaces/IPantosHub.sol";
+import {PantosForwarder} from "../../src/PantosForwarder.sol";
+import {BitpandaEcosystemToken} from "../../src/BitpandaEcosystemToken.sol";
 
-import "./Constants.s.sol";
-import "./PantosBaseScript.s.sol";
+import {Constants} from "./Constants.s.sol";
+import {PantosBaseScript} from "./PantosBaseScript.s.sol";
 
 abstract contract BitpandaEcosystemTokenDeployer is PantosBaseScript {
     function deployBitpandaEcosystemToken(
@@ -29,7 +30,7 @@ abstract contract BitpandaEcosystemTokenDeployer is PantosBaseScript {
 
     function initializeBitpandaEcosystemToken(
         BitpandaEcosystemToken bitpandaEcosystemToken,
-        PantosHub pantosHubProxy,
+        IPantosHub pantosHubProxy,
         PantosForwarder pantosForwarder
     ) public {
         bitpandaEcosystemToken.setPantosForwarder(address(pantosForwarder));

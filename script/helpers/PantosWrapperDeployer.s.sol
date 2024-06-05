@@ -3,20 +3,21 @@ pragma solidity 0.8.23;
 pragma abicoder v2;
 
 /* solhint-disable no-console*/
+import {console2} from "forge-std/console2.sol";
 
-import "../../src/contracts/PantosHub.sol";
-import "../../src/contracts/PantosForwarder.sol";
-import "../../src/contracts/PantosWrapper.sol";
-import "../../src/contracts/wrappers/PantosAvaxWrapper.sol";
-import "../../src/contracts/wrappers/PantosBnbWrapper.sol";
-import "../../src/contracts/wrappers/PantosCeloWrapper.sol";
-import "../../src/contracts/wrappers/PantosCronosWrapper.sol";
-import "../../src/contracts/wrappers/PantosEtherWrapper.sol";
-import "../../src/contracts/wrappers/PantosFantomWrapper.sol";
-import "../../src/contracts/wrappers/PantosMaticWrapper.sol";
+import {IPantosHub} from "../../src/interfaces/IPantosHub.sol";
+import {PantosForwarder} from "../../src/PantosForwarder.sol";
+import {PantosWrapper} from "../../src/PantosWrapper.sol";
+import {PantosAvaxWrapper} from "../../src/wrappers/PantosAvaxWrapper.sol";
+import {PantosBnbWrapper} from "../../src/wrappers/PantosBnbWrapper.sol";
+import {PantosCeloWrapper} from "../../src/wrappers/PantosCeloWrapper.sol";
+import {PantosCronosWrapper} from "../../src/wrappers/PantosCronosWrapper.sol";
+import {PantosEtherWrapper} from "../../src/wrappers/PantosEtherWrapper.sol";
+import {PantosFantomWrapper} from "../../src/wrappers/PantosFantomWrapper.sol";
+import {PantosMaticWrapper} from "../../src/wrappers/PantosMaticWrapper.sol";
 
-import "./Constants.s.sol";
-import "./PantosBaseScript.s.sol";
+import {Constants} from "./Constants.s.sol";
+import {PantosBaseScript} from "./PantosBaseScript.s.sol";
 
 abstract contract PantosWrapperDeployer is PantosBaseScript {
     PantosWrapper[] public pantosWrappers;
@@ -49,7 +50,7 @@ abstract contract PantosWrapperDeployer is PantosBaseScript {
     }
 
     function initializePantosWrappers(
-        PantosHub pantosHubProxy,
+        IPantosHub pantosHubProxy,
         PantosForwarder pantosForwarder
     ) public {
         for (uint256 i; i < pantosWrappers.length; i++) {

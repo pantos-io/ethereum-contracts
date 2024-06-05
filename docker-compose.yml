@@ -1,0 +1,64 @@
+name: pantos-ethereum
+
+networks:
+  pantos-ethereum:
+    name: pantos-ethereum
+    attachable: true
+
+services:
+  eth:
+    restart: always
+    platform: linux/amd64
+    image: pantosio/ethereum-node:${DOCKER_TAG-latest}
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: blockchain-node
+      x-bake:
+        tags:
+          - ${DOCKER_REGISTRY-pantosio}/ethereum-node:${DOCKER_TAG-latest}
+    networks:
+      pantos-ethereum:
+    environment:
+      CHAIN_ID: 31337
+    volumes:
+      - eth-data:/data
+    ports:
+      - 8545:8545
+    healthcheck:
+      test: ["CMD-SHELL", "cast block-number"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 10s
+  bnb:
+    restart: always
+    platform: linux/amd64
+    image: pantosio/ethereum-node:${DOCKER_TAG-latest}
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: blockchain-node
+      x-bake:
+        tags:
+          - ${DOCKER_REGISTRY-pantosio}/ethereum-node:${DOCKER_TAG-latest}
+    networks:
+      pantos-ethereum:
+    volumes:
+      - bnb-data:/data
+    environment:
+      CHAIN_ID: 31338
+    ports:
+      - 8546:8545
+    healthcheck:
+      test: ["CMD-SHELL", "cast block-number"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 10s
+
+volumes:
+  eth-data:
+    name: eth-data
+  bnb-data:
+    name: bnb-data

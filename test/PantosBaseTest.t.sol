@@ -3,14 +3,13 @@ pragma solidity 0.8.23;
 
 pragma abicoder v2;
 
-import "forge-std/Test.sol";
+import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import {Test, Vm} from "forge-std/Test.sol";
 
-import "@openzeppelin/contracts/proxy/transparent/TransparentUpgradeableProxy.sol";
-import "@openzeppelin/contracts/proxy/transparent/ProxyAdmin.sol";
-
-import "../src/contracts/PantosHub.sol";
-import "../src/contracts/PantosForwarder.sol";
-import "../src/contracts/PantosToken.sol";
+import {PantosTypes} from "../src/interfaces/PantosTypes.sol";
+import {PantosBaseToken} from "../src/PantosBaseToken.sol";
+import {PantosForwarder} from "../src/PantosForwarder.sol";
+import {PantosToken} from "../src/PantosToken.sol";
 
 abstract contract PantosBaseTest is Test {
     uint256 public constant BLOCK_TIMESTAMP = 1000;
@@ -21,8 +20,9 @@ abstract contract PantosBaseTest is Test {
     uint256 public constant MINIMUM_TOKEN_STAKE = 10 ** 3 * 10 ** 8;
     uint256 public constant MINIMUM_SERVICE_NODE_STAKE = 10 ** 5 * 10 ** 8;
     uint256 public constant INITIAL_SUPPLY_PAN = 1_000_000_000;
+    uint256 public constant MINIMUM_VALIDATOR_FEE_UPDATE_PERIOD = 0;
     // bitpandaEcosystemToken
-    uint256 public constant INITIAL_SUPPLY_BEST = (10 ** 9) * (10 ** 8);
+    uint256 public constant INITIAL_SUPPLY_BEST = 1_000_000_000;
 
     // following is in sorted order, changing value will change order
     Vm.Wallet public validatorWallet = vm.createWallet("Validator");
@@ -37,8 +37,10 @@ abstract contract PantosBaseTest is Test {
 
     address public constant ADDRESS_ZERO = address(0);
     Vm.Wallet public testWallet = vm.createWallet("testWallet");
+    Vm.Wallet public testWallet2 = vm.createWallet("testWallet2");
 
     address public transferSender = testWallet.addr;
+    address public transferSender2 = testWallet2.addr;
 
     address constant TRANSFER_RECIPIENT =
         address(uint160(uint256(keccak256("TransferRecipient"))));
@@ -76,6 +78,21 @@ abstract contract PantosBaseTest is Test {
 
     function deployer() public view returns (address) {
         return address(this);
+    }
+
+    // src: https://ethereum.stackexchange.com/a/83577
+    function getRevertMsg(
+        bytes memory _returnData
+    ) public pure returns (string memory) {
+        // If the _returnData length is less than 68, then the transaction
+        // failed silently (without a revert message)
+        if (_returnData.length < 68) return "";
+
+        assembly {
+            // Slice the sighash.
+            _returnData := add(_returnData, 0x04)
+        }
+        return abi.decode(_returnData, (string)); // All that remains is the revert string
     }
 
     function transferRequest()
@@ -135,7 +152,10 @@ abstract contract PantosBaseTest is Test {
             );
     }
 
-    function onlyOwnerTest(address callee, bytes memory calldata_) public {
+    function onlyOwnerTest(
+        address callee,
+        bytes memory calldata_
+    ) public virtual {
         string memory revertMessage = "Ownable: caller is not the owner";
         vm.startPrank(address(111));
         modifierTest(callee, calldata_, revertMessage);
@@ -147,12 +167,18 @@ abstract contract PantosBaseTest is Test {
         modifierTest(callee, calldata_, revertMessage);
     }
 
-    function whenPausedTest(address callee, bytes memory calldata_) public {
+    function whenPausedTest(
+        address callee,
+        bytes memory calldata_
+    ) public virtual {
         string memory revertMessage = "Pausable: not paused";
         modifierTest(callee, calldata_, revertMessage);
     }
 
-    function whenNotPausedTest(address callee, bytes memory calldata_) public {
+    function whenNotPausedTest(
+        address callee,
+        bytes memory calldata_
+    ) public virtual {
         string memory revertMessage = "Pausable: paused";
         modifierTest(callee, calldata_, revertMessage);
     }
@@ -168,6 +194,14 @@ abstract contract PantosBaseTest is Test {
         vm.expectRevert(bytes(revertMessage));
         assembly {
             revert(add(response, 32), mload(response))
+        }
+    }
+
+    function assertSortedAscending(address[] memory addresses) public {
+        if (addresses.length > 1) {
+            for (uint i; i < addresses.length - 1; i++) {
+                assertTrue(addresses[i] < addresses[i + 1]);
+            }
         }
     }
 
@@ -237,6 +271,13 @@ abstract contract PantosBaseTest is Test {
             abi.encodeWithSelector(IERC20.totalSupply.selector),
             abi.encode(value)
         );
+    }
+
+    function assertEq(bytes4[] memory a, bytes4[] memory b) public {
+        assertEq(a.length, b.length);
+        for (uint i; i < a.length; i++) {
+            assertEq(a[i], b[i]);
+        }
     }
 
     // exclude this class from coverage

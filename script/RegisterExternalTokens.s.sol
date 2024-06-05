@@ -3,10 +3,11 @@ pragma solidity 0.8.23;
 pragma abicoder v2;
 
 /* solhint-disable no-console*/
+import {console2} from "forge-std/console2.sol";
 
-import "../src/contracts/PantosHub.sol";
-
-import "./helpers/PantosBaseAddresses.s.sol";
+import {PantosTypes} from "../src/interfaces/PantosTypes.sol";
+import {IPantosHub} from "../src/interfaces/IPantosHub.sol";
+import {PantosBaseAddresses} from "./helpers/PantosBaseAddresses.s.sol";
 
 /**
  * @title RegisterExternalTokens
@@ -23,7 +24,7 @@ import "./helpers/PantosBaseAddresses.s.sol";
  */
 contract RegisterExternalTokens is PantosBaseAddresses {
     Blockchain public thisBlockchain;
-    PantosHub public pantosHubProxy;
+    IPantosHub public pantosHubProxy;
 
     function registerExternalToken(Blockchain memory otherBlockchain) public {
         string[] memory tokenSymbols = getTokenSymbols();
@@ -125,7 +126,7 @@ contract RegisterExternalTokens is PantosBaseAddresses {
         vm.startBroadcast();
 
         thisBlockchain = determineBlockchain();
-        pantosHubProxy = PantosHub(
+        pantosHubProxy = IPantosHub(
             vm.parseAddress(getContractAddress(thisBlockchain, "hub_proxy"))
         );
 

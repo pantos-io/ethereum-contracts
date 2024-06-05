@@ -4,11 +4,10 @@ pragma abicoder v2;
 
 /* solhint-disable no-console*/
 
-import "../../src/contracts/PantosToken.sol";
-import "../../src/contracts/PantosHub.sol";
-import "../../src/interfaces/PantosTypes.sol";
+import {PantosToken} from "../../src/PantosToken.sol";
+import {PantosTypes} from "../../src/interfaces/PantosTypes.sol";
 
-import "./PantosBaseScript.s.sol";
+import {PantosBaseScript} from "./PantosBaseScript.s.sol";
 
 contract PantosBaseAddresses is PantosBaseScript {
     mapping(BlockchainId => bool) public initializedChains;

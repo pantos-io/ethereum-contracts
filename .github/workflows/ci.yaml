@@ -1,0 +1,120 @@
+name: Solidity based workflow
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+
+jobs:
+  format-lint:
+    name: Format and lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - uses: ./.github/actions/install-deps
+
+      - name: Formatting check Solidity
+        id: formatter-check-solidity
+        run: npx prettier --check --plugin=prettier-plugin-solidity '{src,script,test}/**/*.sol'
+
+      - name: Linting Solidity
+        run: npx solhint '{src,script,test}/**/*.sol'
+
+  build-test:
+    name: Build and test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - uses: ./.github/actions/install-deps
+
+      - name: Run Forge build
+        run: |
+          forge --version
+          forge build --sizes
+
+      - name: Run Forge tests
+        run: forge test -vvv
+      
+      - name: Run snapshot
+        run: forge snapshot --check
+
+      - name: Run forge coverage
+        run: NO_COLOR=1 forge coverage --ir-minimum --report summary >> $GITHUB_STEP_SUMMARY
+        
+  docker-build:
+    name: Build Docker images
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+        id: buildx
+
+      - name: Build and load
+        run: |
+          docker buildx bake \
+            --set "*.cache-from=type=gha" \
+            --set "*.cache-to=type=gha,mode=max" \
+            --set "*.platform=linux/amd64" \
+            --builder ${{ steps.buildx.outputs.name }} \
+            -f docker-compose.yml \
+            --load
+
+      - name: Test
+        timeout-minutes: 5
+        run: |
+          docker compose up &
+          echo "Waiting for the containers to become healthy..."
+          
+          # Loop until all containers are healthy
+          while docker ps --filter "health!=healthy" --filter "ancestor=$(docker compose config --services | xargs -I{} docker compose images -q {})" | grep -q .; do
+              echo "Some containers are not healthy yet, waiting..."
+              sleep 5
+          done
+          
+          echo "All containers are healthy"
+          docker compose stop
+  
+  static-analysis:
+    name: Static analysis
+    runs-on: ubuntu-latest
+    permissions:
+      actions: read
+      contents: read
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Analyze using Slither
+        uses: crytic/slither-action@v0.3.1
+        id: slither
+        with:
+          sarif: results.sarif
+          node-version: '20.10'
+          fail-on: none
+          slither-args: --checklist --markdown-root ${{ github.server_url }}/${{ github.repository }}/blob/${{ github.sha }}/
+
+      - name: Create/update checklist as PR comment
+        uses: actions/github-script@v7
+        if: github.event_name == 'pull_request'
+        env:
+          REPORT: ${{ steps.slither.outputs.stdout }}
+        with:
+          script: |
+            const script = require('.github/scripts/comment')
+            const header = '# Slither report'
+            const body = process.env.REPORT
+            await script({ github, context, header, body })

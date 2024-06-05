@@ -1,0 +1,10 @@
+# Ignore all files except the ones we care about
+**
+
+!foundry.toml
+!src
+!script
+!.gitmodules
+!remappings.txt
+!.git
+!entrypoint.sh

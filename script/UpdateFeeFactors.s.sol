@@ -3,11 +3,12 @@ pragma solidity 0.8.23;
 pragma abicoder v2;
 
 /* solhint-disable no-console*/
+import {console2} from "forge-std/console2.sol";
 
-import "../src/contracts/PantosHub.sol";
+import {IPantosHub} from "../src/interfaces/IPantosHub.sol";
 
-import "./helpers/Constants.s.sol";
-import "./helpers/PantosHubDeployer.s.sol";
+import {Constants} from "./helpers/Constants.s.sol";
+import {PantosBaseScript} from "./helpers/PantosHubDeployer.s.sol";
 
 /**
  * @title UpdateFeeFactors
@@ -21,7 +22,7 @@ import "./helpers/PantosHubDeployer.s.sol";
  */
 contract UpdateFeeFactors is PantosBaseScript {
     function run(address pantosHubProxyAddress) public {
-        PantosHub pantosHubProxy = PantosHub(pantosHubProxyAddress);
+        IPantosHub pantosHubProxy = IPantosHub(pantosHubProxyAddress);
         uint256 feeFactorValidFrom = vm.unixTime() /
             1000 +
             Constants.FEE_FACTOR_VALID_FROM_OFFSET;

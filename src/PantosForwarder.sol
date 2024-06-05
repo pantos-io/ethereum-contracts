@@ -8,9 +8,9 @@ import "@openzeppelin/contracts/security/Pausable.sol";
 import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 import "@openzeppelin/contracts/utils/Strings.sol";
 
-import "../interfaces/IPantosForwarder.sol";
-import "../interfaces/IPantosHub.sol";
-import "../interfaces/IPantosToken.sol";
+import "./interfaces/IPantosForwarder.sol";
+import "./interfaces/IPantosHub.sol";
+import "./interfaces/IPantosToken.sol";
 
 uint256 constant DEFAULT_MINIMUM_VALIDATOR_NODE_SIGNATURES = 3;
 uint constant INVALID_VALIDATOR_NODE_INDEX = type(uint).max;

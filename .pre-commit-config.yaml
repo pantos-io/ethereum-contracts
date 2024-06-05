@@ -1,0 +1,49 @@
+repos:
+  - repo: local
+    hooks:
+      - id: validate-commit-msg
+        name: Commit message is prefixed by Jira ticket number
+        entry: ^(?!PAN-\d*:.+)
+        language: pygrep
+        stages: [commit-msg]
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.4.0
+    hooks:
+      - id: no-commit-to-branch
+        name: Check that branch name follows our standard
+        description: Checks that a branch has a proper name
+        args: ["--branch", "main", "--pattern", '^(?!(feature|bugfix)\/PAN-[0-9]+-[a-z0-9._-]+).*']
+        stages: [commit-msg]
+  - repo: https://github.com/pre-commit/mirrors-prettier
+    rev: v3.1.0
+    hooks:
+      - id: prettier
+        args:
+        - --plugin=prettier-plugin-solidity
+        files: '\.sol$'
+        additional_dependencies:
+        - prettier@3.1.1
+        - prettier-plugin-solidity@1.2.0
+        - solhint@4.0.0
+        - solhint-plugin-prettier@0.1.0
+  - repo: local
+    hooks:
+      - id: solhint
+        name: "lint solidity"
+        entry: npx solhint
+        language: system
+        files: '\.sol$'
+  - repo: local
+    hooks:
+      - id: test
+        name: "forge test"
+        entry: forge test
+        language: system
+        pass_filenames: false
+  - repo: local
+    hooks:
+      - id: snapshot
+        name: "forge snapshot"
+        entry: forge snapshot
+        language: system
+        pass_filenames: false

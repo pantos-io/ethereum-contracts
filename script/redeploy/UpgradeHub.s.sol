@@ -2,31 +2,23 @@
 pragma solidity 0.8.23;
 pragma abicoder v2;
 
-import "../helpers/PantosHubDeployer.s.sol";
+import {PantosHubDeployer} from "../helpers/PantosHubDeployer.s.sol";
 
 /**
  * @title UpgradeHub
  *
- * @notice Deploy and upgrade the logic contract of the Pantos Hub contract.
+ * @notice Deploy and upgrade facets of the Pantos Hub.
  *
  * @dev Usage
  * forge script ./script/redeploy/UpgradeHub.s.sol --account <account> \
  *     --sender <sender> --rpc-url <rpc alias> --slow --force \
- *     --sig "run(address,address)" <proxyAdminAddress> <transparentProxyAddress>
+ *     --sig "run(address)" <pantosHubProxyAddress>
  */
 contract UpgradeHub is PantosHubDeployer {
-    function run(
-        address proxyAdminAddress,
-        address transparentProxyAddress
-    ) public {
+    function run(address pantosHubProxyAddress) public {
         vm.startBroadcast();
 
-        ProxyAdmin proxyAdmin = ProxyAdmin(proxyAdminAddress);
-        ITransparentUpgradeableProxy transparentProxy = ITransparentUpgradeableProxy(
-                transparentProxyAddress
-            );
-
-        upgradePantosHub(proxyAdmin, transparentProxy);
+        upgradePantosHub(pantosHubProxyAddress);
 
         vm.stopBroadcast();
     }

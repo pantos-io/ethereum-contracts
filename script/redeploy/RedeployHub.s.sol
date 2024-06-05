@@ -3,10 +3,13 @@ pragma solidity 0.8.23;
 pragma abicoder v2;
 
 /* solhint-disable no-console*/
+import {console2} from "forge-std/console2.sol";
 
-import "../../src/interfaces/PantosTypes.sol";
+import {PantosTypes} from "../../src/interfaces/PantosTypes.sol";
+import {IPantosHub} from "../../src/interfaces/IPantosHub.sol";
+import {PantosForwarder} from "../../src/PantosForwarder.sol";
 
-import "../helpers/PantosHubRedeployer.s.sol";
+import {PantosHubRedeployer} from "../helpers/PantosHubRedeployer.s.sol";
 
 /**
  * @title RedeployHub
@@ -28,16 +31,23 @@ import "../helpers/PantosHubRedeployer.s.sol";
  * @dev Usage
  * forge script ./script/redeploy/RedeployHub.s.sol --account <account> \
  *     --sender <sender> --rpc-url <rpc alias> --slow --force \
- *     --sig "run(address,uint256)" <oldPantosHubProxyAddress> <nextTransferId>
+ *     --sig "run(address,uint256)" <oldPantosHubProxyAddress>
  */
 contract RedeployHub is PantosHubRedeployer {
-    function deployAndInitializeNewPantosHub(
-        uint256 nextTransferId
-    ) public onlyPantosHubRedeployerInitialized returns (PantosHub) {
-        address primaryValidatorNodeAddress = getOldPantosHubProxy()
+    function deployAndInitializeNewPantosHub()
+        public
+        onlyPantosHubRedeployerInitialized
+        returns (IPantosHub)
+    {
+        IPantosHub oldPantosHubProxy = getOldPantosHubProxy();
+        if (!oldPantosHubProxy.paused()) {
+            oldPantosHubProxy.pause();
+        }
+        address primaryValidatorNodeAddress = oldPantosHubProxy
             .getPrimaryValidatorNode();
-        PantosHub newPantosHubProxy;
-        (, newPantosHubProxy, ) = deployPantosHub(nextTransferId);
+        uint256 nextTransferId = oldPantosHubProxy.getNextTransferId();
+
+        (IPantosHub newPantosHubProxy, ) = deployPantosHub(nextTransferId);
         initializePantosHub(
             newPantosHubProxy,
             getPantosForwarder(),
@@ -48,7 +58,7 @@ contract RedeployHub is PantosHubRedeployer {
     }
 
     function migrateHubAtForwarder(
-        PantosHub newPantosHubProxy
+        IPantosHub newPantosHubProxy
     ) public onlyPantosHubRedeployerInitialized {
         PantosForwarder pantosForwarder = getPantosForwarder();
         pantosForwarder.pause();
@@ -61,17 +71,12 @@ contract RedeployHub is PantosHubRedeployer {
         );
     }
 
-    function run(
-        address oldPantosHubProxyAddress,
-        uint256 nextTransferId
-    ) public {
+    function run(address oldPantosHubProxyAddress) public {
         vm.startBroadcast();
 
         initializePantosHubRedeployer(oldPantosHubProxyAddress);
 
-        PantosHub newPantosHubProxy = deployAndInitializeNewPantosHub(
-            nextTransferId
-        );
+        IPantosHub newPantosHubProxy = deployAndInitializeNewPantosHub();
         migrateHubAtForwarder(newPantosHubProxy);
         migrateTokensFromOldHubToNewHub(newPantosHubProxy);
 
