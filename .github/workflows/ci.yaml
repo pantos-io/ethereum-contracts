@@ -10,6 +10,9 @@ jobs:
   format-lint:
     name: Format and lint
     runs-on: ubuntu-latest
+    permissions:
+      # required for all workflows
+      security-events: write
     steps:
       - uses: step-security/harden-runner@v2
         with:
@@ -114,17 +117,4 @@ jobs:
         uses: github/codeql-action/upload-sarif@v3
         with:
           sarif_file: ${{ steps.slither.outputs.sarif }}
-
-      # - name: Create/update checklist as PR comment
-      #   uses: actions/github-script@v7
-      #   if: github.event_name == 'pull_request'
-      #   env:
-      #     REPORT: ${{ steps.slither.outputs.stdout }}
-      #   with:
-      #     github-token: ${{ secrets.GITHUB_TOKEN }}
-      #     script: |
-      #       const script = require('.github/scripts/comment')
-      #       const header = '# Slither report'
-      #       const body = process.env.REPORT
-      #       await script({ github, context, header, body })
 
