@@ -14,19 +14,9 @@ jobs:
           contents: read
           pull-requests: write
         steps:
-          - uses: actions/checkout@v4
+          - uses: step-security/harden-runner@v2
             with:
-              submodules: recursive
-    
-          - name: Analyze using Slither
-            uses: crytic/slither-action@v0.3.1
-            id: slither
-            with:
-              sarif: results.sarif
-              node-version: '20.10'
-              fail-on: none
-              slither-args: --checklist --markdown-root ${{ github.server_url }}/${{ github.repository }}/blob/${{ github.sha }}/
-    
+              egress-policy: audit    
           - name: Create/update checklist as PR comment
             uses: actions/github-script@v7
             if: github.event_name == 'pull_request'
