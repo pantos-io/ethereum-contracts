@@ -117,6 +117,7 @@ jobs:
         env:
           REPORT: ${{ steps.slither.outputs.stdout }}
         with:
+          github-token: ${{ secrets.GH_TOKEN }}
           script: |
             const script = require('.github/scripts/comment')
             const header = '# Slither report'
