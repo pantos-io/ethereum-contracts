@@ -117,9 +117,15 @@ jobs:
         env:
           REPORT: ${{ steps.slither.outputs.stdout }}
         with:
-          github-token: ${{ secrets.GH_TOKEN }}
+          # github-token: ${{ secrets.GH_TOKEN }}
           script: |
-            const script = require('.github/scripts/comment')
-            const header = '# Slither report'
-            const body = process.env.REPORT
-            await script({ github, context, header, body })
+            #const script = require('.github/scripts/comment')
+            #const header = '# Slither report'
+            #const body = process.env.REPORT
+            #await script({ github, context, header, body })
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: '👋 Thanks for reporting!'
+            })
