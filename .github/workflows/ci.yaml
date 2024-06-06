@@ -105,7 +105,7 @@ jobs:
           submodules: recursive
 
       - name: Analyze using Slither
-        uses: crytic/slither-action@v0.3.1
+        uses: crytic/slither-action@v0.4.0
         id: slither
         with:
           sarif: results.sarif
