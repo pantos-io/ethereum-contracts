@@ -29,8 +29,8 @@ RUN anvil --port 8545 --chain-id 31337 --state-interval 1 --dump-state anvil-sta
     while ! nc -z 127.0.0.1 8545; do echo 'Waiting for anvil to be available'; sleep 1; done && \
     forge script ./script/DeployContracts.s.sol --account local_deployer \
     --password '' --sender 0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266 --rpc-url local-8545 \
-    --sig "run(address,uint256,uint256,uint256)" 0x88CE2c1d82328f84Dd197f63482A3B68E18cD707 \
-    100000000000000000 100000000000000000 0 --broadcast && \
+    --sig "run(address,uint256,uint256,uint256,address[])" 0x88CE2c1d82328f84Dd197f63482A3B68E18cD707 \
+    100000000000000000 100000000000000000 0 [] --broadcast && \
     tee BNB_CHAIN.json AVALANCHE.json POLYGON.json \
     CRONOS.json FANTOM.json CELO.json < ETHEREUM.json && \
     echo "Anvil started, running deployment script..." && \
