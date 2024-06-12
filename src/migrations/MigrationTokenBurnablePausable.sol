@@ -1,11 +1,13 @@
 // SPDX-License-Identifier: GPL-3.0
 // slither-disable-next-line solc-version
-pragma solidity 0.8.23;
+pragma solidity 0.8.26;
 pragma abicoder v2;
 
-import "../PantosBaseToken.sol";
-import "@openzeppelin/contracts/token/ERC20/extensions/ERC20Burnable.sol";
-import "@openzeppelin/contracts/token/ERC20/extensions/ERC20Pausable.sol";
+import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
+import {ERC20Burnable} from "@openzeppelin/contracts/token/ERC20/extensions/ERC20Burnable.sol";
+import {ERC20Pausable} from "@openzeppelin/contracts/token/ERC20/extensions/ERC20Pausable.sol";
+
+import {PantosBaseToken} from "../PantosBaseToken.sol";
 
 contract MigrationTokenBurnablePausable is
     PantosBaseToken,
@@ -66,14 +68,14 @@ contract MigrationTokenBurnablePausable is
     }
 
     /**
-     * @dev See {ERC20Pausable-_beforeTokenTransfer}
+     * @dev See {ERC20-_update}.
      */
-    function _beforeTokenTransfer(
+    function _update(
         address sender,
         address recipient,
         uint256 amount
     ) internal override(ERC20, ERC20Pausable) {
-        ERC20Pausable._beforeTokenTransfer(sender, recipient, amount);
+        super._update(sender, recipient, amount);
     }
 
     /**

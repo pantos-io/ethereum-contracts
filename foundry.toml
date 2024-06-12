@@ -2,7 +2,7 @@
     src = "src"
     out = "out"
     libs = ["lib"]
-    solc = "0.8.23"
+    solc = "0.8.26"
 
     # Gives access to deploy script to read/write to filesystem
     fs_permissions = [{ access = "read-write", path = "./"}]

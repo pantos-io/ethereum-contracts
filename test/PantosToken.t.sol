@@ -1,13 +1,15 @@
 // SPDX-License-Identifier: GPL-3.0
-pragma solidity 0.8.23;
+pragma solidity 0.8.26;
 
 /* solhint-disable no-console*/
 
-import "forge-std/console2.sol";
+import {console2} from "forge-std/console2.sol";
 
-import "../src/PantosToken.sol";
+import {IPantosToken} from "../src/interfaces/IPantosToken.sol";
+import {PantosBaseToken} from "../src/PantosBaseToken.sol";
+import {PantosToken} from "../src/PantosToken.sol";
 
-import "./PantosBaseToken.t.sol";
+import {PantosBaseTokenTest} from "./PantosBaseToken.t.sol";
 
 contract PantosTokenTest is PantosBaseTokenTest {
     PantosTokenHarness public pantosToken;

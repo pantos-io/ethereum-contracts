@@ -1,14 +1,20 @@
 // SPDX-License-Identifier: GPL-3.0
-pragma solidity 0.8.23;
+pragma solidity 0.8.26;
 
 /* solhint-disable no-console*/
 
-import "forge-std/console2.sol";
+import {Strings} from "@openzeppelin/contracts/utils/Strings.sol";
+import {MessageHashUtils} from "@openzeppelin/contracts/utils/cryptography/MessageHashUtils.sol";
+import {console2} from "forge-std/console2.sol";
+import {Vm} from "forge-std/Test.sol";
 
-import "../src/PantosForwarder.sol";
-import "../src/interfaces/PantosTypes.sol";
+import {IPantosForwarder} from "../src/interfaces/IPantosForwarder.sol";
+import {PantosForwarder} from "../src/PantosForwarder.sol";
+import {PantosTypes} from "../src/interfaces/PantosTypes.sol";
+import {IPantosRegistry} from "../src/interfaces/IPantosRegistry.sol";
+import {PantosBaseToken} from "../src/PantosBaseToken.sol";
 
-import "./PantosBaseTest.t.sol";
+import {PantosBaseTest} from "./PantosBaseTest.t.sol";
 
 contract PantosForwarderTest is PantosBaseTest {
     address public constant PANTOS_HUB_ADDRESS =
@@ -1321,7 +1327,7 @@ contract PantosForwarderTest is PantosBaseTest {
         PantosTypes.TransferRequest memory request
     ) public view returns (bytes32) {
         return
-            ECDSA.toEthSignedMessageHash(
+            MessageHashUtils.toEthSignedMessageHash(
                 keccak256(
                     abi.encodePacked(
                         uint256(thisBlockchain.blockchainId),
@@ -1345,7 +1351,7 @@ contract PantosForwarderTest is PantosBaseTest {
         PantosTypes.TransferFromRequest memory request
     ) public view returns (bytes32) {
         return
-            ECDSA.toEthSignedMessageHash(
+            MessageHashUtils.toEthSignedMessageHash(
                 keccak256(
                     abi.encodePacked(
                         uint256(thisBlockchain.blockchainId),
@@ -1374,7 +1380,7 @@ contract PantosForwarderTest is PantosBaseTest {
         PantosTypes.TransferToRequest memory request
     ) public view returns (bytes32) {
         return
-            ECDSA.toEthSignedMessageHash(
+            MessageHashUtils.toEthSignedMessageHash(
                 keccak256(
                     abi.encodePacked(
                         request.sourceBlockchainId,

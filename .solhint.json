@@ -2,7 +2,7 @@
   "extends": "solhint:default",
   "rules": {
     "prettier/prettier": "error",
-    "compiler-version": ["error", "<=0.8.23"]
+    "compiler-version": ["error", "<=0.8.26"]
   },
   "plugins": ["prettier"]
 }

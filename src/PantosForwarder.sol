@@ -1,16 +1,18 @@
 // SPDX-License-Identifier: GPL-3.0
 // slither-disable-next-line solc-version
-pragma solidity 0.8.23;
+pragma solidity 0.8.26;
 pragma abicoder v2;
 
-import "@openzeppelin/contracts/access/Ownable.sol";
-import "@openzeppelin/contracts/security/Pausable.sol";
-import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
-import "@openzeppelin/contracts/utils/Strings.sol";
+import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
+import {Pausable} from "@openzeppelin/contracts/utils/Pausable.sol";
+import {ECDSA} from "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
+import {MessageHashUtils} from "@openzeppelin/contracts/utils/cryptography/MessageHashUtils.sol";
+import {Strings} from "@openzeppelin/contracts/utils/Strings.sol";
 
-import "./interfaces/IPantosForwarder.sol";
-import "./interfaces/IPantosHub.sol";
-import "./interfaces/IPantosToken.sol";
+import {PantosTypes} from "../src/interfaces/PantosTypes.sol";
+import {IPantosForwarder} from "./interfaces/IPantosForwarder.sol";
+import {IPantosHub} from "./interfaces/IPantosHub.sol";
+import {IPantosToken} from "./interfaces/IPantosToken.sol";
 
 uint256 constant DEFAULT_MINIMUM_VALIDATOR_NODE_SIGNATURES = 3;
 uint constant INVALID_VALIDATOR_NODE_INDEX = type(uint).max;
@@ -39,7 +41,7 @@ contract PantosForwarder is IPantosForwarder, Ownable, Pausable {
     // Used nonces of senders (to prevent replay attacks)
     mapping(address => mapping(uint256 => bool)) private _usedSenderNonces;
 
-    constructor() {
+    constructor() Ownable(msg.sender) {
         // Contract is paused until it is fully initialized
         _pause();
     }
@@ -510,7 +512,7 @@ contract PantosForwarder is IPantosForwarder, Ownable, Pausable {
         bytes memory signature
     ) private pure {
         // Recreate the message that was signed
-        bytes32 message = ECDSA.toEthSignedMessageHash(baseMessage);
+        bytes32 message = MessageHashUtils.toEthSignedMessageHash(baseMessage);
         // Recover the signer's address from the signature
         address recoveredSignerAddress = ECDSA.recover(message, signature);
         require(

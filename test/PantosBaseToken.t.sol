@@ -1,13 +1,16 @@
 // SPDX-License-Identifier: GPL-3.0
-pragma solidity 0.8.23;
+pragma solidity 0.8.26;
 
 /* solhint-disable no-console*/
 
-import "forge-std/console2.sol";
+import {console2} from "forge-std/console2.sol";
+import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import {IERC20Errors} from "@openzeppelin/contracts/interfaces/draft-IERC6093.sol";
 
-import "../src/BitpandaEcosystemToken.sol";
+import {PantosBaseToken} from "../src/PantosBaseToken.sol";
+import {BitpandaEcosystemToken} from "../src/BitpandaEcosystemToken.sol";
 
-import "./PantosBaseTest.t.sol";
+import {PantosBaseTest} from "./PantosBaseTest.t.sol";
 
 abstract contract PantosBaseTokenTest is PantosBaseTest {
     address public constant PANTOS_FORWARDER_ADDRESS =
@@ -56,7 +59,12 @@ abstract contract PantosBaseTokenTest is PantosBaseTest {
         address receiver = address(0);
         uint256 amount = 1_000;
 
-        vm.expectRevert("ERC20: mint to the zero address");
+        bytes4 selector = IERC20Errors.ERC20InvalidReceiver.selector;
+        bytes memory revertMessage = abi.encodeWithSelector(
+            selector,
+            ADDRESS_ZERO
+        );
+        vm.expectRevert(revertMessage);
         vm.prank(PANTOS_FORWARDER_ADDRESS);
 
         token().pantosTransferTo(receiver, amount);
@@ -98,7 +106,12 @@ abstract contract PantosBaseTokenTest is PantosBaseTest {
         address sender = ADDRESS_ZERO;
         uint256 amount = 1_000_000;
 
-        vm.expectRevert("ERC20: burn from the zero address");
+        bytes4 selector = IERC20Errors.ERC20InvalidSender.selector;
+        bytes memory revertMessage = abi.encodeWithSelector(
+            selector,
+            ADDRESS_ZERO
+        );
+        vm.expectRevert(revertMessage);
         vm.prank(PANTOS_FORWARDER_ADDRESS);
 
         token().pantosTransferFrom(sender, amount);
@@ -146,7 +159,12 @@ abstract contract PantosBaseTokenTest is PantosBaseTest {
         address sender = ADDRESS_ZERO;
         address receiver = address(2);
         uint256 amount = 1_000_000;
-        vm.expectRevert("ERC20: transfer from the zero address");
+        bytes4 selector = IERC20Errors.ERC20InvalidSender.selector;
+        bytes memory revertMessage = abi.encodeWithSelector(
+            selector,
+            ADDRESS_ZERO
+        );
+        vm.expectRevert(revertMessage);
         vm.prank(PANTOS_FORWARDER_ADDRESS);
 
         token().pantosTransfer(sender, receiver, amount);
@@ -157,7 +175,12 @@ abstract contract PantosBaseTokenTest is PantosBaseTest {
         address sender = address(1);
         address receiver = ADDRESS_ZERO;
         uint256 amount = 1_000_000;
-        vm.expectRevert("ERC20: transfer to the zero address");
+        bytes4 selector = IERC20Errors.ERC20InvalidReceiver.selector;
+        bytes memory revertMessage = abi.encodeWithSelector(
+            selector,
+            ADDRESS_ZERO
+        );
+        vm.expectRevert(revertMessage);
         vm.prank(PANTOS_FORWARDER_ADDRESS);
 
         token().pantosTransfer(sender, receiver, amount);
