@@ -1,13 +1,17 @@
 // SPDX-License-Identifier: GPL-3.0
-pragma solidity 0.8.23;
+pragma solidity 0.8.26;
 
 /* solhint-disable no-console*/
 
-import "forge-std/console2.sol";
+import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import {Pausable} from "@openzeppelin/contracts/utils/Pausable.sol";
+import {console2} from "forge-std/console2.sol";
 
-import "../src/PantosTokenWrapper.sol";
+import {IPantosToken} from "../src/interfaces/IPantosToken.sol";
+import {PantosWrapper} from "../src/PantosWrapper.sol";
+import {PantosTokenWrapper} from "../src/PantosTokenWrapper.sol";
 
-import "./PantosBaseTest.t.sol";
+import {PantosBaseTest} from "./PantosBaseTest.t.sol";
 
 contract PantosTokenWrapperTest is PantosBaseTest {
     PantosTokenWrapperHarness pantosTokenWrapper;
@@ -260,11 +264,11 @@ contract PantosTokenWrapperTest is PantosBaseTest {
         assertEq(NAME, pantosTokenWrapper.name());
     }
 
-    function test_beforeTokenTransfer_WhenNotPaused() external {
+    function test_update_WhenNotPaused() external {
         initializePantosTokenWrapper();
 
         bytes memory calldata_ = abi.encodeWithSelector(
-            PantosTokenWrapperHarness.exposed_beforeTokenTransfer.selector,
+            PantosTokenWrapperHarness.exposed_update.selector,
             ADDRESS_ZERO,
             ADDRESS_ZERO,
             0
@@ -274,14 +278,13 @@ contract PantosTokenWrapperTest is PantosBaseTest {
         assertTrue(success);
     }
 
-    function test_beforeTokenTransfer_WhenPaused() external {
-        vm.expectRevert("ERC20Pausable: token transfer while paused");
-
-        pantosTokenWrapper.exposed_beforeTokenTransfer(
-            ADDRESS_ZERO,
-            ADDRESS_ZERO,
-            0
+    function test_update_WhenPaused() external {
+        bytes memory revertMessage = abi.encodeWithSelector(
+            Pausable.EnforcedPause.selector
         );
+        vm.expectRevert(revertMessage);
+
+        pantosTokenWrapper.exposed_update(ADDRESS_ZERO, ADDRESS_ZERO, 0);
     }
 
     function wrap(uint256 amount) public {
@@ -317,11 +320,11 @@ contract PantosTokenWrapperHarness is PantosTokenWrapper {
         address wrappedToken
     ) PantosTokenWrapper(name, symbol, decimals, wrappedToken) {}
 
-    function exposed_beforeTokenTransfer(
+    function exposed_update(
         address from,
         address to,
         uint256 amount
     ) external {
-        _beforeTokenTransfer(from, to, amount);
+        _update(from, to, amount);
     }
 }

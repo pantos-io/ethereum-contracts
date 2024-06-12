@@ -1,12 +1,13 @@
 // SPDX-License-Identifier: GPL-3.0
 // slither-disable-next-line solc-version
-pragma solidity 0.8.23;
+pragma solidity 0.8.26;
 pragma abicoder v2;
 
-import "@openzeppelin/contracts/access/Ownable.sol";
-import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
+import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
+import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 
-import "./interfaces/IPantosToken.sol";
+import {IBEP20} from "./interfaces/IBEP20.sol";
+import {IPantosToken} from "./interfaces/IPantosToken.sol";
 
 /**
  * @title Pantos base token
@@ -24,7 +25,7 @@ abstract contract PantosBaseToken is IPantosToken, ERC20, Ownable {
         string memory name_,
         string memory symbol_,
         uint8 decimals_
-    ) ERC20(name_, symbol_) {
+    ) ERC20(name_, symbol_) Ownable(msg.sender) {
         _decimals = decimals_;
     }
 

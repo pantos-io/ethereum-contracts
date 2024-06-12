@@ -1,9 +1,11 @@
 // SPDX-License-Identifier: GPL-3.0
-pragma solidity 0.8.23;
+pragma solidity 0.8.26;
 
 pragma abicoder v2;
 
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
+import {Pausable} from "@openzeppelin/contracts/utils/Pausable.sol";
 import {Test, Vm} from "forge-std/Test.sol";
 
 import {PantosTypes} from "../src/interfaces/PantosTypes.sol";
@@ -156,8 +158,12 @@ abstract contract PantosBaseTest is Test {
         address callee,
         bytes memory calldata_
     ) public virtual {
-        string memory revertMessage = "Ownable: caller is not the owner";
         vm.startPrank(address(111));
+        bytes4 selector = Ownable.OwnableUnauthorizedAccount.selector;
+        bytes memory revertMessage = abi.encodeWithSelector(
+            selector,
+            address(111)
+        );
         modifierTest(callee, calldata_, revertMessage);
     }
 
@@ -171,7 +177,8 @@ abstract contract PantosBaseTest is Test {
         address callee,
         bytes memory calldata_
     ) public virtual {
-        string memory revertMessage = "Pausable: not paused";
+        bytes4 selector = Pausable.ExpectedPause.selector;
+        bytes memory revertMessage = abi.encodeWithSelector(selector);
         modifierTest(callee, calldata_, revertMessage);
     }
 
@@ -179,7 +186,8 @@ abstract contract PantosBaseTest is Test {
         address callee,
         bytes memory calldata_
     ) public virtual {
-        string memory revertMessage = "Pausable: paused";
+        bytes4 selector = Pausable.EnforcedPause.selector;
+        bytes memory revertMessage = abi.encodeWithSelector(selector);
         modifierTest(callee, calldata_, revertMessage);
     }
 
@@ -188,10 +196,18 @@ abstract contract PantosBaseTest is Test {
         bytes memory calldata_,
         string memory revertMessage
     ) public {
+        modifierTest(callee, calldata_, bytes(revertMessage));
+    }
+
+    function modifierTest(
+        address callee,
+        bytes memory calldata_,
+        bytes memory revertMessage
+    ) public {
         (bool success, bytes memory response) = callee.call(calldata_);
 
         assertFalse(success);
-        vm.expectRevert(bytes(revertMessage));
+        vm.expectRevert(revertMessage);
         assembly {
             revert(add(response, 32), mload(response))
         }
