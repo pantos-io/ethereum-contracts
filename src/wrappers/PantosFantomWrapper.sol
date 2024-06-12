@@ -3,7 +3,7 @@
 pragma solidity 0.8.26;
 pragma abicoder v2;
 
-import "../PantosCoinWrapper.sol";
+import {PantosCoinWrapper} from "../PantosCoinWrapper.sol";
 
 /**
  * @title Pantos-compatible token contract that wraps the Fantom

@@ -3,8 +3,10 @@
 pragma solidity 0.8.26;
 pragma abicoder v2;
 
-import "../PantosBaseToken.sol";
-import "@openzeppelin/contracts/token/ERC20/extensions/ERC20Burnable.sol";
+import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
+import {ERC20Burnable} from "@openzeppelin/contracts/token/ERC20/extensions/ERC20Burnable.sol";
+
+import {PantosBaseToken} from "../PantosBaseToken.sol";
 
 /**
  * @title Pantos token

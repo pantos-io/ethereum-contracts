@@ -3,7 +3,7 @@
 pragma solidity 0.8.26;
 pragma abicoder v2;
 
-import "./IPantosToken.sol";
+import {IPantosToken} from "./IPantosToken.sol";
 
 /**
  * @title Common interface for Pantos-compatible token contracts that

@@ -3,11 +3,13 @@ pragma solidity 0.8.26;
 
 /* solhint-disable no-console*/
 
-import "forge-std/console2.sol";
+import {console2} from "forge-std/console2.sol";
 
-import "../src/BitpandaEcosystemToken.sol";
+import {IPantosToken} from "../src/interfaces/IPantosToken.sol";
+import {PantosBaseToken} from "../src/PantosBaseToken.sol";
+import {BitpandaEcosystemToken} from "../src/BitpandaEcosystemToken.sol";
 
-import "./PantosBaseToken.t.sol";
+import {PantosBaseTokenTest} from "./PantosBaseToken.t.sol";
 
 contract BitpandaEcosystemTokenTest is PantosBaseTokenTest {
     BitpandaEcosystemTokenHarness bestToken;

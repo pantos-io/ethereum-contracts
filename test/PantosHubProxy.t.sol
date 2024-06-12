@@ -3,7 +3,6 @@ pragma solidity 0.8.26;
 
 /* solhint-disable no-console*/
 
-import {console2} from "forge-std/console2.sol";
 import {IDiamondCut} from "@diamond/interfaces/IDiamondCut.sol";
 import {IDiamondLoupe} from "@diamond/interfaces/IDiamondLoupe.sol";
 import {IERC165} from "@diamond/interfaces/IERC165.sol";
@@ -11,6 +10,7 @@ import {IERC173} from "@diamond/interfaces/IERC173.sol";
 import {DiamondCutFacet} from "@diamond/facets/DiamondCutFacet.sol";
 import {DiamondLoupeFacet} from "@diamond/facets/DiamondLoupeFacet.sol";
 import {OwnershipFacet} from "@diamond/facets/OwnershipFacet.sol";
+import {console2} from "forge-std/console2.sol";
 
 import {IPantosRegistry} from "../src/interfaces/IPantosRegistry.sol";
 import {IPantosTransfer} from "../src/interfaces/IPantosTransfer.sol";

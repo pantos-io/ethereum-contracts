@@ -3,9 +3,9 @@
 pragma solidity 0.8.26;
 pragma abicoder v2;
 
-import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
-import "./PantosWrapper.sol";
+import {PantosWrapper} from "./PantosWrapper.sol";
 
 /**
  * @title Pantos-compatible token contract that wraps another ERC20

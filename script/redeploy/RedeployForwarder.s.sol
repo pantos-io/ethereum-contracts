@@ -4,7 +4,9 @@ pragma abicoder v2;
 
 /* solhint-disable no-console*/
 
-import "../helpers/PantosForwarderRedeployer.s.sol";
+import {PantosForwarder} from "../../src/PantosForwarder.sol";
+
+import {PantosForwarderRedeployer} from "../helpers/PantosForwarderRedeployer.s.sol";
 
 /**
  * @title RedeployForwarder

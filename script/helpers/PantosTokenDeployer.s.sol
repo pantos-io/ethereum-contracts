@@ -3,12 +3,13 @@ pragma solidity 0.8.26;
 pragma abicoder v2;
 
 /* solhint-disable no-console*/
+import {console2} from "forge-std/console2.sol";
 
-import "../../src/PantosForwarder.sol";
-import "../../src/PantosToken.sol";
+import {PantosForwarder} from "../../src/PantosForwarder.sol";
+import {PantosToken} from "../../src/PantosToken.sol";
 
-import "./Constants.s.sol";
-import "./PantosBaseScript.s.sol";
+import {Constants} from "./Constants.s.sol";
+import {PantosBaseScript} from "./PantosBaseScript.s.sol";
 
 abstract contract PantosTokenDeployer is PantosBaseScript {
     function deployPantosToken(

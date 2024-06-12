@@ -3,11 +3,13 @@ pragma solidity 0.8.26;
 
 /* solhint-disable no-console*/
 
-import "forge-std/console2.sol";
+import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import {console2} from "forge-std/console2.sol";
 
-import "../src/PantosCoinWrapper.sol";
+import {PantosWrapper} from "../src/PantosWrapper.sol";
+import {PantosCoinWrapper} from "../src/PantosCoinWrapper.sol";
 
-import "./PantosBaseTest.t.sol";
+import {PantosBaseTest} from "./PantosBaseTest.t.sol";
 
 contract PantosCoinWrapperTest is PantosBaseTest {
     PantosCoinWrapper pantosCoinWrapper;

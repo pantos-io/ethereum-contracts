@@ -7,7 +7,6 @@ import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import {ERC20Capped} from "@openzeppelin/contracts/token/ERC20/extensions/ERC20Capped.sol";
 import {ERC20Pausable} from "@openzeppelin/contracts/token/ERC20/extensions/ERC20Pausable.sol";
 
-import {IBEP20} from "./interfaces/IBEP20.sol";
 import {PantosBaseToken} from "./PantosBaseToken.sol";
 
 /**

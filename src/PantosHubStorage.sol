@@ -3,7 +3,7 @@
 pragma solidity 0.8.26;
 pragma abicoder v2;
 
-import "./interfaces/PantosTypes.sol";
+import {PantosTypes} from "./interfaces/PantosTypes.sol";
 
 /**
  * @notice Pantos Hub storage state variables.

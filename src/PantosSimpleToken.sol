@@ -3,7 +3,7 @@
 pragma solidity 0.8.26;
 pragma abicoder v2;
 
-import "./PantosBaseToken.sol";
+import {PantosBaseToken} from "./PantosBaseToken.sol";
 
 /**
  * @title Pantos-compatible simple token

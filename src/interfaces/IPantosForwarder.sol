@@ -3,7 +3,7 @@
 pragma solidity 0.8.26;
 pragma abicoder v2;
 
-import "./PantosTypes.sol";
+import {PantosTypes} from "./PantosTypes.sol";
 
 /**
  * @title Pantos Forwarder interface
