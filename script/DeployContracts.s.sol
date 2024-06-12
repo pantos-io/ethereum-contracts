@@ -23,8 +23,8 @@ import {BitpandaEcosystemTokenDeployer} from "./helpers/BitpandaEcosystemTokenDe
  * @dev Usage
  * forge script ./script/DeployContracts.s.sol --account <account> \
  *     --sender <sender> --rpc-url <rpc alias> --slow --force \
- *     --sig "run(address,uint256,uint256,uint256)" <validator> <panSupply> \
- *     <bestSupply> <nextTransferId>
+ *     --sig "run(address,uint256,uint256,uint256,address[])" <validator> <panSupply> \
+ *     <bestSupply> <nextTransferId> <otherValidators>
  */
 contract DeployContracts is
     PantosHubDeployer,
@@ -69,10 +69,11 @@ contract DeployContracts is
     }
 
     function run(
-        address validator,
+        address primaryValidator,
         uint256 panSupply,
         uint256 bestSupply,
-        uint256 nextTransferId
+        uint256 nextTransferId,
+        address[] memory otherValidators
     ) public {
         vm.startBroadcast();
 
@@ -88,13 +89,18 @@ contract DeployContracts is
             pantosHubProxy,
             pantosForwarder,
             pantosToken,
-            // PAN-1721: primary validator node address
-            validator
+            primaryValidator
         );
 
-        // PAN-1721: all validator node addresses
-        address[] memory validatorNodeAddresses = new address[](1);
-        validatorNodeAddresses[0] = validator;
+        // all validator node addresses
+        address[] memory validatorNodeAddresses = new address[](
+            otherValidators.length + 1
+        );
+        validatorNodeAddresses[0] = primaryValidator;
+        for (uint i; i < otherValidators.length; i++) {
+            validatorNodeAddresses[i + 1] = otherValidators[i];
+        }
+
         initializePantosForwarder(
             pantosForwarder,
             pantosHubProxy,
