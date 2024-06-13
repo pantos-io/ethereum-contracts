@@ -4,8 +4,8 @@ pragma abicoder v2;
 
 /* solhint-disable no-console*/
 
-import "forge-std/Script.sol";
-import "forge-std/console2.sol";
+import {Script} from "forge-std/Script.sol";
+import {console2} from "forge-std/console2.sol";
 
 abstract contract PantosBaseScript is Script {
     enum BlockchainId {

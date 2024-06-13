@@ -3,7 +3,7 @@
 pragma solidity 0.8.26;
 pragma abicoder v2;
 
-import "./PantosWrapper.sol";
+import {PantosWrapper} from "./PantosWrapper.sol";
 
 /**
  * @title Pantos-compatible token contract that wraps a blockchain
