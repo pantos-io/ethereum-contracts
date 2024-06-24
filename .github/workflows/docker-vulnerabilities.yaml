@@ -49,35 +49,20 @@ jobs:
               env:
                 DOCKER_TAG: analysis-latest
         
-            - name: Scan vulnerabilities eth image
+            - name: Scan vulnerabilities ethereum node image
               uses: aquasecurity/trivy-action@0.20.0
               with:           
-                image-ref: 'pantosio/pantos-ethereum-eth:analysis-latest'
+                image-ref: 'pantosio/ethereum-node:analysis-latest'
                 format: 'sarif'
-                output: 'trivy-pantos-ethereum-eth-results.sarif'
+                output: 'trivy-pantos-ethereum-node-results.sarif'
                 severity: 'CRITICAL,HIGH'
             
-            - name: Upload Trivy scan results for eth to GitHub Security tab
+            - name: Upload Trivy scan results for ethereum node to GitHub Security tab
               uses: github/codeql-action/upload-sarif@v3
               if: always()
               with:
-                category: 'pantos-ethereum-eth'
-                sarif_file: 'trivy-pantos-ethereum-eth-results.sarif'
-
-            - name: Scan vulnerabilities bnb image
-              uses: aquasecurity/trivy-action@0.20.0
-              with:           
-                image-ref: 'pantosio/pantos-ethereum-bnb:analysis-latest'
-                format: 'sarif'
-                output: 'trivy-pantos-ethereum-bnb-results.sarif'
-                severity: 'CRITICAL,HIGH'
-            
-            - name: Upload Trivy scan results for eth to GitHub Security tab
-              uses: github/codeql-action/upload-sarif@v3
-              if: always()
-              with:
-                category: 'pantos-ethereum-bnb'
-                sarif_file: 'trivy-pantos-ethereum-bnb-results.sarif'
+                category: 'pantos-ethereum-node'
+                sarif_file: 'trivy-pantos-ethereum-node-results.sarif'
             
             - name: Move cache
               if: always()
