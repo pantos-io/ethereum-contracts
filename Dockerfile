@@ -1,5 +1,5 @@
 #syntax=docker/dockerfile:1.7.0-labs
-FROM ghcr.io/foundry-rs/foundry:latest AS build
+FROM --platform=linux/amd64 ghcr.io/foundry-rs/foundry:latest AS build
 
 RUN apk add bash
 
@@ -13,7 +13,9 @@ RUN git submodule update --init --recursive
 
 RUN forge build
 
-FROM ghcr.io/foundry-rs/foundry:latest AS deployed-contracts
+FROM --platform=linux/amd64 ghcr.io/foundry-rs/foundry:latest AS deployed-contracts
+
+RUN apk add --no-cache jq
 
 WORKDIR /root
 
@@ -31,8 +33,13 @@ RUN anvil --port 8545 --chain-id 31337 --state-interval 1 --dump-state anvil-sta
     --password '' --sender 0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266 --rpc-url local-8545 \
     --sig "run(address,uint256,uint256,uint256,address[])" 0x88CE2c1d82328f84Dd197f63482A3B68E18cD707 \
     100000000000000000 100000000000000000 0 [] --broadcast && \
-    tee BNB_CHAIN.json AVALANCHE.json POLYGON.json \
-    CRONOS.json FANTOM.json CELO.json < ETHEREUM.json && \
+    # Convert the Ethereum json to an env file and copy it over
+    for chain in ETHEREUM BNB_CHAIN AVALANCHE POLYGON CRONOS FANTOM CELO; do \
+        file="$chain.json"; \
+        if [ $chain = "BNB_CHAIN" ]; then chain="BNB"; fi; \
+        jq --arg chain "$chain" -r 'to_entries | map({key: (if .key == "hub_proxy" then "hub" elif .key == "pan" then "pan_token" else .key end), value: .value}) | map("\($chain|ascii_upcase)_\(.key|ascii_upcase)=\(.value|tostring)") | .[]' ETHEREUM.json > "$chain.env" && \
+        if [ ! -f $file ]; then cp -f ETHEREUM.json $file; fi \
+    done; \
     echo "Anvil started, running deployment script..." && \
     # Fetch the hash of the file here
     HASH=$(sha256sum anvil-state.json | cut -d ' ' -f 1) && \
@@ -44,11 +51,12 @@ RUN anvil --port 8545 --chain-id 31337 --state-interval 1 --dump-state anvil-sta
     while [ $(sha256sum anvil-state.json | cut -d ' ' -f 1) = $HASH ]; do sleep 1; done
 
 ENTRYPOINT ["anvil", "--load-state", "anvil-state.json", "--chain-id"]
-FROM ghcr.io/foundry-rs/foundry:latest AS blockchain-node
+FROM --platform=linux/amd64 ghcr.io/foundry-rs/foundry:latest AS blockchain-node
 
 COPY --from=deployed-contracts /root/anvil-state.json anvil-state.json
 COPY --from=deployed-contracts /root/.foundry/keystores/local_deployer /data-static/keystore
 COPY --from=deployed-contracts /root/*.json /data-static/
+COPY --from=deployed-contracts /root/*.env /data-static/
 COPY --from=deployed-contracts /root/mnemonic.txt /data-static/
 COPY --from=deployed-contracts /root/accounts /data-static/
 COPY ./entrypoint.sh entrypoint.sh
