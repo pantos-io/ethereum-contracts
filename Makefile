@@ -51,3 +51,7 @@ analyze-mythril:
        pip install mythril; \
        myth analyze src/PantosToken.sol --solc-json mythril.config.json; \
     )
+
+.PHONY: docker
+docker:
+	docker compose up --force-recreate
