@@ -35,6 +35,10 @@ jobs:
     name: Build and test
     runs-on: ubuntu-latest
     steps:
+      - uses: step-security/harden-runner@v2
+        with:
+          disable-sudo: false
+          egress-policy: audit
       - uses: actions/checkout@v4
         with:
           submodules: recursive
@@ -59,6 +63,11 @@ jobs:
     name: Build Docker images
     runs-on: ubuntu-latest
     steps:
+      - uses: step-security/harden-runner@v2
+        with:
+          disable-sudo: false
+          egress-policy: audit
+      
       - uses: actions/checkout@v4
 
       - name: Set up QEMU
@@ -101,6 +110,11 @@ jobs:
       contents: read
       security-events: write
     steps:
+      - uses: step-security/harden-runner@v2
+        with:
+          disable-sudo: false
+          egress-policy: audit
+      
       - uses: actions/checkout@v4
         with:
           submodules: recursive
