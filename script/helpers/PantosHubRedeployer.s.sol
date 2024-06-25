@@ -91,19 +91,15 @@ abstract contract PantosHubRedeployer is PantosHubDeployer {
             "Migrating %d tokens from the old PantosHub to the new one",
             _ownedTokens.length
         );
-        unregisterTokensFromOldHub();
-        uint256 panTokensToApprove = minimumTokenStake * _ownedTokens.length;
-        _pantosToken.approve(address(newPantosHubProxy), panTokensToApprove);
-        console2.log("PantosToken.approve(%d)", panTokensToApprove);
+
+        approvePanTokensForNewHub(newPantosHubProxy);
+
         for (uint256 i = 0; i < _ownedTokens.length; i++) {
             if (address(_ownedTokens[i]) != address(_pantosToken)) {
-                newPantosHubProxy.registerToken(
-                    address(_ownedTokens[i]),
+                registerTokenAtNewHub(
+                    newPantosHubProxy,
+                    _ownedTokens[i],
                     minimumTokenStake
-                );
-                console2.log(
-                    "New PantosHub.registerToken(%s)",
-                    address(_ownedTokens[i])
                 );
             }
             for (
@@ -120,20 +116,91 @@ abstract contract PantosHubRedeployer is PantosHubDeployer {
                             address(_ownedTokens[i])
                         ][BlockchainId(blockchainId)];
                     if (externalTokenRecord.active) {
-                        newPantosHubProxy.registerExternalToken(
-                            address(_ownedTokens[i]),
+                        registerExternalTokenAtNewHub(
+                            newPantosHubProxy,
+                            _ownedTokens[i],
                             blockchainId,
-                            externalTokenRecord.externalToken
-                        );
-                        console2.log(
-                            "New PantosHub.registerExternalToken(%s, %s, %s)",
-                            address(_ownedTokens[i]),
-                            blockchain.name,
                             externalTokenRecord.externalToken
                         );
                     }
                 }
             }
+        }
+        // unregister tokens from old hub after all registered at new hub
+        unregisterTokensFromOldHub();
+    }
+
+    function registerTokenAtNewHub(
+        IPantosHub newPantosHubProxy,
+        PantosToken token,
+        uint256 stake
+    ) public onlyPantosHubRedeployerInitialized {
+        PantosTypes.TokenRecord memory tokenRecord = newPantosHubProxy
+            .getTokenRecord(address(token));
+        if (!tokenRecord.active) {
+            newPantosHubProxy.registerToken(address(token), stake);
+            console2.log("New PantosHub.registerToken(%s)", address(token));
+        } else {
+            console2.log(
+                "Token already registered; skipping registerToken(%s)",
+                address(token)
+            );
+        }
+    }
+
+    function registerExternalTokenAtNewHub(
+        IPantosHub newPantosHubProxy,
+        PantosToken token,
+        uint256 blockchainId,
+        string memory externalToken
+    ) public onlyPantosHubRedeployerInitialized {
+        PantosTypes.ExternalTokenRecord
+            memory externalTokenRecord = newPantosHubProxy
+                .getExternalTokenRecord(address(token), blockchainId);
+
+        if (!externalTokenRecord.active) {
+            newPantosHubProxy.registerExternalToken(
+                address(token),
+                blockchainId,
+                externalToken
+            );
+            console2.log(
+                "New PantosHub.registerExternalToken(%s, %d, %s)",
+                address(token),
+                blockchainId,
+                externalToken
+            );
+        } else {
+            console2.log(
+                "External token already registered;"
+                "skipping PantosHub.registerExternalToken(%s, %d, %s)",
+                address(token),
+                blockchainId,
+                externalToken
+            );
+        }
+    }
+
+    function approvePanTokensForNewHub(
+        IPantosHub newPantosHubProxy
+    ) public onlyPantosHubRedeployerInitialized {
+        uint256 minimumTokenStake = newPantosHubProxy.getMinimumTokenStake();
+        uint256 panTokensNeeded = minimumTokenStake * _ownedTokens.length;
+
+        uint256 panTokensAllowance = _pantosToken.allowance(
+            msg.sender,
+            address(newPantosHubProxy)
+        );
+
+        if (panTokensAllowance < panTokensNeeded) {
+            _pantosToken.approve(address(newPantosHubProxy), 0);
+            _pantosToken.approve(address(newPantosHubProxy), panTokensNeeded);
+            console2.log("PantosToken.approve(%d)", panTokensNeeded);
+        } else {
+            console2.log(
+                "Already have allowance; skipping PantosToken.approve(%d)",
+                panTokensNeeded
+            );
         }
     }
 
@@ -141,12 +208,25 @@ abstract contract PantosHubRedeployer is PantosHubDeployer {
         public
         onlyPantosHubRedeployerInitialized
     {
+        console2.log(
+            "Unregistering %d tokens from the old PantosHub",
+            _ownedTokens.length
+        );
         for (uint256 i = 0; i < _ownedTokens.length; i++) {
-            console2.log(
-                "Unregistering token %s from the old PantosHub",
-                address(_ownedTokens[i])
-            );
-            _oldPantosHubProxy.unregisterToken(address(_ownedTokens[i]));
+            PantosTypes.TokenRecord memory tokenRecord = _oldPantosHubProxy
+                .getTokenRecord(address(_ownedTokens[i]));
+            if (tokenRecord.active) {
+                _oldPantosHubProxy.unregisterToken(address(_ownedTokens[i]));
+                console2.log(
+                    "Unregistered token %s from the old PantosHub",
+                    address(_ownedTokens[i])
+                );
+            } else {
+                console2.log(
+                    "Already unregistered token %s from the old PantosHub",
+                    address(_ownedTokens[i])
+                );
+            }
         }
     }
 
