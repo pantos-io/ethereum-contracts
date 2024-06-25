@@ -8,3 +8,5 @@
 !remappings.txt
 !.git
 !entrypoint.sh
+Dockerfile
+docker-compose.yml

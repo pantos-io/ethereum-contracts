@@ -54,4 +54,4 @@ analyze-mythril:
 
 .PHONY: docker
 docker:
-	docker compose up --force-recreate --build
+	docker compose up --force-recreate

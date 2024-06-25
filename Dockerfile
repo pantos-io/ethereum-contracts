@@ -37,7 +37,8 @@ RUN anvil --port 8545 --chain-id 31337 --state-interval 1 --dump-state anvil-sta
     for chain in ETHEREUM BNB_CHAIN AVALANCHE POLYGON CRONOS FANTOM CELO; do \
         file="$chain.json"; \
         if [ $chain = "BNB_CHAIN" ]; then chain="BNB"; fi; \
-        jq --arg chain "$chain" -r 'to_entries | map({key: (if .key == "hub_proxy" then "hub" elif .key == "pan" then "pan_token" else .key end), value: .value}) | map("\($chain|ascii_upcase)_\(.key|ascii_upcase)=\(.value|tostring)") | .[]' ETHEREUM.json > "$chain.env" && \
+        jq --arg chain "$chain" -r 'to_entries | map({key: (if .key == "hub_proxy" then "hub" elif .key == "pan" then "pan_token" else .key end), value: .value}) | map("\($chain|ascii_upcase)_\(.key|ascii_upcase)=\(.value|tostring)") | .[]' ETHEREUM.json > "$chain.env"; \
+        cat "$chain.env" >> all.env; \
         if [ ! -f $file ]; then cp -f ETHEREUM.json $file; fi \
     done; \
     echo "Anvil started, running deployment script..." && \
