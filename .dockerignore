@@ -10,3 +10,4 @@
 !entrypoint.sh
 Dockerfile
 docker-compose.yml
+data

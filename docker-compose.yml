@@ -2,6 +2,7 @@ name: pantos-ethereum
 
 networks:
   pantos-ethereum:
+    driver: overlay
     name: pantos-ethereum
     attachable: true
 
@@ -23,6 +24,7 @@ services:
       CHAIN_ID: 31337
     volumes:
       - eth-data:/data
+      - ./data/eth:/data
     ports:
       - 8545:8545
     healthcheck:
@@ -46,6 +48,7 @@ services:
       pantos-ethereum:
     volumes:
       - bnb-data:/data
+      - ./data/bnb:/data
     environment:
       CHAIN_ID: 31338
     ports:
