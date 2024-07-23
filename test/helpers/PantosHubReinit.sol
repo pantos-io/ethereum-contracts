@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 // slither-disable-next-line solc-version
 pragma solidity 0.8.26;
-pragma abicoder v2;
+
 
 import {PantosHubStorageExtended} from "./DummyFacet.sol";
 

@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0
 pragma solidity 0.8.26;
-pragma abicoder v2;
+
 
 import {PantosHubStorage} from "../../src/PantosHubStorage.sol";
 import {PantosBaseFacet} from "../../src/facets/PantosBaseFacet.sol";
