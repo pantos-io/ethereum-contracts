@@ -86,7 +86,7 @@ jobs:
             --sbom=true \
             --push \
             -f docker-compose.yml \
-            app worker
+            eth
         env:
           DOCKER_TAG: ${{ inputs.tag }}
 
