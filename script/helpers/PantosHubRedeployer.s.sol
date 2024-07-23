@@ -86,21 +86,14 @@ abstract contract PantosHubRedeployer is PantosHubDeployer {
     function migrateTokensFromOldHubToNewHub(
         IPantosHub newPantosHubProxy
     ) public onlyPantosHubRedeployerInitialized {
-        uint256 minimumTokenStake = newPantosHubProxy.getMinimumTokenStake();
         console2.log(
             "Migrating %d tokens from the old PantosHub to the new one",
             _ownedTokens.length
         );
 
-        approvePanTokensForNewHub(newPantosHubProxy);
-
         for (uint256 i = 0; i < _ownedTokens.length; i++) {
             if (address(_ownedTokens[i]) != address(_pantosToken)) {
-                registerTokenAtNewHub(
-                    newPantosHubProxy,
-                    _ownedTokens[i],
-                    minimumTokenStake
-                );
+                registerTokenAtNewHub(newPantosHubProxy, _ownedTokens[i]);
             }
             for (
                 uint256 blockchainId;
@@ -132,13 +125,12 @@ abstract contract PantosHubRedeployer is PantosHubDeployer {
 
     function registerTokenAtNewHub(
         IPantosHub newPantosHubProxy,
-        PantosToken token,
-        uint256 stake
+        PantosToken token
     ) public onlyPantosHubRedeployerInitialized {
         PantosTypes.TokenRecord memory tokenRecord = newPantosHubProxy
             .getTokenRecord(address(token));
         if (!tokenRecord.active) {
-            newPantosHubProxy.registerToken(address(token), stake);
+            newPantosHubProxy.registerToken(address(token));
             console2.log("New PantosHub.registerToken(%s)", address(token));
         } else {
             console2.log(
@@ -177,29 +169,6 @@ abstract contract PantosHubRedeployer is PantosHubDeployer {
                 address(token),
                 blockchainId,
                 externalToken
-            );
-        }
-    }
-
-    function approvePanTokensForNewHub(
-        IPantosHub newPantosHubProxy
-    ) public onlyPantosHubRedeployerInitialized {
-        uint256 minimumTokenStake = newPantosHubProxy.getMinimumTokenStake();
-        uint256 panTokensNeeded = minimumTokenStake * _ownedTokens.length;
-
-        uint256 panTokensAllowance = _pantosToken.allowance(
-            msg.sender,
-            address(newPantosHubProxy)
-        );
-
-        if (panTokensAllowance < panTokensNeeded) {
-            _pantosToken.approve(address(newPantosHubProxy), 0);
-            _pantosToken.approve(address(newPantosHubProxy), panTokensNeeded);
-            console2.log("PantosToken.approve(%d)", panTokensNeeded);
-        } else {
-            console2.log(
-                "Already have allowance; skipping PantosToken.approve(%d)",
-                panTokensNeeded
             );
         }
     }

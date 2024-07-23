@@ -9,7 +9,6 @@ import {IPantosHub} from "../../src/interfaces/IPantosHub.sol";
 import {PantosForwarder} from "../../src/PantosForwarder.sol";
 import {BitpandaEcosystemToken} from "../../src/BitpandaEcosystemToken.sol";
 
-import {Constants} from "./Constants.s.sol";
 import {PantosBaseScript} from "./PantosBaseScript.s.sol";
 
 abstract contract BitpandaEcosystemTokenDeployer is PantosBaseScript {
@@ -36,10 +35,7 @@ abstract contract BitpandaEcosystemTokenDeployer is PantosBaseScript {
         bitpandaEcosystemToken.setPantosForwarder(address(pantosForwarder));
 
         // Register token at Pantos hub
-        pantosHubProxy.registerToken(
-            address(bitpandaEcosystemToken),
-            Constants.MINIMUM_TOKEN_STAKE
-        );
+        pantosHubProxy.registerToken(address(bitpandaEcosystemToken));
 
         bitpandaEcosystemToken.unpause();
 

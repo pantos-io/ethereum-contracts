@@ -14,7 +14,6 @@ library PantosTypes {
 
     struct TokenRecord {
         bool active;
-        uint256 stake;
     }
 
     struct ExternalTokenRecord {
@@ -25,9 +24,8 @@ library PantosTypes {
     struct ServiceNodeRecord {
         bool active;
         string url;
-        uint256 freeStake;
-        uint256 lockedStake;
-        address unstakingAddress;
+        uint256 deposit;
+        address withdrawalAddress;
         uint256 unregisterTime;
     }
 

@@ -7,7 +7,6 @@ import {PantosForwarder} from "../src/PantosForwarder.sol";
 import {PantosToken} from "../src/PantosToken.sol";
 import {BitpandaEcosystemToken} from "../src/BitpandaEcosystemToken.sol";
 
-import {Constants} from "./helpers/Constants.s.sol";
 import {PantosHubDeployer, DeployedFacets} from "./helpers/PantosHubDeployer.s.sol";
 import {PantosForwarderDeployer} from "./helpers/PantosForwarderDeployer.s.sol";
 import {PantosWrapperDeployer} from "./helpers/PantosWrapperDeployer.s.sol";
@@ -37,14 +36,6 @@ contract DeployContracts is
     PantosForwarder public pantosForwarder;
     PantosToken public pantosToken;
     BitpandaEcosystemToken public bitpandaEcosystemToken;
-
-    function approveAmountAtPantosToken() public {
-        // Approve amount at PantosToken
-        // Approve amount for all the wrapers + BEST tokens
-        uint256 amount = (pantosWrappers.length + 1) *
-            Constants.MINIMUM_TOKEN_STAKE;
-        pantosToken.approve(address(pantosHubProxy), amount);
-    }
 
     function exportContractAddresses() public {
         string memory blockchainName = determineBlockchain().name;
@@ -107,9 +98,6 @@ contract DeployContracts is
             pantosToken,
             validatorNodeAddresses
         );
-
-        // approve needs to be done before token registration
-        approveAmountAtPantosToken();
 
         initializePantosToken(pantosToken, pantosForwarder);
         initializeBitpandaEcosystemToken(

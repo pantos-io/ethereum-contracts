@@ -85,31 +85,24 @@ interface IPantosRegistry {
     event ServiceNodeUrlUpdated(address serviceNode);
 
     /**
-     * @notice Event that is emitted when the minimum token stake is
-     * updated.
-     *
-     * @param minimumTokenStake The new minimum token stake.
-     */
-    event MinimumTokenStakeUpdated(uint256 minimumTokenStake);
-
-    /**
      * @notice Event that is emitted when the unbonding period for the
-     * service node stake is updated.
+     * service node deposit is updated.
      *
-     * @param unbondingPeriodServiceNodeStake The new unbonding period
-     * for the service node stake (in seconds).
+     * @param unbondingPeriodServiceNodeDeposit The new unbonding period
+     * for the service node deposit (in seconds).
      */
-    event UnbondingPeriodServiceNodeStakeUpdated(
-        uint256 unbondingPeriodServiceNodeStake
+    event UnbondingPeriodServiceNodeDepositUpdated(
+        uint256 unbondingPeriodServiceNodeDeposit
     );
 
     /**
-     * @notice Event that is emitted when the minimum service node stake
-     * is updated.
+     * @notice Event that is emitted when the minimum service node
+     * deposit is updated.
      *
-     * @param minimumServiceNodeStake The new minimum service node stake.
+     * @param minimumServiceNodeDeposit The new minimum service node
+     * deposit.
      */
-    event MinimumServiceNodeStakeUpdated(uint256 minimumServiceNodeStake);
+    event MinimumServiceNodeDepositUpdated(uint256 minimumServiceNodeDeposit);
 
     /**
      * @notice Event that is emitted when the minimum validator fee update
@@ -246,40 +239,29 @@ interface IPantosRegistry {
 
     /**
      * @notice Used by the owner of the Pantos Hub contract to update
-     * the minimum token stake.
+     * the unbonding period for the service node deposit.
      *
-     * @param minimumTokenStake The new minimum token stake.
-     *
-     * @dev The function can only be called by the Pantos Hub owner and
-     * if the contract is paused.
-     */
-    function setMinimumTokenStake(uint256 minimumTokenStake) external;
-
-    /**
-     * @notice Used by the owner of the Pantos Hub contract to update
-     * the unbonding period for the service node stake.
-     *
-     * @param unbondingPeriodServiceNodeStake The new unbonding period
-     * for the service node stake (in seconds).
+     * @param unbondingPeriodServiceNodeDeposit The new unbonding period
+     * for the service node deposit (in seconds).
      *
      * @dev The function can only be called by the Pantos Hub owner.
      */
-    function setUnbondingPeriodServiceNodeStake(
-        uint256 unbondingPeriodServiceNodeStake
+    function setUnbondingPeriodServiceNodeDeposit(
+        uint256 unbondingPeriodServiceNodeDeposit
     ) external;
 
     /**
      * @notice Used by the owner of the Pantos Hub contract to update
-     * the minimum service node stake.
+     * the minimum service node deposit.
      *
-     * @param minimumServiceNodeStake The new minimum service node
-     * stake.
+     * @param minimumServiceNodeDeposit The new minimum service node
+     * deposit.
      *
      * @dev The function can only be called by the Pantos Hub owner and
      * if the contract is paused.
      */
-    function setMinimumServiceNodeStake(
-        uint256 minimumServiceNodeStake
+    function setMinimumServiceNodeDeposit(
+        uint256 minimumServiceNodeDeposit
     ) external;
 
     /**
@@ -298,9 +280,8 @@ interface IPantosRegistry {
      * is required to be the owner of the token contract.
      *
      * @param token The address of the token contract.
-     * @param stake The amount of tokens to stake.
      */
-    function registerToken(address token, uint256 stake) external;
+    function registerToken(address token) external;
 
     /**
      * @notice Allows a user to unregister a token with the Pantos Hub. The
@@ -309,26 +290,6 @@ interface IPantosRegistry {
      * @param token The address of the token contract.
      */
     function unregisterToken(address token) external;
-
-    /**
-     * @notice Allows a user to increase the stake of a token at the Pantos Hub.
-     * The user is required to be the owner of the token contract.
-     *
-     * @param token The address of the token contract.
-     * @param stake The additional stake that will be added to the current
-     * one of the token contract.
-     */
-    function increaseTokenStake(address token, uint256 stake) external;
-
-    /**
-     * @notice Allows a user to decrease the stake of a token at the Pantos Hub.
-     * The user is required to be the owner of the token contract.
-     *
-     * @param token The address of the token contract.
-     * @param stake The reduced stake that will be subtracted from the current
-     * one of the token contract.
-     */
-    function decreaseTokenStake(address token, uint256 stake) external;
 
     /**
      * @notice Allows a user to register an external token with the Pantos Hub.
@@ -379,78 +340,78 @@ interface IPantosRegistry {
     ) external;
 
     /**
-     * @notice Used by a service node or its unstaking address to register
-     * a service node in the Pantos Hub.
+     * @notice Used by a service node or its withdrawal address to
+     * register a service node at the Pantos Hub.
      *
      * @param serviceNodeAddress The registered service node address.
-     * @param url The url under which the service node is reachable.
-     * @param stake The required stake in Pan in order to register.
-     * @param unstakingAddress The address where the stake will be returned
-     * after the service node is unregistered.
+     * @param url The URL under which the service node is reachable.
+     * @param deposit The provided deposit in PAN.
+     * @param withdrawalAddress The address where the deposit will be
+     * returned to after the service node has been unregistered.
      *
      * @dev The function is only callable by a service node itself or its
-     * unstaking address. The service node is required to provide a url
+     * withdrawal address. The service node is required to provide a URL
      * under which it is reachable. The service node is required to provide
-     * a stake in Pan in order to register. The stake is required to be at
-     * least the minimum service node stake. The service node is required
-     * to provide an unstaking address where the token stake will be returned
+     * a deposit in PAN in order to register. The deposit is required to be at
+     * least the minimum service node deposit. The service node is required
+     * to provide a withdrawal address where the deposit will be returned
      * after the unregistration and the elapse of the unbonding period.
-     * The service node is required to be registered in the Pantos Hub in
+     * The service node is required to be registered at the Pantos Hub in
      * order to be able to transfer tokens between blockchains.
      * If the service node was unregistered, this function can be called
-     * only if the stake has already been withdrawn. If the service node
-     * intends to register again after an uregistration but the stake has
+     * only if the deposit has already been withdrawn. If the service node
+     * intends to register again after an uregistration but the deposit has
      * not been withdrawn, use the cancelServiceNodeUnregistration function.
      */
     function registerServiceNode(
         address serviceNodeAddress,
         string calldata url,
-        uint256 stake,
-        address unstakingAddress
+        uint256 deposit,
+        address withdrawalAddress
     ) external;
 
     /**
-     * @notice Used by a service node or its unstaking address to unregister
-     * a service node from the Pantos Hub.
+     * @notice Used by a service node or its withdrawal address to
+     * unregister a service node from the Pantos Hub.
      *
      * @param serviceNodeAddress The address of the service node which is
      * unregistered.
      *
      * @dev The function is only callable by a service node itself or its
-     * unstaking address. The service node is required to be registered in
+     * withdrawal address. The service node is required to be registered in
      * the Pantos Hub in order to be able to transfer tokens between
      * blockchains. Unregistering a service node from the Pantos Hub makes
      * it impossible to transfer tokens between blockchains using the
-     * service node. The stake of the service node ca be withdrawn after
+     * service node. The deposit of the service node can be withdrawn after
      * the elapse of the unbonding period by calling the
-     * withdrawServiceNodeStake function at the PantosHub.
+     * withdrawServiceNodeDeposit function at the PantosHub.
      */
     function unregisterServiceNode(address serviceNodeAddress) external;
 
     /**
-     * @notice Used by a service node or its unstaking address to withdraw
-     * the stake from the Pantos Hub.
+     * @notice Used by a service node or its withdrawal address to
+     * withdraw the deposit from the Pantos Hub.
      *
-     * @param serviceNodeAddress The address of the service node which plan
-     * to withdraw the stake.
+     * @param serviceNodeAddress The address of the service node which
+     * wants to withdraw its deposit.
      *
      * @dev The function is only callable by a service node itself or its
-     * unstaking address. The stake can be withdrawn only if the unbonding
+     * withdrawal address. The deposit can be withdrawn only if the unbonding
      * period has elapsed. The unbonding period is the minimum time that
      * must pass between the unregistration of the service node and the
-     * withdrawal of the stake.
+     * withdrawal of the deposit.
      */
-    function withdrawServiceNodeStake(address serviceNodeAddress) external;
+    function withdrawServiceNodeDeposit(address serviceNodeAddress) external;
 
     /**
-     * @notice Used by a service node or its unstaking address to cancel
+     * @notice Used by a service node or its withdrawal address to cancel
      * the unregistration from the PantosHub.
      *
      * @param serviceNodeAddress The address of the service node to cancel
      * the unregistration for.
      *
      * @dev The function is only callable by a service node itself or its
-     * unstaking address. A service node might need to have its unregistration
+     * withdrawal address. A service node might need to have its unregistration
      * cancelled if a new registration is required before the unbondoing
      * period would elapse.
      */
@@ -459,31 +420,35 @@ interface IPantosRegistry {
     ) external;
 
     /**
-     * @notice Used by a service node to increase its stake at the Pantos Hub
-     * The function is only callable by an active service node itself.
+     * @notice Increase a service node's deposit at the Pantos Hub.
      *
-     * @param serviceNodeAddress The address of the service node which will
-     * have the stake increased.
-     * @param stake The additional stake that will be added to the current
-     * one of the service node.
+     * @param serviceNodeAddress The address of the service node which
+     * will have its deposit increased.
+     * @param deposit The amount that will be added to the current
+     * deposit of the service node.
+     *
+     * @dev The function is only callable by an active service node
+     * itself or the account of its withdrawal address.
      */
-    function increaseServiceNodeStake(
+    function increaseServiceNodeDeposit(
         address serviceNodeAddress,
-        uint256 stake
+        uint256 deposit
     ) external;
 
     /**
-     * @notice Used by a service node to decrease its stake at the Pantos Hub.
-     * The function is only callable by an active service node itself.
+     * @notice Decrease a service node's deposit at the Pantos Hub.
      *
-     * @param serviceNodeAddress The address of the service node which will
-     * have the stake decreased.
-     * @param stake The reduced stake that will be subtracted from the current
-     * one of the service node.
+     * @param serviceNodeAddress The address of the service node which
+     * will have its deposit decreased.
+     * @param deposit The amount that will be subtracted from the
+     * current deposit of the service node.
+     *
+     * @dev The function is only callable by an active service node
+     * itself or the account of its withdrawal address.
      */
-    function decreaseServiceNodeStake(
+    function decreaseServiceNodeDeposit(
         address serviceNodeAddress,
-        uint256 stake
+        uint256 deposit
     ) external;
 
     /**
@@ -554,30 +519,21 @@ interface IPantosRegistry {
     ) external view returns (PantosTypes.BlockchainRecord memory);
 
     /**
-     * @notice Returns the minimum stake required to register a token in the
-     * Pantos Hub.
+     * @notice Returns the minimum deposit required to register a service node
+     * at the Pantos Hub.
      *
-     * @return The minimum required stake to register a token in the Pantos
-     * Hub as uint.
-     */
-    function getMinimumTokenStake() external view returns (uint256);
-
-    /**
-     * @notice Returns the minimum stake required to register a service node
-     * in the Pantos Hub.
-     *
-     * @return The minimum required stake to register a service node in the
+     * @return The minimum required deposit to register a service node at the
      * Pantos Hub.
      */
-    function getMinimumServiceNodeStake() external view returns (uint256);
+    function getMinimumServiceNodeDeposit() external view returns (uint256);
 
     /**
-     * @notice Returns the unbonding period of the service node stake
+     * @notice Returns the unbonding period of the service node deposit
      * (in seconds).
      *
-     * @return The unbonding period of the service node stake.
+     * @return The unbonding period of the service node deposit.
      */
-    function getUnbondingPeriodServiceNodeStake()
+    function getUnbondingPeriodServiceNodeDeposit()
         external
         view
         returns (uint256);

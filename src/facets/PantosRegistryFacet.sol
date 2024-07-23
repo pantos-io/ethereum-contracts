@@ -78,7 +78,7 @@ contract PantosRegistryFacet is IPantosRegistry, PantosBaseFacet {
         );
         s.pantosToken = pantosToken;
         emit PantosTokenSet(pantosToken);
-        registerToken(pantosToken, 0);
+        registerToken(pantosToken);
     }
 
     /**
@@ -176,35 +176,26 @@ contract PantosRegistryFacet is IPantosRegistry, PantosBaseFacet {
     }
 
     /**
-     * @dev See {IPantosRegistry-setMinimumTokenStake}.
+     * @dev See {IPantosRegistry-setUnbondingPeriodServiceNodeDeposit}.
      */
-    function setMinimumTokenStake(
-        uint256 minimumTokenStake
-    ) public override whenPaused onlyOwner {
-        s.minimumTokenStake = minimumTokenStake;
-        emit MinimumTokenStakeUpdated(minimumTokenStake);
-    }
-
-    /**
-     * @dev See {IPantosRegistry-setUnbondingPeriodServiceNodeStake}.
-     */
-    function setUnbondingPeriodServiceNodeStake(
-        uint256 unbondingPeriodServiceNodeStake
+    function setUnbondingPeriodServiceNodeDeposit(
+        uint256 unbondingPeriodServiceNodeDeposit
     ) public override onlyOwner {
-        s.unbondingPeriodServiceNodeStake = unbondingPeriodServiceNodeStake;
-        emit UnbondingPeriodServiceNodeStakeUpdated(
-            unbondingPeriodServiceNodeStake
+        s
+            .unbondingPeriodServiceNodeDeposit = unbondingPeriodServiceNodeDeposit;
+        emit UnbondingPeriodServiceNodeDepositUpdated(
+            unbondingPeriodServiceNodeDeposit
         );
     }
 
     /**
-     * @dev See {IPantosRegistry-setMinimumServiceNodeStake}.
+     * @dev See {IPantosRegistry-setMinimumServiceNodeDeposit}.
      */
-    function setMinimumServiceNodeStake(
-        uint256 minimumServiceNodeStake
+    function setMinimumServiceNodeDeposit(
+        uint256 minimumServiceNodeDeposit
     ) public override whenPaused onlyOwner {
-        s.minimumServiceNodeStake = minimumServiceNodeStake;
-        emit MinimumServiceNodeStakeUpdated(minimumServiceNodeStake);
+        s.minimumServiceNodeDeposit = minimumServiceNodeDeposit;
+        emit MinimumServiceNodeDepositUpdated(minimumServiceNodeDeposit);
     }
 
     /**
@@ -223,10 +214,7 @@ contract PantosRegistryFacet is IPantosRegistry, PantosBaseFacet {
      * @dev See {IPantosRegistry-registerToken}.
      */
     // slither-disable-next-line timestamp
-    function registerToken(
-        address token,
-        uint256 stake
-    ) public override ownerOrNotPaused {
+    function registerToken(address token) public override ownerOrNotPaused {
         // Validate the input parameters
         require(
             token != address(0),
@@ -237,31 +225,13 @@ contract PantosRegistryFacet is IPantosRegistry, PantosBaseFacet {
             IPantosToken(token).getOwner() == msg.sender,
             "PantosHub: caller is not the token owner"
         );
-        // All tokens except for the Pantos token must stake at least the
-        // minimum amount of Pantos tokens
-        require(
-            token == s.pantosToken || stake >= s.minimumTokenStake,
-            "PantosHub: stake must be >= minimum token stake"
-        );
         // Validate the stored token data
         PantosTypes.TokenRecord storage tokenRecord = s.tokenRecords[token];
         require(!tokenRecord.active, "PantosHub: token must not be active");
         // Store the token record
         tokenRecord.active = true;
-        tokenRecord.stake = stake;
         s.tokens.push(token);
         emit TokenRegistered(token);
-        // Transfer the token stake to this contract
-        if (token != s.pantosToken) {
-            require(
-                IPantosToken(s.pantosToken).transferFrom(
-                    msg.sender,
-                    address(this),
-                    stake
-                ),
-                "PantosHub: transfer of token stake failed"
-            );
-        }
     }
 
     /**
@@ -278,8 +248,6 @@ contract PantosRegistryFacet is IPantosRegistry, PantosBaseFacet {
         );
         // Update the token record
         tokenRecord.active = false;
-        uint256 stake = tokenRecord.stake;
-        tokenRecord.stake = 0;
         // Inactivate the associated external tokens
         mapping(uint256 => PantosTypes.ExternalTokenRecord)
             storage externalTokenRecords = s.externalTokenRecords[token];
@@ -304,76 +272,6 @@ contract PantosRegistryFacet is IPantosRegistry, PantosBaseFacet {
             }
         }
         emit TokenUnregistered(token);
-        // Refund the token stake
-        if (stake > 0) {
-            require(
-                IPantosToken(s.pantosToken).transfer(msg.sender, stake),
-                "PantosHub: refund of token stake failed"
-            );
-        }
-    }
-
-    /**
-     * @dev See {IPantosRegistry-increaseTokenStake}.
-     */
-    // slither-disable-next-line timestamp
-    function increaseTokenStake(
-        address token,
-        uint256 stake
-    ) external override {
-        require(
-            IPantosToken(token).getOwner() == msg.sender,
-            "PantosHub: caller is not the token owner"
-        );
-        require(
-            stake > 0,
-            "PantosHub: additional stake must be greater than 0"
-        );
-        // Validate the stored token data
-        PantosTypes.TokenRecord storage tokenRecord = s.tokenRecords[token];
-        require(tokenRecord.active, "PantosHub: token must be active");
-        uint256 newTokenStake = tokenRecord.stake + stake;
-        require(
-            newTokenStake >= s.minimumTokenStake,
-            "PantosHub: new stake must be at least the minimum token stake"
-        );
-        tokenRecord.stake = newTokenStake;
-        require(
-            IPantosToken(s.pantosToken).transferFrom(
-                msg.sender,
-                address(this),
-                stake
-            ),
-            "PantosHub: transfer of token stake failed"
-        );
-    }
-
-    /**
-     * @dev See {IPantosRegistry-decreaseTokenStake}.
-     */
-    // slither-disable-next-line timestamp
-    function decreaseTokenStake(
-        address token,
-        uint256 stake
-    ) external override {
-        require(
-            IPantosToken(token).getOwner() == msg.sender,
-            "PantosHub: caller is not the token owner"
-        );
-        require(stake > 0, "PantosHub: reduced stake must be greater than 0");
-        // Validate the stored token data
-        PantosTypes.TokenRecord storage tokenRecord = s.tokenRecords[token];
-        require(tokenRecord.active, "PantosHub: token must be active");
-        uint256 newTokenStake = tokenRecord.stake - stake;
-        require(
-            newTokenStake >= s.minimumTokenStake,
-            "PantosHub: new stake must be at least the minimum token stake"
-        );
-        tokenRecord.stake = newTokenStake;
-        require(
-            IPantosToken(s.pantosToken).transfer(msg.sender, stake),
-            "PantosHub: refund of token stake failed"
-        );
     }
 
     /**
@@ -404,12 +302,6 @@ contract PantosRegistryFacet is IPantosRegistry, PantosBaseFacet {
         require(
             IPantosToken(token).getOwner() == msg.sender,
             "PantosHub: caller is not the token owner"
-        );
-        // All tokens except for the Pantos token must stake at least the
-        // minimum amount of Pantos tokens
-        require(
-            token == s.pantosToken || tokenRecord.stake >= s.minimumTokenStake,
-            "PantosHub: token stake must be >= minimum token stake"
         );
         // Validate the stored external token data
         PantosTypes.ExternalTokenRecord storage externalTokenRecord = s
@@ -457,14 +349,15 @@ contract PantosRegistryFacet is IPantosRegistry, PantosBaseFacet {
     function registerServiceNode(
         address serviceNodeAddress,
         string calldata url,
-        uint256 stake,
-        address unstakingAddress
+        uint256 deposit,
+        address withdrawalAddress
     ) external override whenNotPaused {
         // Validate the input parameters
         require(
-            msg.sender == serviceNodeAddress || msg.sender == unstakingAddress,
+            msg.sender == serviceNodeAddress ||
+                msg.sender == withdrawalAddress,
             "PantosHub: caller is not the service node or the "
-            "unstaking address"
+            "withdrawal address"
         );
         require(
             bytes(url).length > 0,
@@ -476,8 +369,8 @@ contract PantosRegistryFacet is IPantosRegistry, PantosBaseFacet {
             "PantosHub: service node URL must be unique"
         );
         require(
-            stake >= s.minimumServiceNodeStake,
-            "PantosHub: stake must be >= minimum service node stake"
+            deposit >= s.minimumServiceNodeDeposit,
+            "PantosHub: deposit must be >= minimum service node deposit"
         );
         // Validate the stored service node data
         PantosTypes.ServiceNodeRecord storage serviceNodeRecord = s
@@ -488,27 +381,26 @@ contract PantosRegistryFacet is IPantosRegistry, PantosBaseFacet {
         );
         require(
             serviceNodeRecord.unregisterTime == 0,
-            "PantosHub: service node must withdraw its stake or cancel "
+            "PantosHub: service node must withdraw its deposit or cancel "
             "the unregistration"
         );
-        assert(serviceNodeRecord.freeStake == 0);
-        assert(serviceNodeRecord.lockedStake == 0);
+        assert(serviceNodeRecord.deposit == 0);
         // Store the service node record
         serviceNodeRecord.active = true;
         serviceNodeRecord.url = url;
-        serviceNodeRecord.freeStake = stake;
-        serviceNodeRecord.unstakingAddress = unstakingAddress;
+        serviceNodeRecord.deposit = deposit;
+        serviceNodeRecord.withdrawalAddress = withdrawalAddress;
         s.serviceNodes.push(serviceNodeAddress);
         s.isServiceNodeUrlUsed[urlHash] = true;
         emit ServiceNodeRegistered(serviceNodeAddress);
-        // Transfer the service node stake to this contract
+        // Transfer the service node deposit to this contract
         require(
             IPantosToken(s.pantosToken).transferFrom(
                 msg.sender,
                 address(this),
-                stake
+                deposit
             ),
-            "PantosHub: transfer of service node stake failed"
+            "PantosHub: transfer of service node deposit failed"
         );
     }
 
@@ -524,16 +416,15 @@ contract PantosRegistryFacet is IPantosRegistry, PantosBaseFacet {
             .serviceNodeRecords[serviceNodeAddress];
         require(
             msg.sender == serviceNodeAddress ||
-                msg.sender == serviceNodeRecord.unstakingAddress,
+                msg.sender == serviceNodeRecord.withdrawalAddress,
             "PantosHub: caller is not the service node or the "
-            "unstaking address"
+            "withdrawal address"
         );
         require(
             serviceNodeRecord.active,
             "PantosHub: service node must be active"
         );
 
-        assert(serviceNodeRecord.lockedStake == 0);
         // Update the service node record
         serviceNodeRecord.active = false;
         serviceNodeRecord.unregisterTime = block.timestamp;
@@ -551,9 +442,9 @@ contract PantosRegistryFacet is IPantosRegistry, PantosBaseFacet {
     }
 
     /**
-     * @dev See {IPantosRegistry-withdrawServiceNodeStake}.
+     * @dev See {IPantosRegistry-withdrawServiceNodeDeposit}.
      */
-    function withdrawServiceNodeStake(
+    function withdrawServiceNodeDeposit(
         address serviceNodeAddress
     ) external override {
         // Validate the stored service node data
@@ -561,37 +452,37 @@ contract PantosRegistryFacet is IPantosRegistry, PantosBaseFacet {
             .serviceNodeRecords[serviceNodeAddress];
         require(
             serviceNodeRecord.unregisterTime != 0,
-            "PantosHub: service node has no stake to withdraw"
+            "PantosHub: service node has no deposit to withdraw"
         );
         require(
             msg.sender == serviceNodeAddress ||
-                msg.sender == serviceNodeRecord.unstakingAddress,
+                msg.sender == serviceNodeRecord.withdrawalAddress,
             "PantosHub: caller is not the service node or the "
-            "unstaking address"
+            "withdrawal address"
         );
         // slither-disable-next-line timestamp
         require(
             block.timestamp >=
                 serviceNodeRecord.unregisterTime +
-                    s.unbondingPeriodServiceNodeStake,
+                    s.unbondingPeriodServiceNodeDeposit,
             "PantosHub: the unbonding period has not elapsed"
         );
-        uint256 stake = serviceNodeRecord.freeStake;
+        uint256 deposit = serviceNodeRecord.deposit;
         // Update the service node record
         serviceNodeRecord.unregisterTime = 0;
-        serviceNodeRecord.freeStake = 0;
+        serviceNodeRecord.deposit = 0;
         s.isServiceNodeUrlUsed[
             keccak256(bytes(serviceNodeRecord.url))
         ] = false;
         delete serviceNodeRecord.url;
-        // Refund the service node stake
-        if (stake > 0) {
+        // Refund the service node deposit
+        if (deposit > 0) {
             require(
                 IPantosToken(s.pantosToken).transfer(
-                    serviceNodeRecord.unstakingAddress,
-                    stake
+                    serviceNodeRecord.withdrawalAddress,
+                    deposit
                 ),
-                "PantosHub: refund of service node stake failed"
+                "PantosHub: refund of service node deposit failed"
             );
         }
     }
@@ -611,9 +502,9 @@ contract PantosRegistryFacet is IPantosRegistry, PantosBaseFacet {
         );
         require(
             msg.sender == serviceNodeAddress ||
-                msg.sender == serviceNodeRecord.unstakingAddress,
+                msg.sender == serviceNodeRecord.withdrawalAddress,
             "PantosHub: caller is not the service node or the "
-            "unstaking address"
+            "withdrawal address"
         );
         serviceNodeRecord.active = true;
         serviceNodeRecord.unregisterTime = 0;
@@ -622,80 +513,83 @@ contract PantosRegistryFacet is IPantosRegistry, PantosBaseFacet {
     }
 
     /**
-     * @dev See {IPantosRegistry-increaseServiceNodeStake}.
+     * @dev See {IPantosRegistry-increaseServiceNodeDeposit}.
      */
     // slither-disable-next-line timestamp
-    function increaseServiceNodeStake(
+    function increaseServiceNodeDeposit(
         address serviceNodeAddress,
-        uint256 stake
+        uint256 deposit
     ) external override {
         PantosTypes.ServiceNodeRecord storage serviceNodeRecord = s
             .serviceNodeRecords[serviceNodeAddress];
         require(
             msg.sender == serviceNodeAddress ||
-                msg.sender == serviceNodeRecord.unstakingAddress,
+                msg.sender == serviceNodeRecord.withdrawalAddress,
             "PantosHub: caller is not the service node or the "
-            "unstaking address"
+            "withdrawal address"
         );
         require(
             serviceNodeRecord.active,
             "PantosHub: service node must be active"
         );
         require(
-            stake > 0,
-            "PantosHub: additional stake must be greater than 0"
+            deposit > 0,
+            "PantosHub: additional deposit must be greater than 0"
         );
-        uint256 newServiceNodeStake = serviceNodeRecord.freeStake + stake;
+        uint256 newServiceNodeDeposit = serviceNodeRecord.deposit + deposit;
         require(
-            newServiceNodeStake >= s.minimumServiceNodeStake,
-            "PantosHub: new stake must be at least the minimum "
-            "service node stake"
+            newServiceNodeDeposit >= s.minimumServiceNodeDeposit,
+            "PantosHub: new deposit must be at least the minimum "
+            "service node deposit"
         );
-        serviceNodeRecord.freeStake = newServiceNodeStake;
+        serviceNodeRecord.deposit = newServiceNodeDeposit;
         require(
             IPantosToken(s.pantosToken).transferFrom(
                 msg.sender,
                 address(this),
-                stake
+                deposit
             ),
-            "PantosHub: transfer of service node stake failed"
+            "PantosHub: transfer of service node deposit failed"
         );
     }
 
     /**
-     * @dev See {IPantosRegistry-decreaseServiceNodeStake}.
+     * @dev See {IPantosRegistry-decreaseServiceNodeDeposit}.
      */
     // slither-disable-next-line timestamp
-    function decreaseServiceNodeStake(
+    function decreaseServiceNodeDeposit(
         address serviceNodeAddress,
-        uint256 stake
+        uint256 deposit
     ) external override {
         PantosTypes.ServiceNodeRecord storage serviceNodeRecord = s
             .serviceNodeRecords[serviceNodeAddress];
         require(
             msg.sender == serviceNodeAddress ||
-                msg.sender == serviceNodeRecord.unstakingAddress,
+                msg.sender == serviceNodeRecord.withdrawalAddress,
             "PantosHub: caller is not the service node or the "
-            "unstaking address"
+            "withdrawal address"
         );
         require(
             serviceNodeRecord.active,
             "PantosHub: service node must be active"
         );
-        require(stake > 0, "PantosHub: reduced stake must be greater than 0");
-        uint256 newServiceNodeStake = serviceNodeRecord.freeStake - stake;
         require(
-            newServiceNodeStake >= s.minimumServiceNodeStake,
-            "PantosHub: new stake must be at least the minimum "
-            "service node stake"
+            deposit > 0,
+            "PantosHub: reduced deposit must be greater than 0"
         );
-        serviceNodeRecord.freeStake = newServiceNodeStake;
+        uint256 newServiceNodeDeposit = serviceNodeRecord.deposit - deposit;
+        require(
+            newServiceNodeDeposit >= s.minimumServiceNodeDeposit,
+            "PantosHub: new deposit must be at least the minimum "
+            "service node deposit"
+        );
+        serviceNodeRecord.deposit = newServiceNodeDeposit;
         require(
             IPantosToken(s.pantosToken).transfer(
-                serviceNodeRecord.unstakingAddress,
-                stake
+                serviceNodeRecord.withdrawalAddress,
+                deposit
             ),
-            "PantosHub: refund of service node stake failed"
+            "PantosHub: refund of service node deposit failed"
         );
     }
 
@@ -789,34 +683,27 @@ contract PantosRegistryFacet is IPantosRegistry, PantosBaseFacet {
     }
 
     /**
-     * @dev See {IPantosRegistry-getMinimumTokenStake}.
+     * @dev See {IPantosRegistry-getMinimumServiceNodeDeposit}.
      */
-    function getMinimumTokenStake() public view override returns (uint256) {
-        return s.minimumTokenStake;
-    }
-
-    /**
-     * @dev See {IPantosRegistry-getMinimumServiceNodeStake}.
-     */
-    function getMinimumServiceNodeStake()
+    function getMinimumServiceNodeDeposit()
         public
         view
         override
         returns (uint256)
     {
-        return s.minimumServiceNodeStake;
+        return s.minimumServiceNodeDeposit;
     }
 
     /**
-     * @dev See {IPantosRegistry-getUnbondingPeriodServiceNodeStake}.
+     * @dev See {IPantosRegistry-getUnbondingPeriodServiceNodeDeposit}.
      */
-    function getUnbondingPeriodServiceNodeStake()
+    function getUnbondingPeriodServiceNodeDeposit()
         public
         view
         override
         returns (uint256)
     {
-        return s.unbondingPeriodServiceNodeStake;
+        return s.unbondingPeriodServiceNodeDeposit;
     }
 
     /**

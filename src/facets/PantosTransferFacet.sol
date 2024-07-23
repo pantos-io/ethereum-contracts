@@ -32,8 +32,6 @@ contract PantosTransferFacet is IPantosTransfer, PantosBaseFacet {
         );
         // Verify the token and service node
         _verifyTransfer(request);
-        // Service node's stake is currently not locked since there would be
-        // no benefit for transfers as they are handled now
         // Assign a new transfer ID
         uint256 transferId = s.nextTransferId++;
         emit Transfer(
@@ -67,8 +65,6 @@ contract PantosTransferFacet is IPantosTransfer, PantosBaseFacet {
         );
         // Verify the destination blockchain, token, and service node
         _verifyTransferFrom(request);
-        // Service node's stake is currently not locked since there would be
-        // no benefit for transfers as they are handled now
         // Assign a new transfer ID
         uint256 sourceTransferId = s.nextTransferId++;
         emit TransferFrom(
@@ -333,10 +329,10 @@ contract PantosTransferFacet is IPantosTransfer, PantosBaseFacet {
             serviceNodeRecord.active,
             "PantosHub: service node must be registered"
         );
-        // Service node must have enough free stake
+        // Service node must have enough deposit
         require(
-            serviceNodeRecord.freeStake >= s.minimumServiceNodeStake,
-            "PantosHub: service node must have enough free stake"
+            serviceNodeRecord.deposit >= s.minimumServiceNodeDeposit,
+            "PantosHub: service node must have enough deposit"
         );
     }
 
