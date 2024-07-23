@@ -2,6 +2,7 @@ name: pantos-ethereum
 
 networks:
   pantos-ethereum:
+    driver: overlay
     name: pantos-ethereum
     attachable: true
 
@@ -9,20 +10,22 @@ services:
   eth:
     restart: always
     platform: linux/amd64
-    image: pantosio/ethereum-node:${DOCKER_TAG-latest}
+    image: pantosio/ethereum-node:${DOCKER_TAG-local}
     build:
       context: .
       dockerfile: Dockerfile
       target: blockchain-node
       x-bake:
         tags:
-          - ${DOCKER_REGISTRY-pantosio}/ethereum-node:${DOCKER_TAG-latest}
+          - ${DOCKER_REGISTRY-pantosio}/ethereum-node:${DOCKER_TAG-local}
+          - ${DOCKER_REGISTRY-pantosio}/ethereum-node:${EXTRA_TAG-local}
     networks:
       pantos-ethereum:
     environment:
       CHAIN_ID: 31337
     volumes:
       - eth-data:/data
+      - ./data/eth:/data
     ports:
       - 8545:8545
     healthcheck:
@@ -34,18 +37,20 @@ services:
   bnb:
     restart: always
     platform: linux/amd64
-    image: pantosio/ethereum-node:${DOCKER_TAG-latest}
+    image: pantosio/ethereum-node:${DOCKER_TAG-local}
     build:
       context: .
       dockerfile: Dockerfile
       target: blockchain-node
       x-bake:
         tags:
-          - ${DOCKER_REGISTRY-pantosio}/ethereum-node:${DOCKER_TAG-latest}
+          - ${DOCKER_REGISTRY-pantosio}/ethereum-node:${DOCKER_TAG-local}
+          - ${DOCKER_REGISTRY-pantosio}/ethereum-node:${EXTRA_TAG-local}
     networks:
       pantos-ethereum:
     volumes:
       - bnb-data:/data
+      - ./data/bnb:/data
     environment:
       CHAIN_ID: 31338
     ports:

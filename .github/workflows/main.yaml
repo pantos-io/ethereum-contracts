@@ -1,0 +1,14 @@
+name: Publish dev release
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  publish-docker:
+    uses: ./.github/workflows/publish-docker.yaml
+    secrets: 'inherit'
+    with:
+      tag: development
+      architecture: amd64
+      environment: main
