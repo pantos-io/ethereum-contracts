@@ -2,7 +2,6 @@
 // slither-disable-next-line solc-version
 pragma solidity 0.8.26;
 
-
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 import {Pausable} from "@openzeppelin/contracts/utils/Pausable.sol";
 import {ECDSA} from "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";

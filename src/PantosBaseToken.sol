@@ -2,7 +2,6 @@
 // slither-disable-next-line solc-version
 pragma solidity 0.8.26;
 
-
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 

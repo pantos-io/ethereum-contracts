@@ -2,7 +2,6 @@
 // slither-disable-next-line solc-version
 pragma solidity 0.8.26;
 
-
 import {IERC173} from "@diamond/interfaces/IERC173.sol";
 
 import {IPantosRegistry} from "./IPantosRegistry.sol";

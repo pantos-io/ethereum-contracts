@@ -2,7 +2,6 @@
 // slither-disable-next-line solc-version
 pragma solidity 0.8.26;
 
-
 import {PantosTypes} from "../interfaces/PantosTypes.sol";
 import {IPantosForwarder} from "../interfaces/IPantosForwarder.sol";
 import {IPantosToken} from "../interfaces/IPantosToken.sol";

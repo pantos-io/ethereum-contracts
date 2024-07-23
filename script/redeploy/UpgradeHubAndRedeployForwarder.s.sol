@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0
 pragma solidity 0.8.26;
 
-
 import {PantosForwarder} from "../../src/PantosForwarder.sol";
 
 import {PantosHubDeployer} from "../helpers/PantosHubDeployer.s.sol";
