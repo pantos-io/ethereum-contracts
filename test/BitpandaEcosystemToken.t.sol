@@ -1,6 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0
 pragma solidity 0.8.26;
-
 /* solhint-disable no-console*/
 
 import {console2} from "forge-std/console2.sol";
