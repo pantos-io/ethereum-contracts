@@ -2,6 +2,14 @@
 // slither-disable-next-line solc-version
 pragma solidity 0.8.26;
 
+import {LibDiamond} from "@diamond/libraries/LibDiamond.sol";
+import {IDiamondLoupe} from "@diamond/interfaces/IDiamondLoupe.sol";
+import {IDiamondCut} from "@diamond/interfaces/IDiamondCut.sol";
+import {IERC173} from "@diamond/interfaces/IERC173.sol";
+import {IERC165} from "@diamond/interfaces/IERC165.sol";
+
+import {PantosHubStorage} from "../PantosHubStorage.sol";
+
 /**
  * @title Pantos Hub initializer
  *
@@ -16,24 +24,14 @@ pragma solidity 0.8.26;
  * by the diamond cut facet using delegatecall to initialize the state of
  * Pantos Hub.
  */
-
-import {LibDiamond} from "@diamond/libraries/LibDiamond.sol";
-import {IDiamondLoupe} from "@diamond/interfaces/IDiamondLoupe.sol";
-import {IDiamondCut} from "@diamond/interfaces/IDiamondCut.sol";
-import {IERC173} from "@diamond/interfaces/IERC173.sol";
-import {IERC165} from "@diamond/interfaces/IERC165.sol";
-
-import {PantosHubStorage} from "../PantosHubStorage.sol";
-
 contract PantosHubInit {
     PantosHubStorage internal ps;
 
     struct Args {
         uint256 blockchainId;
         string blockchainName;
-        uint256 minimumTokenStake;
-        uint256 minimumServiceNodeStake;
-        uint256 unbondingPeriodServiceNodeStake;
+        uint256 minimumServiceNodeDeposit;
+        uint256 unbondingPeriodServiceNodeDeposit;
         uint256 feeFactor;
         uint256 feeFactorValidFrom;
         uint256 minimumValidatorFeeUpdatePeriod;
@@ -92,11 +90,9 @@ contract PantosHubInit {
         ps.validatorFeeRecords[args.blockchainId].validFrom = args
             .feeFactorValidFrom;
 
-        // Set the minimum stakes
-        ps.minimumTokenStake = args.minimumTokenStake;
-        ps.minimumServiceNodeStake = args.minimumServiceNodeStake;
-        ps.unbondingPeriodServiceNodeStake = args
-            .unbondingPeriodServiceNodeStake;
+        ps.minimumServiceNodeDeposit = args.minimumServiceNodeDeposit;
+        ps.unbondingPeriodServiceNodeDeposit = args
+            .unbondingPeriodServiceNodeDeposit;
         // Set the next transfer ID (is greater than 0 if there have already
         // been prior Pantos transfers initiated on the current blockchain)
         ps.nextTransferId = args.nextTransferId;

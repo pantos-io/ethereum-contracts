@@ -27,8 +27,8 @@ abstract contract PantosHubDeployer is PantosBaseTest {
         address(uint160(uint256(keccak256("PantosForwarderAddress"))));
     address constant PANTOS_TOKEN_ADDRESS =
         address(uint160(uint256(keccak256("PantosTokenAddress"))));
-    address constant SERVICE_NODE_UNSTAKING_ADDRESS =
-        address(uint160(uint256(keccak256("ServiceNodeUnstakingAddress"))));
+    address constant SERVICE_NODE_WITHDRAWAL_ADDRESS =
+        address(uint160(uint256(keccak256("ServiceNodeWithdrawalAddress"))));
     address constant TRANSFER_SENDER =
         address(uint160(uint256(keccak256("TransferSender"))));
 
@@ -139,9 +139,8 @@ abstract contract PantosHubDeployer is PantosBaseTest {
         PantosHubInit.Args memory args = PantosHubInit.Args({
             blockchainId: uint256(thisBlockchain.blockchainId),
             blockchainName: thisBlockchain.name,
-            minimumTokenStake: MINIMUM_TOKEN_STAKE,
-            minimumServiceNodeStake: MINIMUM_SERVICE_NODE_STAKE,
-            unbondingPeriodServiceNodeStake: SERVICE_NODE_STAKE_UNBONDING_PERIOD,
+            minimumServiceNodeDeposit: MINIMUM_SERVICE_NODE_DEPOSIT,
+            unbondingPeriodServiceNodeDeposit: SERVICE_NODE_DEPOSIT_UNBONDING_PERIOD,
             feeFactor: thisBlockchain.feeFactor,
             feeFactorValidFrom: FEE_FACTOR_VALID_FROM,
             minimumValidatorFeeUpdatePeriod: MINIMUM_VALIDATOR_FEE_UPDATE_PERIOD,
@@ -276,14 +275,13 @@ abstract contract PantosHubDeployer is PantosBaseTest {
             thisBlockchainValidatorFeeRecord.validFrom,
             FEE_FACTOR_VALID_FROM
         );
-        assertEq(pantosHubProxy.getMinimumTokenStake(), MINIMUM_TOKEN_STAKE);
         assertEq(
-            pantosHubProxy.getMinimumServiceNodeStake(),
-            MINIMUM_SERVICE_NODE_STAKE
+            pantosHubProxy.getMinimumServiceNodeDeposit(),
+            MINIMUM_SERVICE_NODE_DEPOSIT
         );
         assertEq(
-            pantosHubProxy.getUnbondingPeriodServiceNodeStake(),
-            SERVICE_NODE_STAKE_UNBONDING_PERIOD
+            pantosHubProxy.getUnbondingPeriodServiceNodeDeposit(),
+            SERVICE_NODE_DEPOSIT_UNBONDING_PERIOD
         );
         assertEq(pantosHubProxy.getNextTransferId(), 0);
     }
@@ -347,14 +345,13 @@ abstract contract PantosHubDeployer is PantosBaseTest {
             FEE_FACTOR_VALID_FROM
         );
 
-        assertEq(pantosHubProxy.getMinimumTokenStake(), MINIMUM_TOKEN_STAKE);
         assertEq(
-            pantosHubProxy.getMinimumServiceNodeStake(),
-            MINIMUM_SERVICE_NODE_STAKE
+            pantosHubProxy.getMinimumServiceNodeDeposit(),
+            MINIMUM_SERVICE_NODE_DEPOSIT
         );
         assertEq(
-            pantosHubProxy.getUnbondingPeriodServiceNodeStake(),
-            SERVICE_NODE_STAKE_UNBONDING_PERIOD
+            pantosHubProxy.getUnbondingPeriodServiceNodeDeposit(),
+            SERVICE_NODE_DEPOSIT_UNBONDING_PERIOD
         );
         assertEq(pantosHubProxy.getNextTransferId(), 0);
     }
@@ -364,7 +361,7 @@ abstract contract PantosHubDeployer is PantosBaseTest {
         pure
         returns (bytes4[] memory)
     {
-        bytes4[] memory selectors = new bytes4[](46);
+        bytes4[] memory selectors = new bytes4[](42);
         selectors[0] = IPantosRegistry.setPantosForwarder.selector;
         selectors[1] = IPantosRegistry.setPantosToken.selector;
         selectors[2] = IPantosRegistry.setPrimaryValidatorNode.selector;
@@ -372,59 +369,55 @@ abstract contract PantosHubDeployer is PantosBaseTest {
         selectors[4] = IPantosRegistry.unregisterBlockchain.selector;
         selectors[5] = IPantosRegistry.updateBlockchainName.selector;
         selectors[6] = IPantosRegistry.updateFeeFactor.selector;
-        selectors[7] = IPantosRegistry.setMinimumTokenStake.selector;
-        selectors[8] = IPantosRegistry
-            .setUnbondingPeriodServiceNodeStake
+        selectors[7] = IPantosRegistry
+            .setUnbondingPeriodServiceNodeDeposit
             .selector;
-        selectors[9] = IPantosRegistry.setMinimumServiceNodeStake.selector;
-        selectors[10] = IPantosRegistry
+        selectors[8] = IPantosRegistry.setMinimumServiceNodeDeposit.selector;
+        selectors[9] = IPantosRegistry
             .setMinimumValidatorFeeUpdatePeriod
             .selector;
-        selectors[11] = IPantosRegistry.registerToken.selector;
-        selectors[12] = IPantosRegistry.unregisterToken.selector;
-        selectors[13] = IPantosRegistry.increaseTokenStake.selector;
-        selectors[14] = IPantosRegistry.decreaseTokenStake.selector;
-        selectors[15] = IPantosRegistry.registerExternalToken.selector;
-        selectors[16] = IPantosRegistry.unregisterExternalToken.selector;
-        selectors[17] = IPantosRegistry.registerServiceNode.selector;
-        selectors[18] = IPantosRegistry.unregisterServiceNode.selector;
-        selectors[19] = IPantosRegistry.withdrawServiceNodeStake.selector;
-        selectors[20] = IPantosRegistry
+        selectors[10] = IPantosRegistry.registerToken.selector;
+        selectors[11] = IPantosRegistry.unregisterToken.selector;
+        selectors[12] = IPantosRegistry.registerExternalToken.selector;
+        selectors[13] = IPantosRegistry.unregisterExternalToken.selector;
+        selectors[14] = IPantosRegistry.registerServiceNode.selector;
+        selectors[15] = IPantosRegistry.unregisterServiceNode.selector;
+        selectors[16] = IPantosRegistry.withdrawServiceNodeDeposit.selector;
+        selectors[17] = IPantosRegistry
             .cancelServiceNodeUnregistration
             .selector;
-        selectors[21] = IPantosRegistry.increaseServiceNodeStake.selector;
-        selectors[22] = IPantosRegistry.decreaseServiceNodeStake.selector;
-        selectors[23] = IPantosRegistry.updateServiceNodeUrl.selector;
+        selectors[18] = IPantosRegistry.increaseServiceNodeDeposit.selector;
+        selectors[19] = IPantosRegistry.decreaseServiceNodeDeposit.selector;
+        selectors[20] = IPantosRegistry.updateServiceNodeUrl.selector;
 
-        selectors[24] = IPantosRegistry.getPantosForwarder.selector;
-        selectors[25] = IPantosRegistry.getPantosToken.selector;
-        selectors[26] = IPantosRegistry.getPrimaryValidatorNode.selector;
-        selectors[27] = IPantosRegistry.getNumberBlockchains.selector;
-        selectors[28] = IPantosRegistry.getNumberActiveBlockchains.selector;
-        selectors[29] = IPantosRegistry.getCurrentBlockchainId.selector;
-        selectors[30] = IPantosRegistry.getBlockchainRecord.selector;
-        selectors[31] = IPantosRegistry.getMinimumTokenStake.selector;
-        selectors[32] = IPantosRegistry
+        selectors[21] = IPantosRegistry.getPantosForwarder.selector;
+        selectors[22] = IPantosRegistry.getPantosToken.selector;
+        selectors[23] = IPantosRegistry.getPrimaryValidatorNode.selector;
+        selectors[24] = IPantosRegistry.getNumberBlockchains.selector;
+        selectors[25] = IPantosRegistry.getNumberActiveBlockchains.selector;
+        selectors[26] = IPantosRegistry.getCurrentBlockchainId.selector;
+        selectors[27] = IPantosRegistry.getBlockchainRecord.selector;
+        selectors[28] = IPantosRegistry
             .isServiceNodeInTheUnbondingPeriod
             .selector;
-        selectors[33] = IPantosRegistry.isValidValidatorNodeNonce.selector;
-        selectors[34] = IPantosRegistry.getMinimumServiceNodeStake.selector;
-        selectors[35] = IPantosRegistry
-            .getUnbondingPeriodServiceNodeStake
+        selectors[29] = IPantosRegistry.isValidValidatorNodeNonce.selector;
+        selectors[30] = IPantosRegistry.getMinimumServiceNodeDeposit.selector;
+        selectors[31] = IPantosRegistry
+            .getUnbondingPeriodServiceNodeDeposit
             .selector;
-        selectors[36] = IPantosRegistry.getTokens.selector;
-        selectors[37] = IPantosRegistry.getTokenRecord.selector;
-        selectors[38] = IPantosRegistry.getExternalTokenRecord.selector;
-        selectors[39] = IPantosRegistry.getServiceNodes.selector;
-        selectors[40] = IPantosRegistry.getServiceNodeRecord.selector;
-        selectors[41] = IPantosRegistry.getValidatorFeeRecord.selector;
-        selectors[42] = IPantosRegistry
+        selectors[32] = IPantosRegistry.getTokens.selector;
+        selectors[33] = IPantosRegistry.getTokenRecord.selector;
+        selectors[34] = IPantosRegistry.getExternalTokenRecord.selector;
+        selectors[35] = IPantosRegistry.getServiceNodes.selector;
+        selectors[36] = IPantosRegistry.getServiceNodeRecord.selector;
+        selectors[37] = IPantosRegistry.getValidatorFeeRecord.selector;
+        selectors[38] = IPantosRegistry
             .getMinimumValidatorFeeUpdatePeriod
             .selector;
 
-        selectors[43] = IPantosRegistry.pause.selector;
-        selectors[44] = IPantosRegistry.unpause.selector;
-        selectors[45] = IPantosRegistry.paused.selector;
+        selectors[39] = IPantosRegistry.pause.selector;
+        selectors[40] = IPantosRegistry.unpause.selector;
+        selectors[41] = IPantosRegistry.paused.selector;
         return selectors;
     }
 

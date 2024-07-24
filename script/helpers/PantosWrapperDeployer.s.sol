@@ -15,7 +15,6 @@ import {PantosEtherWrapper} from "../../src/wrappers/PantosEtherWrapper.sol";
 import {PantosFantomWrapper} from "../../src/wrappers/PantosFantomWrapper.sol";
 import {PantosMaticWrapper} from "../../src/wrappers/PantosMaticWrapper.sol";
 
-import {Constants} from "./Constants.s.sol";
 import {PantosBaseScript} from "./PantosBaseScript.s.sol";
 
 abstract contract PantosWrapperDeployer is PantosBaseScript {
@@ -55,10 +54,7 @@ abstract contract PantosWrapperDeployer is PantosBaseScript {
         for (uint256 i; i < pantosWrappers.length; i++) {
             pantosWrappers[i].setPantosForwarder(address(pantosForwarder));
 
-            pantosHubProxy.registerToken(
-                address(pantosWrappers[i]),
-                Constants.MINIMUM_TOKEN_STAKE
-            );
+            pantosHubProxy.registerToken(address(pantosWrappers[i]));
             pantosWrappers[i].unpause();
             console2.log(
                 "%s initialized; paused=%s",

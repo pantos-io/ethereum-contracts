@@ -551,89 +551,60 @@ contract PantosHubTest is PantosHubDeployer {
         );
     }
 
-    function test_setMinimumTokenStake() external {
-        uint256 minimumTokenStake = 1;
+    function test_setUnbondingPeriodServiceNodeDeposit() external {
+        uint256 unbondingPeriodServiceNodeDeposit = 1;
         vm.expectEmit();
-        emit IPantosRegistry.MinimumTokenStakeUpdated(minimumTokenStake);
-
-        pantosHubProxy.setMinimumTokenStake(minimumTokenStake);
-
-        assertEq(pantosHubProxy.getMinimumTokenStake(), minimumTokenStake);
-    }
-
-    function test_setMinimumTokenStake_WhenNotPaused() external {
-        initializePantosHub();
-        bytes memory calldata_ = abi.encodeWithSelector(
-            IPantosRegistry.setMinimumTokenStake.selector,
-            1
+        emit IPantosRegistry.UnbondingPeriodServiceNodeDepositUpdated(
+            unbondingPeriodServiceNodeDeposit
         );
 
-        whenPausedTest(address(pantosHubProxy), calldata_);
+        pantosHubProxy.setUnbondingPeriodServiceNodeDeposit(
+            unbondingPeriodServiceNodeDeposit
+        );
+
+        assertEq(
+            pantosHubProxy.getUnbondingPeriodServiceNodeDeposit(),
+            unbondingPeriodServiceNodeDeposit
+        );
     }
 
-    function test_setMinimumTokenStake_ByNonOwner() external {
+    function test_setUnbondingPeriodServiceNodeDeposit_ByNonOwner() external {
         bytes memory calldata_ = abi.encodeWithSelector(
-            IPantosRegistry.setMinimumTokenStake.selector,
+            IPantosRegistry.setUnbondingPeriodServiceNodeDeposit.selector,
             1
         );
 
         onlyOwnerTest(address(pantosHubProxy), calldata_);
     }
 
-    function test_setUnbondingPeriodServiceNodeStake() external {
-        uint256 unbondingPeriodServiceNodeStake = 1;
+    function test_setMinimumServiceNodeDeposit() external {
+        uint256 minimumServiceNodeDeposit = 1;
         vm.expectEmit();
-        emit IPantosRegistry.UnbondingPeriodServiceNodeStakeUpdated(
-            unbondingPeriodServiceNodeStake
+        emit IPantosRegistry.MinimumServiceNodeDepositUpdated(
+            minimumServiceNodeDeposit
         );
 
-        pantosHubProxy.setUnbondingPeriodServiceNodeStake(
-            unbondingPeriodServiceNodeStake
-        );
+        pantosHubProxy.setMinimumServiceNodeDeposit(minimumServiceNodeDeposit);
 
         assertEq(
-            pantosHubProxy.getUnbondingPeriodServiceNodeStake(),
-            unbondingPeriodServiceNodeStake
+            pantosHubProxy.getMinimumServiceNodeDeposit(),
+            minimumServiceNodeDeposit
         );
     }
 
-    function test_setUnbondingPeriodServiceNodeStake_ByNonOwner() external {
-        bytes memory calldata_ = abi.encodeWithSelector(
-            IPantosRegistry.setUnbondingPeriodServiceNodeStake.selector,
-            1
-        );
-
-        onlyOwnerTest(address(pantosHubProxy), calldata_);
-    }
-
-    function test_setMinimumServiceNodeStake() external {
-        uint256 minimumServiceNodeStake = 1;
-        vm.expectEmit();
-        emit IPantosRegistry.MinimumServiceNodeStakeUpdated(
-            minimumServiceNodeStake
-        );
-
-        pantosHubProxy.setMinimumServiceNodeStake(minimumServiceNodeStake);
-
-        assertEq(
-            pantosHubProxy.getMinimumServiceNodeStake(),
-            minimumServiceNodeStake
-        );
-    }
-
-    function test_setMinimumServiceNodeStake_WhenNotPaused() external {
+    function test_setMinimumServiceNodeDeposit_WhenNotPaused() external {
         initializePantosHub();
         bytes memory calldata_ = abi.encodeWithSelector(
-            IPantosRegistry.setMinimumServiceNodeStake.selector,
+            IPantosRegistry.setMinimumServiceNodeDeposit.selector,
             1
         );
 
         whenPausedTest(address(pantosHubProxy), calldata_);
     }
 
-    function test_setMinimumServiceNodeStake_ByNonOwner() external {
+    function test_setMinimumServiceNodeDeposit_ByNonOwner() external {
         bytes memory calldata_ = abi.encodeWithSelector(
-            IPantosRegistry.setMinimumServiceNodeStake.selector,
+            IPantosRegistry.setMinimumServiceNodeDeposit.selector,
             1
         );
 
@@ -664,52 +635,29 @@ contract PantosHubTest is PantosHubDeployer {
 
     function test_registerToken() external {
         initializePantosHub();
-        mockIerc20_transferFrom(
-            PANTOS_TOKEN_ADDRESS,
-            deployer(),
-            address(pantosHubProxy),
-            MINIMUM_TOKEN_STAKE,
-            true
-        );
         mockPandasToken_getOwner(PANDAS_TOKEN_ADDRESS, deployer());
         vm.expectEmit();
         emit IPantosRegistry.TokenRegistered(PANDAS_TOKEN_ADDRESS);
-        vm.expectCall(
-            PANTOS_TOKEN_ADDRESS,
-            abi.encodeWithSelector(
-                IERC20.transferFrom.selector,
-                deployer(),
-                address(pantosHubProxy),
-                MINIMUM_TOKEN_STAKE
-            )
-        );
 
-        pantosHubProxy.registerToken(
-            PANDAS_TOKEN_ADDRESS,
-            MINIMUM_TOKEN_STAKE
-        );
+        pantosHubProxy.registerToken(PANDAS_TOKEN_ADDRESS);
 
         PantosTypes.TokenRecord memory tokenRecord = pantosHubProxy
             .getTokenRecord(PANDAS_TOKEN_ADDRESS);
         assertTrue(tokenRecord.active);
-        assertEq(tokenRecord.stake, MINIMUM_TOKEN_STAKE);
     }
 
     function test_registerToken_ByNonOwnerAndPaused() external {
         vm.prank(address(111));
         vm.expectRevert("LibDiamond: Must be contract owner");
 
-        pantosHubProxy.registerToken(
-            PANDAS_TOKEN_ADDRESS,
-            MINIMUM_TOKEN_STAKE
-        );
+        pantosHubProxy.registerToken(PANDAS_TOKEN_ADDRESS);
     }
 
     function test_registerToken_WithToken0() external {
         initializePantosHub();
         vm.expectRevert("PantosHub: token must not be the zero account");
 
-        pantosHubProxy.registerToken(ADDRESS_ZERO, MINIMUM_TOKEN_STAKE);
+        pantosHubProxy.registerToken(ADDRESS_ZERO);
     }
 
     function test_registerToken_ByNonTokenOwner() external {
@@ -718,42 +666,19 @@ contract PantosHubTest is PantosHubDeployer {
 
         vm.expectRevert("PantosHub: caller is not the token owner");
 
-        pantosHubProxy.registerToken(
-            PANDAS_TOKEN_ADDRESS,
-            MINIMUM_TOKEN_STAKE
-        );
-    }
-
-    function test_registerToken_WithNotEnoughStake() external {
-        initializePantosHub();
-        mockPandasToken_getOwner(PANDAS_TOKEN_ADDRESS, deployer());
-        vm.expectRevert("PantosHub: stake must be >= minimum token stake");
-
-        pantosHubProxy.registerToken(
-            PANDAS_TOKEN_ADDRESS,
-            MINIMUM_TOKEN_STAKE - 1
-        );
+        pantosHubProxy.registerToken(PANDAS_TOKEN_ADDRESS);
     }
 
     function test_registerToken_WhenTokenAlreadyRegistered() external {
         registerToken();
         vm.expectRevert("PantosHub: token must not be active");
 
-        pantosHubProxy.registerToken(
-            PANDAS_TOKEN_ADDRESS,
-            MINIMUM_TOKEN_STAKE
-        );
+        pantosHubProxy.registerToken(PANDAS_TOKEN_ADDRESS);
     }
 
     function test_unregisterToken() external {
         registerTokenAndExternalToken();
         mockPandasToken_getOwner(PANDAS_TOKEN_ADDRESS, deployer());
-        mockIerc20_transfer(
-            PANTOS_TOKEN_ADDRESS,
-            deployer(),
-            MINIMUM_TOKEN_STAKE,
-            true
-        );
         vm.expectEmit();
         emit IPantosRegistry.ExternalTokenUnregistered(
             PANDAS_TOKEN_ADDRESS,
@@ -761,14 +686,6 @@ contract PantosHubTest is PantosHubDeployer {
         );
         vm.expectEmit();
         emit IPantosRegistry.TokenUnregistered(PANDAS_TOKEN_ADDRESS);
-        vm.expectCall(
-            PANTOS_TOKEN_ADDRESS,
-            abi.encodeWithSelector(
-                IERC20.transfer.selector,
-                deployer(),
-                MINIMUM_TOKEN_STAKE
-            )
-        );
 
         pantosHubProxy.unregisterToken(PANDAS_TOKEN_ADDRESS);
 
@@ -783,7 +700,6 @@ contract PantosHubTest is PantosHubDeployer {
         assertEq(tokens.length, 1);
         assertEq(tokens[0], PANTOS_TOKEN_ADDRESS);
         assertFalse(tokenRecord.active);
-        assertEq(tokenRecord.stake, 0);
         assertFalse(externalTokenRecord.active);
     }
 
@@ -803,12 +719,6 @@ contract PantosHubTest is PantosHubDeployer {
     function test_unregisterToken_WhenTokenAlreadyUnRegistered() external {
         registerToken();
         mockPandasToken_getOwner(PANDAS_TOKEN_ADDRESS, deployer());
-        mockIerc20_transfer(
-            PANTOS_TOKEN_ADDRESS,
-            deployer(),
-            MINIMUM_TOKEN_STAKE,
-            true
-        );
         pantosHubProxy.unregisterToken(PANDAS_TOKEN_ADDRESS);
         vm.expectRevert("PantosHub: token must be active");
 
@@ -920,21 +830,6 @@ contract PantosHubTest is PantosHubDeployer {
         );
     }
 
-    function test_registerExternalToken_WithNotEnoughTokenStake() external {
-        registerToken();
-        pantosHubProxy.pause();
-        pantosHubProxy.setMinimumTokenStake(MINIMUM_TOKEN_STAKE + 1);
-        vm.expectRevert(
-            "PantosHub: token stake must be >= minimum token stake"
-        );
-
-        pantosHubProxy.registerExternalToken(
-            PANDAS_TOKEN_ADDRESS,
-            uint256(otherBlockchain.blockchainId),
-            EXTERNAL_PANDAS_TOKEN_ADDRESS
-        );
-    }
-
     function test_registerExternalToken_WhenAlreadyRegistered() external {
         registerTokenAndExternalToken();
         vm.expectRevert("PantosHub: external token must not be active");
@@ -1015,132 +910,13 @@ contract PantosHubTest is PantosHubDeployer {
         );
     }
 
-    function test_increaseTokenStake() external {
-        registerToken();
-        mockPandasToken_getOwner(PANDAS_TOKEN_ADDRESS, deployer());
-        mockIerc20_transferFrom(
-            PANTOS_TOKEN_ADDRESS,
-            deployer(),
-            address(pantosHubProxy),
-            1,
-            true
-        );
-        vm.expectCall(
-            PANTOS_TOKEN_ADDRESS,
-            abi.encodeWithSelector(
-                IERC20.transferFrom.selector,
-                deployer(),
-                address(pantosHubProxy),
-                1
-            )
-        );
-
-        pantosHubProxy.increaseTokenStake(PANDAS_TOKEN_ADDRESS, 1);
-
-        PantosTypes.TokenRecord memory tokenRecord = pantosHubProxy
-            .getTokenRecord(PANDAS_TOKEN_ADDRESS);
-        assertTrue(tokenRecord.active);
-        assertEq(tokenRecord.stake, MINIMUM_TOKEN_STAKE + 1);
-    }
-
-    function test_increaseTokenStake_ByNonTokenOwner() external {
-        registerToken();
-        mockPandasToken_getOwner(PANDAS_TOKEN_ADDRESS, deployer());
-        vm.prank(address(123));
-        vm.expectRevert("PantosHub: caller is not the token owner");
-
-        pantosHubProxy.increaseTokenStake(PANDAS_TOKEN_ADDRESS, 1);
-    }
-
-    function test_increaseTokenStake_WithStake0() external {
-        mockPandasToken_getOwner(PANTOS_TOKEN_ADDRESS, deployer());
-        mockPandasToken_getOwner(PANDAS_TOKEN_ADDRESS, deployer());
-        vm.expectRevert("PantosHub: additional stake must be greater than 0");
-
-        pantosHubProxy.increaseTokenStake(PANDAS_TOKEN_ADDRESS, 0);
-    }
-
-    function test_increaseTokenStake_WithNonActiveToken() external {
-        mockPandasToken_getOwner(PANTOS_TOKEN_ADDRESS, deployer());
-        mockPandasToken_getOwner(PANDAS_TOKEN_ADDRESS, deployer());
-        vm.expectRevert("PantosHub: token must be active");
-
-        pantosHubProxy.increaseTokenStake(PANDAS_TOKEN_ADDRESS, 1);
-    }
-
-    function test_increaseTokenStake_WithNotEnoughStake() external {
-        registerToken();
-        pantosHubProxy.pause();
-        pantosHubProxy.setMinimumTokenStake(MINIMUM_TOKEN_STAKE + 2);
-        mockPandasToken_getOwner(PANTOS_TOKEN_ADDRESS, deployer());
-        mockPandasToken_getOwner(PANDAS_TOKEN_ADDRESS, deployer());
-        vm.expectRevert(
-            "PantosHub: new stake must be at least the minimum token stake"
-        );
-
-        pantosHubProxy.increaseTokenStake(PANDAS_TOKEN_ADDRESS, 1);
-    }
-
-    function test_decreaseTokenStake() external {
-        registerToken();
-        pantosHubProxy.pause();
-        pantosHubProxy.setMinimumTokenStake(MINIMUM_TOKEN_STAKE - 1);
-        mockPandasToken_getOwner(PANDAS_TOKEN_ADDRESS, deployer());
-        mockIerc20_transfer(PANTOS_TOKEN_ADDRESS, deployer(), 1, true);
-
-        pantosHubProxy.decreaseTokenStake(PANDAS_TOKEN_ADDRESS, 1);
-
-        PantosTypes.TokenRecord memory tokenRecord = pantosHubProxy
-            .getTokenRecord(PANDAS_TOKEN_ADDRESS);
-        assertTrue(tokenRecord.active);
-        assertEq(tokenRecord.stake, MINIMUM_TOKEN_STAKE - 1);
-    }
-
-    function test_decreaseTokenStake_ByNonTokenOwner() external {
-        registerToken();
-        mockPandasToken_getOwner(PANDAS_TOKEN_ADDRESS, deployer());
-        mockIerc20_transfer(PANDAS_TOKEN_ADDRESS, deployer(), 1, true);
-        vm.prank(address(123));
-        vm.expectRevert("PantosHub: caller is not the token owner");
-
-        pantosHubProxy.decreaseTokenStake(PANDAS_TOKEN_ADDRESS, 1);
-    }
-
-    function test_decreaseTokenStake_WithStake0() external {
-        mockIerc20_transfer(PANDAS_TOKEN_ADDRESS, deployer(), 0, true);
-        mockPandasToken_getOwner(PANDAS_TOKEN_ADDRESS, deployer());
-        vm.expectRevert("PantosHub: reduced stake must be greater than 0");
-
-        pantosHubProxy.decreaseTokenStake(PANDAS_TOKEN_ADDRESS, 0);
-    }
-
-    function test_decreaseTokenStake_WithNonActiveToken() external {
-        mockIerc20_transfer(PANDAS_TOKEN_ADDRESS, deployer(), 1, true);
-        mockPandasToken_getOwner(PANDAS_TOKEN_ADDRESS, deployer());
-        vm.expectRevert("PantosHub: token must be active");
-
-        pantosHubProxy.decreaseTokenStake(PANDAS_TOKEN_ADDRESS, 1);
-    }
-
-    function test_decreaseTokenStake_WithNotEnoughStake() external {
-        registerToken();
-        mockPandasToken_getOwner(PANDAS_TOKEN_ADDRESS, deployer());
-
-        mockIerc20_transfer(PANDAS_TOKEN_ADDRESS, deployer(), 1, true);
-        vm.expectRevert(
-            "PantosHub: new stake must be at least the minimum token stake"
-        );
-
-        pantosHubProxy.decreaseTokenStake(PANDAS_TOKEN_ADDRESS, 1);
-    }
-
     function test_registerServiceNode() external {
         initializePantosHub();
         mockIerc20_transferFrom(
             PANTOS_TOKEN_ADDRESS,
             SERVICE_NODE_ADDRESS,
             address(pantosHubProxy),
-            MINIMUM_SERVICE_NODE_STAKE,
+            MINIMUM_SERVICE_NODE_DEPOSIT,
             true
         );
         vm.prank(SERVICE_NODE_ADDRESS);
@@ -1152,15 +928,15 @@ contract PantosHubTest is PantosHubDeployer {
                 IERC20.transferFrom.selector,
                 SERVICE_NODE_ADDRESS,
                 address(pantosHubProxy),
-                MINIMUM_SERVICE_NODE_STAKE
+                MINIMUM_SERVICE_NODE_DEPOSIT
             )
         );
 
         pantosHubProxy.registerServiceNode(
             SERVICE_NODE_ADDRESS,
             SERVICE_NODE_URL,
-            MINIMUM_SERVICE_NODE_STAKE,
-            SERVICE_NODE_UNSTAKING_ADDRESS
+            MINIMUM_SERVICE_NODE_DEPOSIT,
+            SERVICE_NODE_WITHDRAWAL_ADDRESS
         );
 
         PantosTypes.ServiceNodeRecord memory serviceNodeRecord = pantosHubProxy
@@ -1168,11 +944,10 @@ contract PantosHubTest is PantosHubDeployer {
         address[] memory serviceNodes = pantosHubProxy.getServiceNodes();
         assertTrue(serviceNodeRecord.active);
         assertEq(serviceNodeRecord.url, SERVICE_NODE_URL);
-        assertEq(serviceNodeRecord.freeStake, MINIMUM_SERVICE_NODE_STAKE);
-        assertEq(serviceNodeRecord.lockedStake, 0);
+        assertEq(serviceNodeRecord.deposit, MINIMUM_SERVICE_NODE_DEPOSIT);
         assertEq(
-            serviceNodeRecord.unstakingAddress,
-            SERVICE_NODE_UNSTAKING_ADDRESS
+            serviceNodeRecord.withdrawalAddress,
+            SERVICE_NODE_WITHDRAWAL_ADDRESS
         );
         assertEq(serviceNodeRecord.unregisterTime, 0);
         assertEq(serviceNodes.length, 1);
@@ -1184,8 +959,8 @@ contract PantosHubTest is PantosHubDeployer {
             IPantosRegistry.registerServiceNode.selector,
             SERVICE_NODE_ADDRESS,
             SERVICE_NODE_URL,
-            MINIMUM_SERVICE_NODE_STAKE,
-            SERVICE_NODE_UNSTAKING_ADDRESS
+            MINIMUM_SERVICE_NODE_DEPOSIT,
+            SERVICE_NODE_WITHDRAWAL_ADDRESS
         );
 
         whenNotPausedTest(address(pantosHubProxy), calldata_);
@@ -1196,14 +971,14 @@ contract PantosHubTest is PantosHubDeployer {
         vm.prank(address(123));
         vm.expectRevert(
             "PantosHub: caller is not the service "
-            "node or the unstaking address"
+            "node or the withdrawal address"
         );
 
         pantosHubProxy.registerServiceNode(
             SERVICE_NODE_ADDRESS,
             SERVICE_NODE_URL,
-            MINIMUM_SERVICE_NODE_STAKE,
-            SERVICE_NODE_UNSTAKING_ADDRESS
+            MINIMUM_SERVICE_NODE_DEPOSIT,
+            SERVICE_NODE_WITHDRAWAL_ADDRESS
         );
     }
 
@@ -1215,8 +990,8 @@ contract PantosHubTest is PantosHubDeployer {
         pantosHubProxy.registerServiceNode(
             SERVICE_NODE_ADDRESS,
             "",
-            MINIMUM_SERVICE_NODE_STAKE,
-            SERVICE_NODE_UNSTAKING_ADDRESS
+            MINIMUM_SERVICE_NODE_DEPOSIT,
+            SERVICE_NODE_WITHDRAWAL_ADDRESS
         );
     }
 
@@ -1229,23 +1004,23 @@ contract PantosHubTest is PantosHubDeployer {
         pantosHubProxy.registerServiceNode(
             newSERVICE_NODE_ADDRESS,
             SERVICE_NODE_URL,
-            MINIMUM_SERVICE_NODE_STAKE,
+            MINIMUM_SERVICE_NODE_DEPOSIT,
             newSERVICE_NODE_ADDRESS
         );
     }
 
-    function test_registerServiceNode_WithNotEnoughStake() external {
+    function test_registerServiceNode_WithNotEnoughDeposit() external {
         initializePantosHub();
         vm.prank(SERVICE_NODE_ADDRESS);
         vm.expectRevert(
-            "PantosHub: stake must be >= minimum service node stake"
+            "PantosHub: deposit must be >= minimum service node deposit"
         );
 
         pantosHubProxy.registerServiceNode(
             SERVICE_NODE_ADDRESS,
             SERVICE_NODE_URL,
-            MINIMUM_SERVICE_NODE_STAKE - 1,
-            SERVICE_NODE_UNSTAKING_ADDRESS
+            MINIMUM_SERVICE_NODE_DEPOSIT - 1,
+            SERVICE_NODE_WITHDRAWAL_ADDRESS
         );
     }
 
@@ -1259,8 +1034,8 @@ contract PantosHubTest is PantosHubDeployer {
         pantosHubProxy.registerServiceNode(
             SERVICE_NODE_ADDRESS,
             string.concat(SERVICE_NODE_URL, "/new/path/"),
-            MINIMUM_SERVICE_NODE_STAKE,
-            SERVICE_NODE_UNSTAKING_ADDRESS
+            MINIMUM_SERVICE_NODE_DEPOSIT,
+            SERVICE_NODE_WITHDRAWAL_ADDRESS
         );
     }
 
@@ -1273,14 +1048,14 @@ contract PantosHubTest is PantosHubDeployer {
         vm.prank(SERVICE_NODE_ADDRESS);
         vm.expectRevert(
             "PantosHub: service node must withdraw its "
-            "stake or cancel the unregistration"
+            "deposit or cancel the unregistration"
         );
 
         pantosHubProxy.registerServiceNode(
             SERVICE_NODE_ADDRESS,
             string.concat(SERVICE_NODE_URL, "extra"),
-            MINIMUM_SERVICE_NODE_STAKE,
-            SERVICE_NODE_UNSTAKING_ADDRESS
+            MINIMUM_SERVICE_NODE_DEPOSIT,
+            SERVICE_NODE_WITHDRAWAL_ADDRESS
         );
     }
 
@@ -1294,8 +1069,8 @@ contract PantosHubTest is PantosHubDeployer {
         pantosHubProxy.registerServiceNode(
             SERVICE_NODE_ADDRESS,
             SERVICE_NODE_URL,
-            MINIMUM_SERVICE_NODE_STAKE,
-            SERVICE_NODE_UNSTAKING_ADDRESS
+            MINIMUM_SERVICE_NODE_DEPOSIT,
+            SERVICE_NODE_WITHDRAWAL_ADDRESS
         );
     }
 
@@ -1312,7 +1087,7 @@ contract PantosHubTest is PantosHubDeployer {
         address[] memory serviceNodes = pantosHubProxy.getServiceNodes();
         assertFalse(serviceNodeRecord.active);
         assertEq(serviceNodeRecord.unregisterTime, BLOCK_TIMESTAMP);
-        assertEq(serviceNodeRecord.freeStake, MINIMUM_SERVICE_NODE_STAKE);
+        assertEq(serviceNodeRecord.deposit, MINIMUM_SERVICE_NODE_DEPOSIT);
         assertEq(serviceNodes.length, 0);
     }
 
@@ -1330,7 +1105,7 @@ contract PantosHubTest is PantosHubDeployer {
         vm.prank(address(123));
         vm.expectRevert(
             "PantosHub: caller is not the service "
-            "node or the unstaking address"
+            "node or the withdrawal address"
         );
 
         pantosHubProxy.unregisterServiceNode(SERVICE_NODE_ADDRESS);
@@ -1344,93 +1119,93 @@ contract PantosHubTest is PantosHubDeployer {
         pantosHubProxy.unregisterServiceNode(SERVICE_NODE_ADDRESS);
     }
 
-    function test_withdrawServiceNodeStake_ByUnstakingAddress() external {
+    function test_withdrawServiceNodeDeposit_ByWithdrawalAddress() external {
         registerServiceNode();
         unregisterServicenode();
         mockIerc20_transfer(
             PANTOS_TOKEN_ADDRESS,
-            SERVICE_NODE_UNSTAKING_ADDRESS,
-            MINIMUM_SERVICE_NODE_STAKE,
+            SERVICE_NODE_WITHDRAWAL_ADDRESS,
+            MINIMUM_SERVICE_NODE_DEPOSIT,
             true
         );
-        vm.warp(BLOCK_TIMESTAMP + SERVICE_NODE_STAKE_UNBONDING_PERIOD);
-        vm.prank(SERVICE_NODE_UNSTAKING_ADDRESS);
+        vm.warp(BLOCK_TIMESTAMP + SERVICE_NODE_DEPOSIT_UNBONDING_PERIOD);
+        vm.prank(SERVICE_NODE_WITHDRAWAL_ADDRESS);
         vm.expectCall(
             PANTOS_TOKEN_ADDRESS,
             abi.encodeWithSelector(
                 IERC20.transfer.selector,
-                SERVICE_NODE_UNSTAKING_ADDRESS,
-                MINIMUM_SERVICE_NODE_STAKE
+                SERVICE_NODE_WITHDRAWAL_ADDRESS,
+                MINIMUM_SERVICE_NODE_DEPOSIT
             )
         );
 
-        pantosHubProxy.withdrawServiceNodeStake(SERVICE_NODE_ADDRESS);
+        pantosHubProxy.withdrawServiceNodeDeposit(SERVICE_NODE_ADDRESS);
 
         PantosTypes.ServiceNodeRecord memory serviceNodeRecord = pantosHubProxy
             .getServiceNodeRecord(SERVICE_NODE_ADDRESS);
         assertEq(serviceNodeRecord.unregisterTime, 0);
-        assertEq(serviceNodeRecord.freeStake, 0);
+        assertEq(serviceNodeRecord.deposit, 0);
     }
 
-    function test_withdrawServiceNodeStake_ByServiceNode() external {
+    function test_withdrawServiceNodeDeposit_ByServiceNode() external {
         registerServiceNode();
         unregisterServicenode();
         mockIerc20_transfer(
             PANTOS_TOKEN_ADDRESS,
-            SERVICE_NODE_UNSTAKING_ADDRESS,
-            MINIMUM_SERVICE_NODE_STAKE,
+            SERVICE_NODE_WITHDRAWAL_ADDRESS,
+            MINIMUM_SERVICE_NODE_DEPOSIT,
             true
         );
-        vm.warp(BLOCK_TIMESTAMP + SERVICE_NODE_STAKE_UNBONDING_PERIOD);
+        vm.warp(BLOCK_TIMESTAMP + SERVICE_NODE_DEPOSIT_UNBONDING_PERIOD);
         vm.prank(SERVICE_NODE_ADDRESS);
         vm.expectCall(
             PANTOS_TOKEN_ADDRESS,
             abi.encodeWithSelector(
                 IERC20.transfer.selector,
-                SERVICE_NODE_UNSTAKING_ADDRESS,
-                MINIMUM_SERVICE_NODE_STAKE
+                SERVICE_NODE_WITHDRAWAL_ADDRESS,
+                MINIMUM_SERVICE_NODE_DEPOSIT
             )
         );
 
-        pantosHubProxy.withdrawServiceNodeStake(SERVICE_NODE_ADDRESS);
+        pantosHubProxy.withdrawServiceNodeDeposit(SERVICE_NODE_ADDRESS);
 
         PantosTypes.ServiceNodeRecord memory serviceNodeRecord = pantosHubProxy
             .getServiceNodeRecord(SERVICE_NODE_ADDRESS);
         assertEq(serviceNodeRecord.unregisterTime, 0);
-        assertEq(serviceNodeRecord.freeStake, 0);
+        assertEq(serviceNodeRecord.deposit, 0);
     }
 
-    function test_withdrawServiceNodeStake_WhenAlreadyWithdrawn() external {
+    function test_withdrawServiceNodeDeposit_WhenAlreadyWithdrawn() external {
         registerServiceNode();
         unregisterServicenode();
         mockIerc20_transfer(
             PANTOS_TOKEN_ADDRESS,
-            SERVICE_NODE_UNSTAKING_ADDRESS,
-            MINIMUM_SERVICE_NODE_STAKE,
+            SERVICE_NODE_WITHDRAWAL_ADDRESS,
+            MINIMUM_SERVICE_NODE_DEPOSIT,
             true
         );
-        vm.warp(BLOCK_TIMESTAMP + SERVICE_NODE_STAKE_UNBONDING_PERIOD);
+        vm.warp(BLOCK_TIMESTAMP + SERVICE_NODE_DEPOSIT_UNBONDING_PERIOD);
         vm.prank(SERVICE_NODE_ADDRESS);
-        pantosHubProxy.withdrawServiceNodeStake(SERVICE_NODE_ADDRESS);
-        vm.expectRevert("PantosHub: service node has no stake to withdraw");
+        pantosHubProxy.withdrawServiceNodeDeposit(SERVICE_NODE_ADDRESS);
+        vm.expectRevert("PantosHub: service node has no deposit to withdraw");
 
-        pantosHubProxy.withdrawServiceNodeStake(SERVICE_NODE_ADDRESS);
+        pantosHubProxy.withdrawServiceNodeDeposit(SERVICE_NODE_ADDRESS);
     }
 
-    function test_withdrawServiceNodeStake_ByUnauthorizedParty() external {
+    function test_withdrawServiceNodeDeposit_ByUnauthorizedParty() external {
         registerServiceNode();
         unregisterServicenode();
-        vm.warp(BLOCK_TIMESTAMP + SERVICE_NODE_STAKE_UNBONDING_PERIOD);
+        vm.warp(BLOCK_TIMESTAMP + SERVICE_NODE_DEPOSIT_UNBONDING_PERIOD);
         vm.prank(address(123));
         vm.expectRevert(
             "PantosHub: caller is not the service node or the "
-            "unstaking address"
+            "withdrawal address"
         );
 
-        pantosHubProxy.withdrawServiceNodeStake(SERVICE_NODE_ADDRESS);
+        pantosHubProxy.withdrawServiceNodeDeposit(SERVICE_NODE_ADDRESS);
     }
 
-    function test_withdrawServiceNodeStake_WhenUnbondingPeriodIsNotElapsed()
+    function test_withdrawServiceNodeDeposit_WhenUnbondingPeriodIsNotElapsed()
         external
     {
         registerServiceNode();
@@ -1438,15 +1213,15 @@ contract PantosHubTest is PantosHubDeployer {
         vm.prank(SERVICE_NODE_ADDRESS);
         vm.expectRevert("PantosHub: the unbonding period has not elapsed");
 
-        pantosHubProxy.withdrawServiceNodeStake(SERVICE_NODE_ADDRESS);
+        pantosHubProxy.withdrawServiceNodeDeposit(SERVICE_NODE_ADDRESS);
     }
 
-    function test_cancelServiceNodeUnregistration_ByUnstakingAddress()
+    function test_cancelServiceNodeUnregistration_ByWithdrawalAddress()
         external
     {
         registerServiceNode();
         unregisterServicenode();
-        vm.prank(SERVICE_NODE_UNSTAKING_ADDRESS);
+        vm.prank(SERVICE_NODE_WITHDRAWAL_ADDRESS);
 
         pantosHubProxy.cancelServiceNodeUnregistration(SERVICE_NODE_ADDRESS);
 
@@ -1455,11 +1230,10 @@ contract PantosHubTest is PantosHubDeployer {
         address[] memory serviceNodes = pantosHubProxy.getServiceNodes();
         assertTrue(serviceNodeRecord.active);
         assertEq(serviceNodeRecord.url, SERVICE_NODE_URL);
-        assertEq(serviceNodeRecord.freeStake, MINIMUM_SERVICE_NODE_STAKE);
-        assertEq(serviceNodeRecord.lockedStake, 0);
+        assertEq(serviceNodeRecord.deposit, MINIMUM_SERVICE_NODE_DEPOSIT);
         assertEq(
-            serviceNodeRecord.unstakingAddress,
-            SERVICE_NODE_UNSTAKING_ADDRESS
+            serviceNodeRecord.withdrawalAddress,
+            SERVICE_NODE_WITHDRAWAL_ADDRESS
         );
         assertEq(serviceNodeRecord.unregisterTime, 0);
         assertEq(serviceNodes.length, 1);
@@ -1478,11 +1252,10 @@ contract PantosHubTest is PantosHubDeployer {
         address[] memory serviceNodes = pantosHubProxy.getServiceNodes();
         assertTrue(serviceNodeRecord.active);
         assertEq(serviceNodeRecord.url, SERVICE_NODE_URL);
-        assertEq(serviceNodeRecord.freeStake, MINIMUM_SERVICE_NODE_STAKE);
-        assertEq(serviceNodeRecord.lockedStake, 0);
+        assertEq(serviceNodeRecord.deposit, MINIMUM_SERVICE_NODE_DEPOSIT);
         assertEq(
-            serviceNodeRecord.unstakingAddress,
-            SERVICE_NODE_UNSTAKING_ADDRESS
+            serviceNodeRecord.withdrawalAddress,
+            SERVICE_NODE_WITHDRAWAL_ADDRESS
         );
         assertEq(serviceNodeRecord.unregisterTime, 0);
         assertEq(serviceNodes.length, 1);
@@ -1508,40 +1281,40 @@ contract PantosHubTest is PantosHubDeployer {
         unregisterServicenode();
         vm.expectRevert(
             "PantosHub: caller is not the service node or the "
-            "unstaking address"
+            "withdrawal address"
         );
 
         pantosHubProxy.cancelServiceNodeUnregistration(SERVICE_NODE_ADDRESS);
     }
 
-    function test_increaseServiceNodeStake_ByUnstakingAddress() external {
+    function test_increaseServiceNodeDeposit_ByWithdrawalAddress() external {
         registerServiceNode();
         mockIerc20_transferFrom(
             PANTOS_TOKEN_ADDRESS,
-            SERVICE_NODE_UNSTAKING_ADDRESS,
+            SERVICE_NODE_WITHDRAWAL_ADDRESS,
             address(pantosHubProxy),
             1,
             true
         );
-        vm.prank(SERVICE_NODE_UNSTAKING_ADDRESS);
+        vm.prank(SERVICE_NODE_WITHDRAWAL_ADDRESS);
         vm.expectCall(
             PANTOS_TOKEN_ADDRESS,
             abi.encodeWithSelector(
                 IERC20.transferFrom.selector,
-                SERVICE_NODE_UNSTAKING_ADDRESS,
+                SERVICE_NODE_WITHDRAWAL_ADDRESS,
                 address(pantosHubProxy),
                 1
             )
         );
 
-        pantosHubProxy.increaseServiceNodeStake(SERVICE_NODE_ADDRESS, 1);
+        pantosHubProxy.increaseServiceNodeDeposit(SERVICE_NODE_ADDRESS, 1);
 
         PantosTypes.ServiceNodeRecord memory serviceNodeRecord = pantosHubProxy
             .getServiceNodeRecord(SERVICE_NODE_ADDRESS);
-        assertEq(serviceNodeRecord.freeStake, MINIMUM_SERVICE_NODE_STAKE + 1);
+        assertEq(serviceNodeRecord.deposit, MINIMUM_SERVICE_NODE_DEPOSIT + 1);
     }
 
-    function test_increaseServiceNodeStake_ByServiceNode() external {
+    function test_increaseServiceNodeDeposit_ByServiceNode() external {
         registerServiceNode();
         mockIerc20_transferFrom(
             PANTOS_TOKEN_ADDRESS,
@@ -1561,24 +1334,24 @@ contract PantosHubTest is PantosHubDeployer {
             )
         );
 
-        pantosHubProxy.increaseServiceNodeStake(SERVICE_NODE_ADDRESS, 1);
+        pantosHubProxy.increaseServiceNodeDeposit(SERVICE_NODE_ADDRESS, 1);
 
         PantosTypes.ServiceNodeRecord memory serviceNodeRecord = pantosHubProxy
             .getServiceNodeRecord(SERVICE_NODE_ADDRESS);
-        assertEq(serviceNodeRecord.freeStake, MINIMUM_SERVICE_NODE_STAKE + 1);
+        assertEq(serviceNodeRecord.deposit, MINIMUM_SERVICE_NODE_DEPOSIT + 1);
     }
 
-    function test_increaseServiceNodeStake_ByUnauthorizedParty() external {
+    function test_increaseServiceNodeDeposit_ByUnauthorizedParty() external {
         registerServiceNode();
         vm.expectRevert(
             "PantosHub: caller is not the service node or the "
-            "unstaking address"
+            "withdrawal address"
         );
 
-        pantosHubProxy.increaseServiceNodeStake(SERVICE_NODE_ADDRESS, 1);
+        pantosHubProxy.increaseServiceNodeDeposit(SERVICE_NODE_ADDRESS, 1);
     }
 
-    function test_increaseServiceNodeStake_WhenServiceNodeNotActive()
+    function test_increaseServiceNodeDeposit_WhenServiceNodeNotActive()
         external
     {
         registerServiceNode();
@@ -1586,101 +1359,103 @@ contract PantosHubTest is PantosHubDeployer {
         vm.prank(SERVICE_NODE_ADDRESS);
         vm.expectRevert("PantosHub: service node must be active");
 
-        pantosHubProxy.increaseServiceNodeStake(SERVICE_NODE_ADDRESS, 1);
+        pantosHubProxy.increaseServiceNodeDeposit(SERVICE_NODE_ADDRESS, 1);
     }
 
-    function test_increaseServiceNodeStake_WithStake0() external {
+    function test_increaseServiceNodeDeposit_WithDeposit0() external {
         registerServiceNode();
         vm.prank(SERVICE_NODE_ADDRESS);
-        vm.expectRevert("PantosHub: additional stake must be greater than 0");
+        vm.expectRevert(
+            "PantosHub: additional deposit must be greater than 0"
+        );
 
-        pantosHubProxy.increaseServiceNodeStake(SERVICE_NODE_ADDRESS, 0);
+        pantosHubProxy.increaseServiceNodeDeposit(SERVICE_NODE_ADDRESS, 0);
     }
 
-    function test_increaseServiceNodeStake_WithNotEnoughStake() external {
+    function test_increaseServiceNodeDeposit_WithNotEnoughDeposit() external {
         registerServiceNode();
         pantosHubProxy.pause();
-        pantosHubProxy.setMinimumServiceNodeStake(
-            MINIMUM_SERVICE_NODE_STAKE + 2
+        pantosHubProxy.setMinimumServiceNodeDeposit(
+            MINIMUM_SERVICE_NODE_DEPOSIT + 2
         );
         vm.prank(SERVICE_NODE_ADDRESS);
         vm.expectRevert(
-            "PantosHub: new stake must be at least the minimum "
-            "service node stake"
+            "PantosHub: new deposit must be at least the minimum "
+            "service node deposit"
         );
 
-        pantosHubProxy.increaseServiceNodeStake(SERVICE_NODE_ADDRESS, 1);
+        pantosHubProxy.increaseServiceNodeDeposit(SERVICE_NODE_ADDRESS, 1);
     }
 
-    function test_decreaseServiceNodeStake_ByUnstakingAddress() external {
+    function test_decreaseServiceNodeDeposit_ByWithdrawalAddress() external {
         registerServiceNode();
         mockIerc20_transfer(
             PANTOS_TOKEN_ADDRESS,
-            SERVICE_NODE_UNSTAKING_ADDRESS,
+            SERVICE_NODE_WITHDRAWAL_ADDRESS,
             1,
             true
         );
         pantosHubProxy.pause();
-        pantosHubProxy.setMinimumServiceNodeStake(
-            MINIMUM_SERVICE_NODE_STAKE - 1
+        pantosHubProxy.setMinimumServiceNodeDeposit(
+            MINIMUM_SERVICE_NODE_DEPOSIT - 1
         );
-        vm.prank(SERVICE_NODE_UNSTAKING_ADDRESS);
+        vm.prank(SERVICE_NODE_WITHDRAWAL_ADDRESS);
         vm.expectCall(
             PANTOS_TOKEN_ADDRESS,
             abi.encodeWithSelector(
                 IERC20.transfer.selector,
-                SERVICE_NODE_UNSTAKING_ADDRESS,
+                SERVICE_NODE_WITHDRAWAL_ADDRESS,
                 1
             )
         );
 
-        pantosHubProxy.decreaseServiceNodeStake(SERVICE_NODE_ADDRESS, 1);
+        pantosHubProxy.decreaseServiceNodeDeposit(SERVICE_NODE_ADDRESS, 1);
 
         PantosTypes.ServiceNodeRecord memory serviceNodeRecord = pantosHubProxy
             .getServiceNodeRecord(SERVICE_NODE_ADDRESS);
-        assertEq(serviceNodeRecord.freeStake, MINIMUM_SERVICE_NODE_STAKE - 1);
+        assertEq(serviceNodeRecord.deposit, MINIMUM_SERVICE_NODE_DEPOSIT - 1);
     }
 
-    function test_decreaseServiceNodeStake_ByServiceNode() external {
+    function test_decreaseServiceNodeDeposit_ByServiceNode() external {
         registerServiceNode();
         mockIerc20_transfer(
             PANTOS_TOKEN_ADDRESS,
-            SERVICE_NODE_UNSTAKING_ADDRESS,
+            SERVICE_NODE_WITHDRAWAL_ADDRESS,
             1,
             true
         );
         pantosHubProxy.pause();
-        pantosHubProxy.setMinimumServiceNodeStake(
-            MINIMUM_SERVICE_NODE_STAKE - 1
+        pantosHubProxy.setMinimumServiceNodeDeposit(
+            MINIMUM_SERVICE_NODE_DEPOSIT - 1
         );
         vm.prank(SERVICE_NODE_ADDRESS);
         vm.expectCall(
             PANTOS_TOKEN_ADDRESS,
             abi.encodeWithSelector(
                 IERC20.transfer.selector,
-                SERVICE_NODE_UNSTAKING_ADDRESS,
+                SERVICE_NODE_WITHDRAWAL_ADDRESS,
                 1
             )
         );
 
-        pantosHubProxy.decreaseServiceNodeStake(SERVICE_NODE_ADDRESS, 1);
+        pantosHubProxy.decreaseServiceNodeDeposit(SERVICE_NODE_ADDRESS, 1);
 
         PantosTypes.ServiceNodeRecord memory serviceNodeRecord = pantosHubProxy
             .getServiceNodeRecord(SERVICE_NODE_ADDRESS);
-        assertEq(serviceNodeRecord.freeStake, MINIMUM_SERVICE_NODE_STAKE - 1);
+        assertEq(serviceNodeRecord.deposit, MINIMUM_SERVICE_NODE_DEPOSIT - 1);
     }
 
-    function test_decreaseServiceNodeStake_ByUnauthorizedParty() external {
+    function test_decreaseServiceNodeDeposit_ByUnauthorizedParty() external {
         registerServiceNode();
         vm.expectRevert(
             "PantosHub: caller is not the service node or the "
-            "unstaking address"
+            "withdrawal address"
         );
 
-        pantosHubProxy.decreaseServiceNodeStake(SERVICE_NODE_ADDRESS, 1);
+        pantosHubProxy.decreaseServiceNodeDeposit(SERVICE_NODE_ADDRESS, 1);
     }
 
-    function test_decreaseServiceNodeStake_WhenServiceNodeNotActive()
+    function test_decreaseServiceNodeDeposit_WhenServiceNodeNotActive()
         external
     {
         registerServiceNode();
@@ -1688,26 +1463,26 @@ contract PantosHubTest is PantosHubDeployer {
         vm.prank(SERVICE_NODE_ADDRESS);
         vm.expectRevert("PantosHub: service node must be active");
 
-        pantosHubProxy.decreaseServiceNodeStake(SERVICE_NODE_ADDRESS, 1);
+        pantosHubProxy.decreaseServiceNodeDeposit(SERVICE_NODE_ADDRESS, 1);
     }
 
-    function test_decreaseServiceNodeStake_WithStake0() external {
+    function test_decreaseServiceNodeDeposit_WithDeposit0() external {
         registerServiceNode();
         vm.prank(SERVICE_NODE_ADDRESS);
-        vm.expectRevert("PantosHub: reduced stake must be greater than 0");
+        vm.expectRevert("PantosHub: reduced deposit must be greater than 0");
 
-        pantosHubProxy.decreaseServiceNodeStake(SERVICE_NODE_ADDRESS, 0);
+        pantosHubProxy.decreaseServiceNodeDeposit(SERVICE_NODE_ADDRESS, 0);
     }
 
-    function test_decreaseServiceNodeStake_WithNotEnoughStake() external {
+    function test_decreaseServiceNodeDeposit_WithNotEnoughDeposit() external {
         registerServiceNode();
         vm.prank(SERVICE_NODE_ADDRESS);
         vm.expectRevert(
-            "PantosHub: new stake must be at least the minimum "
-            "service node stake"
+            "PantosHub: new deposit must be at least the minimum "
+            "service node deposit"
         );
 
-        pantosHubProxy.decreaseServiceNodeStake(SERVICE_NODE_ADDRESS, 1);
+        pantosHubProxy.decreaseServiceNodeDeposit(SERVICE_NODE_ADDRESS, 1);
     }
 
     function test_updateServiceNodeUrl() external {
@@ -2043,13 +1818,13 @@ contract PantosHubTest is PantosHubDeployer {
         unregisterServicenode();
         mockIerc20_transfer(
             PANTOS_TOKEN_ADDRESS,
-            SERVICE_NODE_UNSTAKING_ADDRESS,
-            MINIMUM_SERVICE_NODE_STAKE,
+            SERVICE_NODE_WITHDRAWAL_ADDRESS,
+            MINIMUM_SERVICE_NODE_DEPOSIT,
             true
         );
-        vm.warp(BLOCK_TIMESTAMP + SERVICE_NODE_STAKE_UNBONDING_PERIOD);
-        vm.prank(SERVICE_NODE_UNSTAKING_ADDRESS);
-        pantosHubProxy.withdrawServiceNodeStake(SERVICE_NODE_ADDRESS);
+        vm.warp(BLOCK_TIMESTAMP + SERVICE_NODE_DEPOSIT_UNBONDING_PERIOD);
+        vm.prank(SERVICE_NODE_WITHDRAWAL_ADDRESS);
+        pantosHubProxy.withdrawServiceNodeDeposit(SERVICE_NODE_ADDRESS);
 
         assertFalse(
             pantosHubProxy.isServiceNodeInTheUnbondingPeriod(
@@ -2172,7 +1947,9 @@ contract PantosHubTest is PantosHubDeployer {
         pantosHubProxy.verifyTransfer(transferRequest(), "");
     }
 
-    function test_verifyTransfer_WhenServiceNodeHasNotEnoughStake() external {
+    function test_verifyTransfer_WhenServiceNodeHasNotEnoughDeposit()
+        external
+    {
         registerToken();
         registerServiceNode();
         mockPandasToken_getPantosForwarder(
@@ -2180,10 +1957,10 @@ contract PantosHubTest is PantosHubDeployer {
             PANTOS_FORWARDER_ADDRESS
         );
         pantosHubProxy.pause();
-        pantosHubProxy.setMinimumServiceNodeStake(
-            MINIMUM_SERVICE_NODE_STAKE + 1
+        pantosHubProxy.setMinimumServiceNodeDeposit(
+            MINIMUM_SERVICE_NODE_DEPOSIT + 1
         );
-        vm.expectRevert("PantosHub: service node must have enough free stake");
+        vm.expectRevert("PantosHub: service node must have enough deposit");
 
         pantosHubProxy.verifyTransfer(transferRequest(), "");
     }
@@ -2486,21 +2263,17 @@ contract PantosHubTest is PantosHubDeployer {
         assertEq(thisBlockchainRecord.active, true);
     }
 
-    function test_getMinimumTokenStake() external {
-        assertEq(MINIMUM_TOKEN_STAKE, pantosHubProxy.getMinimumTokenStake());
-    }
-
-    function test_getMinimumServiceNodeStake() external {
+    function test_getMinimumServiceNodeDeposit() external {
         assertEq(
-            MINIMUM_SERVICE_NODE_STAKE,
-            pantosHubProxy.getMinimumServiceNodeStake()
+            MINIMUM_SERVICE_NODE_DEPOSIT,
+            pantosHubProxy.getMinimumServiceNodeDeposit()
         );
     }
 
-    function test_getUnbondingPeriodServiceNodeStake() external {
+    function test_getUnbondingPeriodServiceNodeDeposit() external {
         assertEq(
-            SERVICE_NODE_STAKE_UNBONDING_PERIOD,
-            pantosHubProxy.getUnbondingPeriodServiceNodeStake()
+            SERVICE_NODE_DEPOSIT_UNBONDING_PERIOD,
+            pantosHubProxy.getUnbondingPeriodServiceNodeDeposit()
         );
     }
 
@@ -2530,7 +2303,6 @@ contract PantosHubTest is PantosHubDeployer {
             .getTokenRecord(PANDAS_TOKEN_ADDRESS);
 
         assertTrue(tokenRecord.active);
-        assertEq(tokenRecord.stake, MINIMUM_TOKEN_STAKE);
     }
 
     function test_getTokenRecord_WhenTokenNotRegistered() external {
@@ -2538,7 +2310,6 @@ contract PantosHubTest is PantosHubDeployer {
             .getTokenRecord(address(123));
 
         assertFalse(tokenRecord.active);
-        assertEq(tokenRecord.stake, 0);
     }
 
     function test_getExternalTokenRecord_WhenExternalTokenRegistered()
@@ -2595,11 +2366,10 @@ contract PantosHubTest is PantosHubDeployer {
 
         assertTrue(serviceNodeRecord.active);
         assertEq(serviceNodeRecord.url, SERVICE_NODE_URL);
-        assertEq(serviceNodeRecord.freeStake, MINIMUM_SERVICE_NODE_STAKE);
-        assertEq(serviceNodeRecord.lockedStake, 0);
+        assertEq(serviceNodeRecord.deposit, MINIMUM_SERVICE_NODE_DEPOSIT);
         assertEq(
-            serviceNodeRecord.unstakingAddress,
-            SERVICE_NODE_UNSTAKING_ADDRESS
+            serviceNodeRecord.withdrawalAddress,
+            SERVICE_NODE_WITHDRAWAL_ADDRESS
         );
         assertEq(serviceNodeRecord.unregisterTime, 0);
     }
@@ -2612,9 +2382,8 @@ contract PantosHubTest is PantosHubDeployer {
 
         assertFalse(serviceNodeRecord.active);
         assertEq(serviceNodeRecord.url, "");
-        assertEq(serviceNodeRecord.freeStake, 0);
-        assertEq(serviceNodeRecord.lockedStake, 0);
-        assertEq(serviceNodeRecord.unstakingAddress, ADDRESS_ZERO);
+        assertEq(serviceNodeRecord.deposit, 0);
+        assertEq(serviceNodeRecord.withdrawalAddress, ADDRESS_ZERO);
         assertEq(serviceNodeRecord.unregisterTime, 0);
     }
 
@@ -2891,18 +2660,8 @@ contract PantosHubTest is PantosHubDeployer {
 
     function registerToken() public {
         initializePantosHub();
-        mockIerc20_transferFrom(
-            PANTOS_TOKEN_ADDRESS,
-            deployer(),
-            address(pantosHubProxy),
-            MINIMUM_TOKEN_STAKE,
-            true
-        );
         mockPandasToken_getOwner(PANDAS_TOKEN_ADDRESS, deployer());
-        pantosHubProxy.registerToken(
-            PANDAS_TOKEN_ADDRESS,
-            MINIMUM_TOKEN_STAKE
-        );
+        pantosHubProxy.registerToken(PANDAS_TOKEN_ADDRESS);
     }
 
     function registerTokenAndExternalToken() public {
@@ -2920,15 +2679,15 @@ contract PantosHubTest is PantosHubDeployer {
             PANTOS_TOKEN_ADDRESS,
             SERVICE_NODE_ADDRESS,
             address(pantosHubProxy),
-            MINIMUM_SERVICE_NODE_STAKE,
+            MINIMUM_SERVICE_NODE_DEPOSIT,
             true
         );
         vm.prank(SERVICE_NODE_ADDRESS);
         pantosHubProxy.registerServiceNode(
             SERVICE_NODE_ADDRESS,
             SERVICE_NODE_URL,
-            MINIMUM_SERVICE_NODE_STAKE,
-            SERVICE_NODE_UNSTAKING_ADDRESS
+            MINIMUM_SERVICE_NODE_DEPOSIT,
+            SERVICE_NODE_WITHDRAWAL_ADDRESS
         );
     }
 

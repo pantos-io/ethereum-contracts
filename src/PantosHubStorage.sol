@@ -18,8 +18,7 @@ struct PantosHubStorage {
     uint256 numberActiveBlockchains;
     uint256 currentBlockchainId;
     mapping(uint256 => PantosTypes.BlockchainRecord) blockchainRecords;
-    uint256 minimumTokenStake;
-    uint256 minimumServiceNodeStake;
+    uint256 minimumServiceNodeDeposit;
     address[] tokens;
     mapping(address => PantosTypes.TokenRecord) tokenRecords;
     // Token address => blockchain ID => external token record
@@ -31,6 +30,6 @@ struct PantosHubStorage {
     mapping(uint256 => mapping(uint256 => bool)) usedSourceTransferIds;
     mapping(uint256 => PantosTypes.ValidatorFeeRecord) validatorFeeRecords;
     uint256 minimumValidatorFeeUpdatePeriod;
-    uint256 unbondingPeriodServiceNodeStake;
+    uint256 unbondingPeriodServiceNodeDeposit;
     mapping(bytes32 => bool) isServiceNodeUrlUsed;
 }
