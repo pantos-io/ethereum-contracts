@@ -27,7 +27,7 @@ services:
       # Workaround so that we can also access the data locally
       # Without needing an additional container
       - eth-data:/data
-      - ./data/eth:/data-static
+      - ./data/eth:/data2
     ports:
       - 8545:8545
     healthcheck:
@@ -54,7 +54,7 @@ services:
       # Workaround so that we can also access the data locally
       # Without needing an additional container
       - bnb-data:/data
-      - ./data/bnb:/data-static
+      - ./data/bnb:/data2
     environment:
       CHAIN_ID: 31338
     ports:
