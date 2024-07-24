@@ -1,6 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0
 pragma solidity 0.8.26;
-pragma abicoder v2;
 
 library Constants {
     uint256 public constant SERVICE_NODE_STAKE_UNBONDING_PERIOD = 604800;
