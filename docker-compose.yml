@@ -24,8 +24,10 @@ services:
     environment:
       CHAIN_ID: 31337
     volumes:
+      # Workaround so that we can also access the data locally
+      # Without needing an additional container
       - eth-data:/data
-      - ./data/eth:/data
+      - ./data/eth:/data-static
     ports:
       - 8545:8545
     healthcheck:
@@ -49,8 +51,10 @@ services:
     networks:
       pantos-ethereum:
     volumes:
+      # Workaround so that we can also access the data locally
+      # Without needing an additional container
       - bnb-data:/data
-      - ./data/bnb:/data
+      - ./data/bnb:/data-static
     environment:
       CHAIN_ID: 31338
     ports:
