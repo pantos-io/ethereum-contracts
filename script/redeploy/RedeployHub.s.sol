@@ -46,7 +46,13 @@ contract RedeployHub is PantosHubRedeployer {
             .getPrimaryValidatorNode();
         uint256 nextTransferId = oldPantosHubProxy.getNextTransferId();
 
-        (IPantosHub newPantosHubProxy, ) = deployPantosHub(nextTransferId);
+        (IPantosHub newPantosHubProxy, ) = deployPantosHub(
+            getRoleAddress("pauser"),
+            getRoleAddress("deployer"),
+            getRoleAddress("medium_critical_ops"),
+            getRoleAddress("super_critical_ops"),
+            nextTransferId
+        );
         initializePantosHub(
             newPantosHubProxy,
             getPantosForwarder(),

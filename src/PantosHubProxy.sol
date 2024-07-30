@@ -23,14 +23,11 @@ import {IDiamondCut} from "@diamond/interfaces/IDiamondCut.sol";
  */
 contract PantosHubProxy {
     /**
-     * @notice Sets the contract owner and add intial diamond cut facet.
+     * @notice Add intial diamond cut facet.
      *
-     * @param _contractOwner Contract owner address.
      * @param _diamondCutFacet Diamond facet address.
      */
-    constructor(address _contractOwner, address _diamondCutFacet) payable {
-        LibDiamond.setContractOwner(_contractOwner);
-
+    constructor(address _diamondCutFacet) payable {
         // Add the diamondCut external function from the diamondCutFacet
         IDiamondCut.FacetCut[] memory cut = new IDiamondCut.FacetCut[](1);
         bytes4[] memory functionSelectors = new bytes4[](1);

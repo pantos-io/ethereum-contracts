@@ -6,10 +6,7 @@ import {console2} from "forge-std/console2.sol";
 import {IDiamondCut} from "@diamond/interfaces/IDiamondCut.sol";
 import {IDiamondLoupe} from "@diamond/interfaces/IDiamondLoupe.sol";
 import {IERC165} from "@diamond/interfaces/IERC165.sol";
-import {IERC173} from "@diamond/interfaces/IERC173.sol";
-import {DiamondCutFacet} from "@diamond/facets/DiamondCutFacet.sol";
 import {DiamondLoupeFacet} from "@diamond/facets/DiamondLoupeFacet.sol";
-import {OwnershipFacet} from "@diamond/facets/OwnershipFacet.sol";
 
 import {PantosTypes} from "../../src/interfaces/PantosTypes.sol";
 import {IPantosHub} from "../../src/interfaces/IPantosHub.sol";
@@ -17,44 +14,56 @@ import {IPantosRegistry} from "../../src/interfaces/IPantosRegistry.sol";
 import {IPantosTransfer} from "../../src/interfaces/IPantosTransfer.sol";
 import {PantosRegistryFacet} from "../../src/facets/PantosRegistryFacet.sol";
 import {PantosTransferFacet} from "../../src/facets/PantosTransferFacet.sol";
+import {DiamondCutFacet} from "../../src/facets/DiamondCutFacet.sol";
 import {PantosForwarder} from "../../src/PantosForwarder.sol";
 import {PantosToken} from "../../src/PantosToken.sol";
 import {PantosHubProxy} from "../../src/PantosHubProxy.sol";
 import {PantosHubInit} from "../../src/upgradeInitializers/PantosHubInit.sol";
 
-import {PantosBaseScript} from "./PantosBaseScript.s.sol";
+import {PantosBaseAddresses} from "./PantosBaseAddresses.s.sol";
 import {Constants} from "./Constants.s.sol";
-import {PantosBaseScript} from "./PantosBaseScript.s.sol";
 
 struct DeployedFacets {
     DiamondCutFacet dCut;
     DiamondLoupeFacet dLoupe;
-    OwnershipFacet owner;
     PantosRegistryFacet registry;
     PantosTransferFacet transfer;
 }
 
-abstract contract PantosHubDeployer is PantosBaseScript {
-    function deployPantosHub()
-        public
-        returns (IPantosHub, DeployedFacets memory)
-    {
+abstract contract PantosHubDeployer is PantosBaseAddresses {
+    function deployPantosHub(
+        address deployer,
+        address pauser,
+        address mediumCriticalOps,
+        address superCriticalOps
+    ) public returns (IPantosHub, DeployedFacets memory) {
         // This will only change if we migrate testnets
         uint256 nextTransferId = 0;
-        return deployPantosHub(nextTransferId);
+        return
+            deployPantosHub(
+                deployer,
+                pauser,
+                mediumCriticalOps,
+                superCriticalOps,
+                nextTransferId
+            );
     }
 
     function deployPantosHub(
+        address deployer,
+        address pauser,
+        address mediumCriticalOps,
+        address superCriticalOps,
         uint256 nextTransferId
     ) public returns (IPantosHub, DeployedFacets memory) {
-        DiamondCutFacet dCutFacet = new DiamondCutFacet();
+        DiamondCutFacet dCutFacet = new DiamondCutFacet(deployer);
         console2.log(
-            "DiamondCutFacet deployed; address=%s",
-            address(dCutFacet)
+            "DiamondCutFacet deployed; address=%s; deployer=%s",
+            address(dCutFacet),
+            deployer
         );
 
         PantosHubProxy pantosHubDiamond = new PantosHubProxy(
-            address(msg.sender),
             address(dCutFacet)
         );
 
@@ -69,16 +78,25 @@ abstract contract PantosHubDeployer is PantosBaseScript {
             "DiamondLoupeFacet deployed; address=%s",
             address(dLoupe)
         );
-        OwnershipFacet ownerFacet = new OwnershipFacet();
-        console2.log(
-            "OwnershipFacet deployed; address=%s",
-            address(ownerFacet)
+        PantosRegistryFacet registryFacet = new PantosRegistryFacet(
+            deployer,
+            pauser,
+            mediumCriticalOps,
+            superCriticalOps
         );
-        PantosRegistryFacet registryFacet = new PantosRegistryFacet();
         console2.log(
-            "PantosRegistryFacet deployed; address=%s",
-            address(registryFacet)
+            "PantosRegistryFacet deployed; address=%s; deployer=%s",
+            address(registryFacet),
+            deployer
         );
+        console2.log(
+            "PantosRegistryFacet: pauser=%s; mediumCriticalOps=%s; "
+            "superCriticalOps=%s",
+            deployer,
+            mediumCriticalOps,
+            superCriticalOps
+        );
+
         PantosTransferFacet transferFacet = new PantosTransferFacet();
         console2.log(
             "PantosTransferFacet deployed; address=%s",
@@ -88,7 +106,6 @@ abstract contract PantosHubDeployer is PantosBaseScript {
         DeployedFacets memory deployedFacets = DeployedFacets({
             dCut: dCutFacet,
             dLoupe: dLoupe,
-            owner: ownerFacet,
             registry: registryFacet,
             transfer: transferFacet
         });
@@ -115,10 +132,9 @@ abstract contract PantosHubDeployer is PantosBaseScript {
         IPantosHub pantosHubProxy = IPantosHub(address(pantosHubDiamond));
 
         console2.log(
-            "diamondCut PantosHubProxy; paused=%s; cut(s) count=%s; owner=%s",
+            "diamondCut PantosHubProxy; paused=%s; cut(s) count=%s",
             pantosHubProxy.paused(),
-            cut.length,
-            pantosHubProxy.owner()
+            cut.length
         );
         return (pantosHubProxy, deployedFacets);
     }
@@ -127,7 +143,7 @@ abstract contract PantosHubDeployer is PantosBaseScript {
     function prepareFacetCuts(
         DeployedFacets memory facets
     ) public pure returns (IDiamondCut.FacetCut[] memory) {
-        IDiamondCut.FacetCut[] memory cut = new IDiamondCut.FacetCut[](4);
+        IDiamondCut.FacetCut[] memory cut = new IDiamondCut.FacetCut[](3);
 
         // DiamondLoupeFacet
         cut[0] = IDiamondCut.FacetCut({
@@ -136,22 +152,15 @@ abstract contract PantosHubDeployer is PantosBaseScript {
             functionSelectors: getDiamondLoupeSelectors()
         });
 
-        // OwnershipFacet
-        cut[1] = IDiamondCut.FacetCut({
-            facetAddress: address(facets.owner),
-            action: IDiamondCut.FacetCutAction.Add,
-            functionSelectors: getOwnershipSelectors()
-        });
-
         // PantosRegistryFacet
-        cut[2] = IDiamondCut.FacetCut({
+        cut[1] = IDiamondCut.FacetCut({
             facetAddress: address(facets.registry),
             action: IDiamondCut.FacetCutAction.Add,
             functionSelectors: getPantosRegistrySelectors()
         });
 
         // PantosTransferFacet
-        cut[3] = IDiamondCut.FacetCut({
+        cut[2] = IDiamondCut.FacetCut({
             facetAddress: address(facets.transfer),
             action: IDiamondCut.FacetCutAction.Add,
             functionSelectors: getPantosTransferSelectors()
@@ -322,12 +331,30 @@ abstract contract PantosHubDeployer is PantosBaseScript {
     }
 
     function upgradePantosHub(address pantosHubProxyAddress) public {
+        readRolesAddresses();
         IPantosHub pantosHubProxy = IPantosHub(pantosHubProxyAddress);
+        address deployer = getRoleAddress("deployer");
+        address pauser = getRoleAddress("pauser");
+        address mediumCriticalOps = getRoleAddress("medium_critical_ops");
+        address superCriticalOps = getRoleAddress("super_critical_ops");
 
-        PantosRegistryFacet registryFacet = new PantosRegistryFacet();
+        PantosRegistryFacet registryFacet = new PantosRegistryFacet(
+            deployer,
+            pauser,
+            mediumCriticalOps,
+            superCriticalOps
+        );
         console2.log(
-            "New PantosRegistryFacet deployed; address=%s",
-            address(registryFacet)
+            "New PantosRegistryFacet deployed; address=%s; deployer=%s",
+            address(registryFacet),
+            deployer
+        );
+        console2.log(
+            "PantosRegistryFacet: pauser=%s; mediumCriticalOps=%s; "
+            "superCriticalOps=%s",
+            pauser,
+            mediumCriticalOps,
+            superCriticalOps
         );
         PantosTransferFacet transferFacet = new PantosTransferFacet();
         console2.log(
@@ -352,10 +379,9 @@ abstract contract PantosHubDeployer is PantosBaseScript {
         IDiamondCut(pantosHubProxyAddress).diamondCut(cut, address(0), "");
 
         console2.log(
-            "diamondCut PantosHubProxy; paused=%s; cut(s) count=%s; owner=%s",
+            "diamondCut PantosHubProxy; paused=%s; cut(s) count=%s;",
             pantosHubProxy.paused(),
-            cut.length,
-            pantosHubProxy.owner()
+            cut.length
         );
 
         // this will do nothing if there is nothing new added to the storage slots
@@ -592,13 +618,6 @@ abstract contract PantosHubDeployer is PantosBaseScript {
         selectors[2] = IDiamondLoupe.facetFunctionSelectors.selector;
         selectors[3] = IDiamondLoupe.facets.selector;
         selectors[4] = IERC165.supportsInterface.selector;
-        return selectors;
-    }
-
-    function getOwnershipSelectors() public pure returns (bytes4[] memory) {
-        bytes4[] memory selectors = new bytes4[](2);
-        selectors[0] = IERC173.owner.selector;
-        selectors[1] = IERC173.transferOwnership.selector;
         return selectors;
     }
 }

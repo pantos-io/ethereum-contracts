@@ -19,26 +19,6 @@ abstract contract PantosBaseFacet {
     PantosHubStorage internal s;
 
     /**
-     * @notice Modifier which makes sure that only a transaction from the
-     * Pantos Hub owner is allowed.
-     */
-    modifier onlyOwner() {
-        LibDiamond.enforceIsContractOwner();
-        _;
-    }
-
-    /**
-     * @notice Modifier which makes sure that only a transaction from the
-     * Pantos Hub owner is allowed or the contract is not paused.
-     */
-    modifier ownerOrNotPaused() {
-        if (s.paused) {
-            LibDiamond.enforceIsContractOwner();
-        }
-        _;
-    }
-
-    /**
      * @notice Modifier which makes sure that only a transaction from
      * the primary validator node is allowed.
      */

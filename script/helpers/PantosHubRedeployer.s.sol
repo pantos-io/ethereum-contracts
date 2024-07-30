@@ -36,6 +36,7 @@ abstract contract PantosHubRedeployer is PantosHubDeployer {
         );
         _pantosToken = PantosToken(_oldPantosHubProxy.getPantosToken());
         readOwnedAndExternalTokens(_oldPantosHubProxy);
+        readRolesAddresses();
     }
 
     function readOwnedAndExternalTokens(IPantosHub pantosHubProxy) public {

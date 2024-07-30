@@ -9,17 +9,21 @@ import {PantosTypes} from "../../src/interfaces/PantosTypes.sol";
 import {PantosBaseScript} from "./PantosBaseScript.s.sol";
 
 contract PantosBaseAddresses is PantosBaseScript {
-    mapping(BlockchainId => bool) public initializedChains;
+    mapping(BlockchainId => bool) private _contractsInitializedChains;
+    bool private _areRolesInitialized;
     /// @dev Mapping of BlockchainId enum to map of all contract name to addresses
-    mapping(BlockchainId => mapping(string => string)) private _addresses;
+    mapping(BlockchainId => mapping(string => string))
+        private _contractToAddress;
+    /// @dev Mapping of roles to addresses
+    mapping(string => string) private _roleToAddress;
     string[] private _tokenSymbols;
 
-    modifier onlyInitializedChains(BlockchainId blockchainId) {
+    modifier onlyContractsInitializedChains(BlockchainId blockchainId) {
         require(
-            initializedChains[blockchainId],
+            _contractsInitializedChains[blockchainId],
             string(
                 abi.encodePacked(
-                    "PantosForwarderRedeployer: ",
+                    "PantosBaseAddresses contracts: ",
                     getBlockchainById(blockchainId).name,
                     " not initialized"
                 )
@@ -30,14 +34,22 @@ contract PantosBaseAddresses is PantosBaseScript {
 
     function getContractAddress(
         Blockchain memory blockchain,
-        string memory tokenSymbol
+        string memory contractName
     )
         public
         view
-        onlyInitializedChains(blockchain.blockchainId)
+        onlyContractsInitializedChains(blockchain.blockchainId)
         returns (string memory)
     {
-        return _addresses[blockchain.blockchainId][tokenSymbol];
+        return _contractToAddress[blockchain.blockchainId][contractName];
+    }
+
+    function getRoleAddress(string memory role) public view returns (address) {
+        require(
+            _areRolesInitialized,
+            string(abi.encodePacked("PantosBaseRoles roles: not initialized"))
+        );
+        return vm.parseAddress(_roleToAddress[role]);
     }
 
     function readContractAddresses(Blockchain memory blockchain) public {
@@ -49,9 +61,26 @@ contract PantosBaseAddresses is PantosBaseScript {
                 json,
                 string.concat(".", keys[i])
             );
-            _addresses[blockchain.blockchainId][keys[i]] = addr;
+            _contractToAddress[blockchain.blockchainId][keys[i]] = addr;
         }
-        initializedChains[blockchain.blockchainId] = true;
+        _contractsInitializedChains[blockchain.blockchainId] = true;
+    }
+
+    function readRolesAddresses() public {
+        string memory path = string.concat(
+            determineBlockchain().name,
+            "_ROLES.json"
+        );
+        string memory json = vm.readFile(path);
+        string[] memory keys = vm.parseJsonKeys(json, "$");
+        for (uint256 i = 0; i < keys.length; i++) {
+            string memory addr = vm.parseJsonString(
+                json,
+                string.concat(".", keys[i])
+            );
+            _roleToAddress[keys[i]] = addr;
+        }
+        _areRolesInitialized = true;
     }
 
     function readContractAddressesAllChains() public {

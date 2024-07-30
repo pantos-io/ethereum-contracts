@@ -8,13 +8,29 @@ import {IPantosToken} from "../interfaces/IPantosToken.sol";
 import {IPantosRegistry} from "../interfaces/IPantosRegistry.sol";
 
 import {PantosBaseFacet} from "./PantosBaseFacet.sol";
+import {PantosRBAC} from "../PantosRBAC.sol";
 
 /**
  * @title Pantos Registry facet
  *
  * @notice See {IPantosRegistry}.
  */
-contract PantosRegistryFacet is IPantosRegistry, PantosBaseFacet {
+contract PantosRegistryFacet is IPantosRegistry, PantosBaseFacet, PantosRBAC {
+    /**
+     * @notice Sets the RBAC rols.
+     *
+     * @param _deployer The address of the deployer role
+     * @param _pauser The address of the pauser role
+     * @param _mediumCriticalOps The address of the medium critical ops role
+     * @param _superCriticalOps The address of the super critical ops role
+     */
+    constructor(
+        address _deployer,
+        address _pauser,
+        address _mediumCriticalOps,
+        address _superCriticalOps
+    ) PantosRBAC(_deployer, _pauser, _mediumCriticalOps, _superCriticalOps) {}
+
     /**
      * @dev See {IPantosRegistry-pause}.
      */
