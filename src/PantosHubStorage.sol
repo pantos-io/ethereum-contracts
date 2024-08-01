@@ -20,10 +20,12 @@ struct PantosHubStorage {
     mapping(uint256 => PantosTypes.BlockchainRecord) blockchainRecords;
     uint256 minimumServiceNodeDeposit;
     address[] tokens;
+    mapping(address => uint256) tokenIndices;
     mapping(address => PantosTypes.TokenRecord) tokenRecords;
     // Token address => blockchain ID => external token record
     mapping(address => mapping(uint256 => PantosTypes.ExternalTokenRecord)) externalTokenRecords;
     address[] serviceNodes;
+    mapping(address => uint256) serviceNodeIndices;
     mapping(address => PantosTypes.ServiceNodeRecord) serviceNodeRecords;
     uint256 nextTransferId;
     // Source blockchain ID => source transfer ID => already used?
