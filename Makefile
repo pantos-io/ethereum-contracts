@@ -42,7 +42,8 @@ analyze-slither:
 analyze-mythril:
 	@IGNORE_LIST="src/PantosWrapper.sol src/PantosBaseToken.sol src/interfaces/IPantosRegistry.sol src/interfaces/IPantosTransfer.sol src/interfaces/IPantosWrapper.sol src/interfaces/IPantosForwarder.sol src/interfaces/IPantosToken.sol src/interfaces/IBEP20.sol" && \
     IGNORE_FIND=$$(echo $$IGNORE_LIST | sed 's/[^ ]* */! -name &/g') && \
-    docker run --platform linux/amd64 -v $$PWD:/share --entrypoint /bin/sh mythril/myth -c 'cd /share && find src -name "*.sol" $${IGNORE_FIND} -print | xargs myth analyze --solc-json mythril.config.json -o markdown'
+    docker run --platform linux/amd64 -v $$PWD:/share --entrypoint /bin/sh mythril/myth -c 'cd /share && find src -name "*.sol" $${IGNORE_FIND} -print | xargs -I {} sh -c "myth analyze --solc-json mythril.config.json -o markdown {} || echo $$? > mythril_error_code"' && \
+    if [ -f mythril_error_code ]; then exit $$(cat mythril_error_code); fi
 
 .PHONY: docker-build
 docker-build:
