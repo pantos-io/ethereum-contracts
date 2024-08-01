@@ -1,15 +1,12 @@
-name: pantos-ethereum
-
 networks:
   pantos-ethereum:
     driver: overlay
-    name: pantos-ethereum
+    name: pantos-ethereum-${STACK_IDENTIFIER-direct}
     attachable: true
 
 services:
   eth:
     restart: always
-    platform: linux/amd64
     image: pantosio/ethereum-node:${DOCKER_TAG-local}
     build:
       context: .
@@ -38,7 +35,6 @@ services:
       start_period: 10s
   bnb:
     restart: always
-    platform: linux/amd64
     image: pantosio/ethereum-node:${DOCKER_TAG-local}
     build:
       context: .

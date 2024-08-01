@@ -90,7 +90,7 @@ jobs:
       - name: Test
         timeout-minutes: 5
         run: |
-          docker compose up &
+          make docker ARGS="-d --no-build --wait"
           echo "Waiting for the containers to become healthy..."
           
           # Loop until all containers are healthy
@@ -132,3 +132,51 @@ jobs:
         uses: github/codeql-action/upload-sarif@v3
         with:
           sarif_file: ${{ steps.slither.outputs.sarif }}
+
+  mythril:
+    name: Mythril analysis
+    runs-on: ubuntu-latest
+    permissions:
+      actions: read
+      contents: read
+      security-events: write
+    steps:
+      - uses: step-security/harden-runner@v2
+        with:
+          disable-sudo: false
+          egress-policy: audit
+      
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+        id: buildx
+
+      - name: Run Mythril
+        id: mythril
+        run: |
+          make analyze-mythril | tee mythril.log
+          echo "mythril<<EOF" >> $GITHUB_OUTPUT
+          echo "$(cat mythril.log)" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+
+      - name: Upload Mythril log
+        uses: actions/upload-artifact@v4
+        with:
+          name: mythril-log
+          path: mythril.log
+
+      - name: Post comment
+        uses: thollander/actions-comment-pull-request@v2
+        with:
+          message: |
+            Mythril analysis results:
+            ```
+            ${{ steps.mythril.outputs.mythril }}
+            ```
+          comment_tag: mythril

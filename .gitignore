@@ -26,3 +26,5 @@ docs/
 *.swp
 find.sh
 data
+venv*
+*.log
