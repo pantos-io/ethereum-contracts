@@ -36,17 +36,13 @@ snapshot:
 # Slither and mythril latest versions are incompatible with each other
 .PHONY: analyze-slither
 analyze-slither:
-	@docker run --platform linux/amd64 -it -v $$PWD:/share trailofbits/eth-security-toolbox slither /share
+	@docker run --platform linux/amd64 -v $$PWD:/share trailofbits/eth-security-toolbox slither /share
 
 .PHONY: analyze-mythril
 analyze-mythril:
 	@IGNORE_LIST="src/PantosWrapper.sol src/PantosBaseToken.sol src/interfaces/IPantosRegistry.sol src/interfaces/IPantosTransfer.sol src/interfaces/IPantosWrapper.sol src/interfaces/IPantosForwarder.sol src/interfaces/IPantosToken.sol src/interfaces/IBEP20.sol" && \
     IGNORE_FIND=$$(echo $$IGNORE_LIST | sed 's/[^ ]* */! -name &/g') && \
-    docker run --platform linux/amd64 -it -v $$PWD:/share --entrypoint /bin/sh mythril/myth -c 'cd /share && find src -name "*.sol" $${IGNORE_FIND} -print | xargs myth analyze --solc-json mythril.config.json -o markdown'
-
-.PHONY: docker
-docker:
-	docker compose up --force-recreate $(ARGS)
+    docker run --platform linux/amd64 -v $$PWD:/share --entrypoint /bin/sh mythril/myth -c 'cd /share && find src -name "*.sol" $${IGNORE_FIND} -print | xargs myth analyze --solc-json mythril.config.json -o markdown'
 
 .PHONY: docker-build
 docker-build:
@@ -61,23 +57,19 @@ check-swarm-init:
         echo "Docker is already part of a swarm."; \
     fi
 
-.PHONY: docker-swarm
-docker-swarm: check-swarm-init docker-build
+.PHONY: docker
+docker: check-swarm-init docker-build
 	@for i in $$(seq 1 $(INSTANCE_COUNT)); do \
         STACK_NAME="${STACK_BASE_NAME}-${STACK_IDENTIFIER}-$$i"; \
         export INSTANCE=$$i; \
         docker stack deploy -c docker-compose.yml $$STACK_NAME --with-registry-auth --detach=false $(ARGS); \
     done
 
-.PHONY: docker-swarm-remove
-docker-swarm-remove:
+.PHONY: docker-remove
+docker-remove:
 	@for stack in $$(docker stack ls --format "{{.Name}}" | awk '/^${STACK_BASE_NAME}-${STACK_IDENTIFIER}/ {print}'); do \
         echo "Removing stack $$stack"; \
         docker stack rm $$stack --detach=false; \
 		echo "Removing volumes for stack $$stack"; \
         docker volume ls --format "{{.Name}}" | awk '/^$$stack/ {print}' | xargs -r docker volume rm; \
     done
-
-.PHONE: docker-remove
-docker-remove:
-	docker compose down --remove-orphans -v
