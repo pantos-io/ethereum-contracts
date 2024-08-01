@@ -4,7 +4,6 @@ pragma solidity 0.8.26;
 
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {IERC173} from "@diamond/interfaces/IERC173.sol";
-import {console2} from "forge-std/console2.sol";
 
 import {PantosTypes} from "../src/interfaces/PantosTypes.sol";
 import {IPantosForwarder} from "../src/interfaces/IPantosForwarder.sol";
@@ -636,6 +635,7 @@ contract PantosHubTest is PantosHubDeployer {
     function test_registerToken() external {
         initializePantosHub();
         mockPandasToken_getOwner(PANDAS_TOKEN_ADDRESS, deployer());
+        assertFalse(inArray(PANDAS_TOKEN_ADDRESS, loadPantosHubTokens()));
         vm.expectEmit();
         emit IPantosRegistry.TokenRegistered(PANDAS_TOKEN_ADDRESS);
 
@@ -644,6 +644,8 @@ contract PantosHubTest is PantosHubDeployer {
         PantosTypes.TokenRecord memory tokenRecord = pantosHubProxy
             .getTokenRecord(PANDAS_TOKEN_ADDRESS);
         assertTrue(tokenRecord.active);
+        assertTrue(inArray(PANDAS_TOKEN_ADDRESS, loadPantosHubTokens()));
+        checkTokenIndices();
     }
 
     function test_registerToken_ByNonOwnerAndPaused() external {
@@ -701,6 +703,7 @@ contract PantosHubTest is PantosHubDeployer {
         assertEq(tokens[0], PANTOS_TOKEN_ADDRESS);
         assertFalse(tokenRecord.active);
         assertFalse(externalTokenRecord.active);
+        checkTokenIndices();
     }
 
     function test_unregisterToken_ByNonOwnerAndPaused() external {
@@ -732,6 +735,52 @@ contract PantosHubTest is PantosHubDeployer {
         vm.expectRevert("PantosHub: caller is not the token owner");
 
         pantosHubProxy.unregisterToken(PANDAS_TOKEN_ADDRESS);
+    }
+
+    function test_registerToken_unregisterToken() external {
+        address[] memory tokenAddresses = new address[](3);
+        tokenAddresses[0] = PANDAS_TOKEN_ADDRESS;
+        tokenAddresses[1] = PANDAS_TOKEN_ADDRESS_1;
+        tokenAddresses[2] = PANDAS_TOKEN_ADDRESS_2;
+        bool[] memory tokenRegistered = new bool[](3);
+        tokenRegistered[0] = false;
+        tokenRegistered[1] = false;
+        tokenRegistered[2] = false;
+
+        initializePantosHub();
+        checkTokenRegistrations(tokenAddresses, tokenRegistered);
+
+        registerToken(PANDAS_TOKEN_ADDRESS);
+        tokenRegistered[0] = true;
+        checkTokenRegistrations(tokenAddresses, tokenRegistered);
+
+        registerToken(PANDAS_TOKEN_ADDRESS_1);
+        tokenRegistered[1] = true;
+        checkTokenRegistrations(tokenAddresses, tokenRegistered);
+
+        registerToken(PANDAS_TOKEN_ADDRESS_2);
+        tokenRegistered[2] = true;
+        checkTokenRegistrations(tokenAddresses, tokenRegistered);
+
+        pantosHubProxy.unregisterToken(PANDAS_TOKEN_ADDRESS_1);
+        tokenRegistered[1] = false;
+        checkTokenRegistrations(tokenAddresses, tokenRegistered);
+
+        registerToken(PANDAS_TOKEN_ADDRESS_1);
+        tokenRegistered[1] = true;
+        checkTokenRegistrations(tokenAddresses, tokenRegistered);
+
+        pantosHubProxy.unregisterToken(PANDAS_TOKEN_ADDRESS);
+        tokenRegistered[0] = false;
+        checkTokenRegistrations(tokenAddresses, tokenRegistered);
+
+        pantosHubProxy.unregisterToken(PANDAS_TOKEN_ADDRESS_2);
+        tokenRegistered[2] = false;
+        checkTokenRegistrations(tokenAddresses, tokenRegistered);
+
+        registerToken(PANDAS_TOKEN_ADDRESS);
+        tokenRegistered[0] = true;
+        checkTokenRegistrations(tokenAddresses, tokenRegistered);
     }
 
     function test_registerExternalToken() external {
@@ -952,6 +1001,7 @@ contract PantosHubTest is PantosHubDeployer {
         assertEq(serviceNodeRecord.unregisterTime, 0);
         assertEq(serviceNodes.length, 1);
         assertEq(serviceNodes[0], SERVICE_NODE_ADDRESS);
+        checkServiceNodeIndices();
     }
 
     function test_registerServiceNode_WhenPaused() external {
@@ -1089,6 +1139,7 @@ contract PantosHubTest is PantosHubDeployer {
         assertEq(serviceNodeRecord.unregisterTime, BLOCK_TIMESTAMP);
         assertEq(serviceNodeRecord.deposit, MINIMUM_SERVICE_NODE_DEPOSIT);
         assertEq(serviceNodes.length, 0);
+        checkServiceNodeIndices();
     }
 
     function test_unregisterServiceNode_WhenPaused() external {
@@ -1119,9 +1170,95 @@ contract PantosHubTest is PantosHubDeployer {
         pantosHubProxy.unregisterServiceNode(SERVICE_NODE_ADDRESS);
     }
 
+    function test_registerServiceNode_unregisterServiceNode() external {
+        address[] memory serviceNodeAddresses = new address[](3);
+        serviceNodeAddresses[0] = SERVICE_NODE_ADDRESS;
+        serviceNodeAddresses[1] = SERVICE_NODE_ADDRESS_1;
+        serviceNodeAddresses[2] = SERVICE_NODE_ADDRESS_2;
+        bool[] memory serviceNodeRegistered = new bool[](3);
+        serviceNodeRegistered[0] = false;
+        serviceNodeRegistered[1] = false;
+        serviceNodeRegistered[2] = false;
+
+        initializePantosHub();
+        pantosHubProxy.setUnbondingPeriodServiceNodeDeposit(0);
+        mockIerc20_transfer(
+            PANTOS_TOKEN_ADDRESS,
+            SERVICE_NODE_WITHDRAWAL_ADDRESS,
+            MINIMUM_SERVICE_NODE_DEPOSIT,
+            true
+        );
+        checkServiceNodeRegistrations(
+            serviceNodeAddresses,
+            serviceNodeRegistered
+        );
+
+        registerServiceNode(SERVICE_NODE_ADDRESS, SERVICE_NODE_URL);
+        serviceNodeRegistered[0] = true;
+        checkServiceNodeRegistrations(
+            serviceNodeAddresses,
+            serviceNodeRegistered
+        );
+
+        registerServiceNode(SERVICE_NODE_ADDRESS_1, SERVICE_NODE_URL_1);
+        serviceNodeRegistered[1] = true;
+        checkServiceNodeRegistrations(
+            serviceNodeAddresses,
+            serviceNodeRegistered
+        );
+
+        registerServiceNode(SERVICE_NODE_ADDRESS_2, SERVICE_NODE_URL_2);
+        serviceNodeRegistered[2] = true;
+        checkServiceNodeRegistrations(
+            serviceNodeAddresses,
+            serviceNodeRegistered
+        );
+
+        unregisterServiceNode(SERVICE_NODE_ADDRESS_1);
+        serviceNodeRegistered[1] = false;
+        checkServiceNodeRegistrations(
+            serviceNodeAddresses,
+            serviceNodeRegistered
+        );
+
+        vm.prank(SERVICE_NODE_WITHDRAWAL_ADDRESS);
+        pantosHubProxy.withdrawServiceNodeDeposit(SERVICE_NODE_ADDRESS_1);
+
+        registerServiceNode(SERVICE_NODE_ADDRESS_1, SERVICE_NODE_URL_1);
+        serviceNodeRegistered[1] = true;
+        checkServiceNodeRegistrations(
+            serviceNodeAddresses,
+            serviceNodeRegistered
+        );
+
+        unregisterServiceNode(SERVICE_NODE_ADDRESS);
+        serviceNodeRegistered[0] = false;
+        checkServiceNodeRegistrations(
+            serviceNodeAddresses,
+            serviceNodeRegistered
+        );
+
+        unregisterServiceNode(SERVICE_NODE_ADDRESS_2);
+        serviceNodeRegistered[2] = false;
+        checkServiceNodeRegistrations(
+            serviceNodeAddresses,
+            serviceNodeRegistered
+        );
+
+        vm.prank(SERVICE_NODE_WITHDRAWAL_ADDRESS);
+        pantosHubProxy.withdrawServiceNodeDeposit(SERVICE_NODE_ADDRESS);
+
+        registerServiceNode(SERVICE_NODE_ADDRESS, SERVICE_NODE_URL);
+        serviceNodeRegistered[0] = true;
+        checkServiceNodeRegistrations(
+            serviceNodeAddresses,
+            serviceNodeRegistered
+        );
+    }
+
     function test_withdrawServiceNodeDeposit_ByWithdrawalAddress() external {
         registerServiceNode();
-        unregisterServicenode();
+        unregisterServiceNode();
         mockIerc20_transfer(
             PANTOS_TOKEN_ADDRESS,
             SERVICE_NODE_WITHDRAWAL_ADDRESS,
@@ -1149,7 +1286,7 @@ contract PantosHubTest is PantosHubDeployer {
 
     function test_withdrawServiceNodeDeposit_ByServiceNode() external {
         registerServiceNode();
-        unregisterServicenode();
+        unregisterServiceNode();
         mockIerc20_transfer(
             PANTOS_TOKEN_ADDRESS,
             SERVICE_NODE_WITHDRAWAL_ADDRESS,
@@ -1177,7 +1314,7 @@ contract PantosHubTest is PantosHubDeployer {
 
     function test_withdrawServiceNodeDeposit_WhenAlreadyWithdrawn() external {
         registerServiceNode();
-        unregisterServicenode();
+        unregisterServiceNode();
         mockIerc20_transfer(
             PANTOS_TOKEN_ADDRESS,
             SERVICE_NODE_WITHDRAWAL_ADDRESS,
@@ -1194,7 +1331,7 @@ contract PantosHubTest is PantosHubDeployer {
 
     function test_withdrawServiceNodeDeposit_ByUnauthorizedParty() external {
         registerServiceNode();
-        unregisterServicenode();
+        unregisterServiceNode();
         vm.warp(BLOCK_TIMESTAMP + SERVICE_NODE_DEPOSIT_UNBONDING_PERIOD);
         vm.prank(address(123));
         vm.expectRevert(
@@ -1209,7 +1346,7 @@ contract PantosHubTest is PantosHubDeployer {
         external
     {
         registerServiceNode();
-        unregisterServicenode();
+        unregisterServiceNode();
         vm.prank(SERVICE_NODE_ADDRESS);
         vm.expectRevert("PantosHub: the unbonding period has not elapsed");
 
@@ -1220,7 +1357,7 @@ contract PantosHubTest is PantosHubDeployer {
         external
     {
         registerServiceNode();
-        unregisterServicenode();
+        unregisterServiceNode();
         vm.prank(SERVICE_NODE_WITHDRAWAL_ADDRESS);
 
         pantosHubProxy.cancelServiceNodeUnregistration(SERVICE_NODE_ADDRESS);
@@ -1238,11 +1375,12 @@ contract PantosHubTest is PantosHubDeployer {
         assertEq(serviceNodeRecord.unregisterTime, 0);
         assertEq(serviceNodes.length, 1);
         assertEq(serviceNodes[0], SERVICE_NODE_ADDRESS);
+        checkServiceNodeIndices();
     }
 
     function test_cancelServiceNodeUnregistration_ByServiceNode() external {
         registerServiceNode();
-        unregisterServicenode();
+        unregisterServiceNode();
         vm.prank(SERVICE_NODE_ADDRESS);
 
         pantosHubProxy.cancelServiceNodeUnregistration(SERVICE_NODE_ADDRESS);
@@ -1260,6 +1398,7 @@ contract PantosHubTest is PantosHubDeployer {
         assertEq(serviceNodeRecord.unregisterTime, 0);
         assertEq(serviceNodes.length, 1);
         assertEq(serviceNodes[0], SERVICE_NODE_ADDRESS);
+        checkServiceNodeIndices();
     }
 
     function test_cancelServiceNodeUnregistration_WhenServiceNodeNotUnbonding()
@@ -1278,7 +1417,7 @@ contract PantosHubTest is PantosHubDeployer {
         external
     {
         registerServiceNode();
-        unregisterServicenode();
+        unregisterServiceNode();
         vm.expectRevert(
             "PantosHub: caller is not the service node or the "
             "withdrawal address"
@@ -1355,7 +1494,7 @@ contract PantosHubTest is PantosHubDeployer {
         external
     {
         registerServiceNode();
-        unregisterServicenode();
+        unregisterServiceNode();
         vm.prank(SERVICE_NODE_ADDRESS);
         vm.expectRevert("PantosHub: service node must be active");
 
@@ -1459,7 +1598,7 @@ contract PantosHubTest is PantosHubDeployer {
         external
     {
         registerServiceNode();
-        unregisterServicenode();
+        unregisterServiceNode();
         vm.prank(SERVICE_NODE_ADDRESS);
         vm.expectRevert("PantosHub: service node must be active");
 
@@ -1526,7 +1665,7 @@ contract PantosHubTest is PantosHubDeployer {
         external
     {
         registerServiceNode();
-        unregisterServicenode();
+        unregisterServiceNode();
         vm.expectRevert("PantosHub: service node must be active");
 
         pantosHubProxy.updateServiceNodeUrl(
@@ -1536,7 +1675,7 @@ contract PantosHubTest is PantosHubDeployer {
 
     function test_updateServiceNodeUrl_WithSameUrlWhenNotActive() external {
         registerServiceNode();
-        unregisterServicenode();
+        unregisterServiceNode();
         vm.expectRevert("PantosHub: service node URL must be unique");
 
         pantosHubProxy.updateServiceNodeUrl(SERVICE_NODE_URL);
@@ -1802,7 +1941,7 @@ contract PantosHubTest is PantosHubDeployer {
         external
     {
         registerServiceNode();
-        unregisterServicenode();
+        unregisterServiceNode();
 
         assertTrue(
             pantosHubProxy.isServiceNodeInTheUnbondingPeriod(
@@ -1815,7 +1954,7 @@ contract PantosHubTest is PantosHubDeployer {
         external
     {
         registerServiceNode();
-        unregisterServicenode();
+        unregisterServiceNode();
         mockIerc20_transfer(
             PANTOS_TOKEN_ADDRESS,
             SERVICE_NODE_WITHDRAWAL_ADDRESS,
@@ -2658,10 +2797,14 @@ contract PantosHubTest is PantosHubDeployer {
         );
     }
 
-    function registerToken() public {
+    function registerToken(address tokenAddress) public {
         initializePantosHub();
-        mockPandasToken_getOwner(PANDAS_TOKEN_ADDRESS, deployer());
-        pantosHubProxy.registerToken(PANDAS_TOKEN_ADDRESS);
+        mockPandasToken_getOwner(tokenAddress, deployer());
+        pantosHubProxy.registerToken(tokenAddress);
+    }
+
+    function registerToken() public {
+        registerToken(PANDAS_TOKEN_ADDRESS);
     }
 
     function registerTokenAndExternalToken() public {
@@ -2673,27 +2816,103 @@ contract PantosHubTest is PantosHubDeployer {
         );
     }
 
-    function registerServiceNode() public {
+    function registerServiceNode(
+        address serviceNodeAddress,
+        string memory serviceNodeUrl
+    ) public {
         initializePantosHub();
         mockIerc20_transferFrom(
             PANTOS_TOKEN_ADDRESS,
-            SERVICE_NODE_ADDRESS,
+            serviceNodeAddress,
             address(pantosHubProxy),
             MINIMUM_SERVICE_NODE_DEPOSIT,
             true
         );
-        vm.prank(SERVICE_NODE_ADDRESS);
+        vm.prank(serviceNodeAddress);
         pantosHubProxy.registerServiceNode(
-            SERVICE_NODE_ADDRESS,
-            SERVICE_NODE_URL,
+            serviceNodeAddress,
+            serviceNodeUrl,
             MINIMUM_SERVICE_NODE_DEPOSIT,
             SERVICE_NODE_WITHDRAWAL_ADDRESS
         );
     }
 
-    function unregisterServicenode() public {
+    function registerServiceNode() public {
+        registerServiceNode(SERVICE_NODE_ADDRESS, SERVICE_NODE_URL);
+    }
+
+    function unregisterServiceNode(address serviceNodeAddress) public {
         initializePantosHub();
-        vm.prank(SERVICE_NODE_ADDRESS);
-        pantosHubProxy.unregisterServiceNode(SERVICE_NODE_ADDRESS);
+        vm.prank(serviceNodeAddress);
+        pantosHubProxy.unregisterServiceNode(serviceNodeAddress);
+    }
+
+    function unregisterServiceNode() public {
+        unregisterServiceNode(SERVICE_NODE_ADDRESS);
+    }
+
+    function checkTokenIndices() private {
+        address[] memory tokenAddresses = loadPantosHubTokens();
+        for (uint256 i = 0; i < tokenAddresses.length; i++) {
+            address tokenAddress = tokenAddresses[i];
+            assertEq(i, loadPantosHubTokenIndex(tokenAddress));
+        }
+    }
+
+    function checkTokenRegistrations(
+        address[] memory tokenAddresses,
+        bool[] memory tokenRegistered
+    ) private {
+        assertEq(tokenAddresses.length, tokenRegistered.length);
+        address[] memory registeredTokenAddresses = loadPantosHubTokens();
+        for (uint256 i = 0; i < tokenAddresses.length; i++) {
+            address tokenAddress = tokenAddresses[i];
+            PantosTypes.TokenRecord
+                memory tokenRecord = loadPantosHubTokenRecord(tokenAddress);
+            if (tokenRegistered[i]) {
+                assertTrue(inArray(tokenAddress, registeredTokenAddresses));
+                assertTrue(tokenRecord.active);
+            } else {
+                assertFalse(inArray(tokenAddress, registeredTokenAddresses));
+                assertFalse(tokenRecord.active);
+            }
+        }
+        checkTokenIndices();
+    }
+
+    function checkServiceNodeIndices() private {
+        address[] memory serviceNodeAddresses = loadPantosHubServiceNodes();
+        for (uint256 i = 0; i < serviceNodeAddresses.length; i++) {
+            address serviceNodeAddress = serviceNodeAddresses[i];
+            assertEq(i, loadPantosHubServiceNodeIndex(serviceNodeAddress));
+        }
+    }
+
+    function checkServiceNodeRegistrations(
+        address[] memory serviceNodeAddresses,
+        bool[] memory serviceNodeRegistered
+    ) private {
+        assertEq(serviceNodeAddresses.length, serviceNodeRegistered.length);
+        address[]
+            memory registeredServiceNodeAddresses = loadPantosHubServiceNodes();
+        for (uint256 i = 0; i < serviceNodeAddresses.length; i++) {
+            address serviceNodeAddress = serviceNodeAddresses[i];
+            PantosTypes.ServiceNodeRecord
+                memory serviceNodeRecord = loadPantosHubServiceNodeRecord(
+                    serviceNodeAddress
+                );
+            if (serviceNodeRegistered[i]) {
+                assertTrue(
+                    inArray(serviceNodeAddress, registeredServiceNodeAddresses)
+                );
+                assertTrue(serviceNodeRecord.active);
+            } else {
+                assertFalse(
+                    inArray(serviceNodeAddress, registeredServiceNodeAddresses)
+                );
+                assertFalse(serviceNodeRecord.active);
+            }
+        }
+        checkServiceNodeIndices();
     }
 }

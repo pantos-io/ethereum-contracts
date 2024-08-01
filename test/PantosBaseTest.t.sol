@@ -45,9 +45,19 @@ abstract contract PantosBaseTest is Test {
         address(uint160(uint256(keccak256("TransferRecipient"))));
     address constant PANDAS_TOKEN_ADDRESS =
         address(uint160(uint256(keccak256("PandasTokenAddress"))));
+    address constant PANDAS_TOKEN_ADDRESS_1 =
+        address(uint160(uint256(keccak256("PandasTokenAddress1"))));
+    address constant PANDAS_TOKEN_ADDRESS_2 =
+        address(uint160(uint256(keccak256("PandasTokenAddress2"))));
     address constant SERVICE_NODE_ADDRESS =
         address(uint160(uint256(keccak256("ServiceNodeAddress"))));
+    address constant SERVICE_NODE_ADDRESS_1 =
+        address(uint160(uint256(keccak256("ServiceNodeAddress1"))));
+    address constant SERVICE_NODE_ADDRESS_2 =
+        address(uint160(uint256(keccak256("ServiceNodeAddress2"))));
     string constant SERVICE_NODE_URL = "service node url";
+    string constant SERVICE_NODE_URL_1 = "https://servicenode1.pantos.io";
+    string constant SERVICE_NODE_URL_2 = "https://servicenode2.pantos.io";
     string constant EXTERNAL_PANDAS_TOKEN_ADDRESS = "external token address";
     string constant OTHER_BLOCKCHAIN_TRANSACTION_ID =
         "other blockchain transaction ID";
@@ -291,6 +301,28 @@ abstract contract PantosBaseTest is Test {
         for (uint i; i < a.length; i++) {
             assertEq(a[i], b[i]);
         }
+    }
+
+    function inArray(
+        address value,
+        address[] memory array
+    ) internal pure returns (bool) {
+        for (uint256 i = 0; i < array.length; i++) {
+            if (array[i] == value) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    function toAddress(bytes32 value) internal pure returns (address) {
+        return address(uint160(uint256(value)));
+    }
+
+    function toBool(bytes32 value) internal pure returns (bool) {
+        uint8 boolValue = uint8(uint256(value));
+        assert(boolValue == uint8(0) || boolValue == uint8(1));
+        return boolValue == uint8(1);
     }
 
     // exclude this class from coverage

@@ -454,4 +454,242 @@ abstract contract PantosHubDeployer is PantosBaseTest {
         selectors[1] = IERC173.transferOwnership.selector;
         return selectors;
     }
+
+    function loadPantosHubInitialized() internal view returns (uint64) {
+        bytes32 slotValue = loadPantosHubSlotValue(0);
+        return uint64(uint256(slotValue));
+    }
+
+    function loadPantosHubPaused() internal view returns (bool) {
+        bytes32 slotValue = loadPantosHubSlotValue(0);
+        return toBool(slotValue >> 64);
+    }
+
+    function loadPantosHubPantosForwarder() internal view returns (address) {
+        bytes32 slotValue = loadPantosHubSlotValue(0);
+        return toAddress(slotValue >> 72);
+    }
+
+    function loadPantosHubPantosToken() internal view returns (address) {
+        bytes32 slotValue = loadPantosHubSlotValue(1);
+        return toAddress(slotValue);
+    }
+
+    function loadPantosHubPrimaryValidatorNodeAddress()
+        internal
+        view
+        returns (address)
+    {
+        bytes32 slotValue = loadPantosHubSlotValue(2);
+        return toAddress(slotValue);
+    }
+
+    function loadPantosHubNumberBlockchains() internal view returns (uint256) {
+        bytes32 slotValue = loadPantosHubSlotValue(3);
+        return uint256(slotValue);
+    }
+
+    function loadPantosHubNumberActiveBlockchains()
+        internal
+        view
+        returns (uint256)
+    {
+        bytes32 slotValue = loadPantosHubSlotValue(4);
+        return uint256(slotValue);
+    }
+
+    function loadPantosHubCurrentBlockchainId()
+        internal
+        view
+        returns (uint256)
+    {
+        bytes32 slotValue = loadPantosHubSlotValue(5);
+        return uint256(slotValue);
+    }
+
+    function loadPantosHubBlockchainRecord(
+        uint256 blockchainId
+    ) internal view returns (PantosTypes.BlockchainRecord memory) {
+        uint256 startSlot = uint256(keccak256(abi.encode(blockchainId, 6)));
+        bytes32 slotValue = loadPantosHubSlotValue(startSlot);
+        bool active = toBool(slotValue);
+        slotValue = loadPantosHubSlotValue(startSlot + 1);
+        string memory name = string(abi.encodePacked(slotValue));
+        return PantosTypes.BlockchainRecord(active, name);
+    }
+
+    function loadPantosHubMinimumServiceNodeDeposit()
+        internal
+        view
+        returns (uint256)
+    {
+        bytes32 slotValue = loadPantosHubSlotValue(7);
+        return uint256(slotValue);
+    }
+
+    function loadPantosHubTokens() internal view returns (address[] memory) {
+        bytes32 slotValue = loadPantosHubSlotValue(8);
+        uint256 arrayLength = uint256(slotValue);
+        address[] memory tokenAddresses = new address[](arrayLength);
+        uint256 startSlot = uint256(keccak256(abi.encodePacked(uint256(8))));
+        for (uint256 i = 0; i < arrayLength; i++) {
+            slotValue = loadPantosHubSlotValue(startSlot + i);
+            tokenAddresses[i] = toAddress(slotValue);
+        }
+        return tokenAddresses;
+    }
+
+    function loadPantosHubTokenIndex(
+        address tokenAddress
+    ) internal view returns (uint256) {
+        uint256 slot = uint256(keccak256(abi.encode(tokenAddress, 9)));
+        bytes32 slotValue = loadPantosHubSlotValue(slot);
+        return uint256(slotValue);
+    }
+
+    function loadPantosHubTokenRecord(
+        address tokenAddress
+    ) internal view returns (PantosTypes.TokenRecord memory) {
+        uint256 startSlot = uint256(keccak256(abi.encode(tokenAddress, 10)));
+        bytes32 slotValue = loadPantosHubSlotValue(startSlot);
+        bool active = toBool(slotValue);
+        return PantosTypes.TokenRecord(active);
+    }
+
+    function loadPantosHubExternalTokenRecord(
+        address tokenAddress,
+        uint256 blockchainId
+    ) internal view returns (PantosTypes.ExternalTokenRecord memory) {
+        uint256 startSlot = uint256(
+            keccak256(
+                abi.encode(
+                    blockchainId,
+                    keccak256(abi.encode(tokenAddress, 11))
+                )
+            )
+        );
+        bytes32 slotValue = loadPantosHubSlotValue(startSlot);
+        bool active = toBool(slotValue);
+        slotValue = loadPantosHubSlotValue(startSlot + 1);
+        string memory externalTokenAddress = string(
+            abi.encodePacked(slotValue)
+        );
+        return PantosTypes.ExternalTokenRecord(active, externalTokenAddress);
+    }
+
+    function loadPantosHubServiceNodes()
+        internal
+        view
+        returns (address[] memory)
+    {
+        bytes32 slotValue = loadPantosHubSlotValue(12);
+        uint256 arrayLength = uint256(slotValue);
+        address[] memory serviceNodeAddresses = new address[](arrayLength);
+        uint256 startSlot = uint256(keccak256(abi.encodePacked(uint256(12))));
+        for (uint256 i = 0; i < arrayLength; i++) {
+            slotValue = loadPantosHubSlotValue(startSlot + i);
+            serviceNodeAddresses[i] = toAddress(slotValue);
+        }
+        return serviceNodeAddresses;
+    }
+
+    function loadPantosHubServiceNodeIndex(
+        address serviceNodeAddress
+    ) internal view returns (uint256) {
+        uint256 slot = uint256(keccak256(abi.encode(serviceNodeAddress, 13)));
+        bytes32 slotValue = loadPantosHubSlotValue(slot);
+        return uint256(slotValue);
+    }
+
+    function loadPantosHubServiceNodeRecord(
+        address serviceNodeAddress
+    ) internal view returns (PantosTypes.ServiceNodeRecord memory) {
+        uint256 startSlot = uint256(
+            keccak256(abi.encode(serviceNodeAddress, 14))
+        );
+        bytes32 slotValue = loadPantosHubSlotValue(startSlot);
+        bool active = toBool(slotValue);
+        slotValue = loadPantosHubSlotValue(startSlot + 1);
+        string memory url = string(abi.encodePacked(slotValue));
+        slotValue = loadPantosHubSlotValue(startSlot + 2);
+        uint256 deposit = uint256(slotValue);
+        slotValue = loadPantosHubSlotValue(startSlot + 3);
+        address withdrawalAddress = toAddress(slotValue);
+        slotValue = loadPantosHubSlotValue(startSlot + 4);
+        uint256 unregisterTime = uint256(slotValue);
+        return
+            PantosTypes.ServiceNodeRecord(
+                active,
+                url,
+                deposit,
+                withdrawalAddress,
+                unregisterTime
+            );
+    }
+
+    function loadPantosHubNextTransferId() internal view returns (uint256) {
+        bytes32 slotValue = loadPantosHubSlotValue(15);
+        return uint256(slotValue);
+    }
+
+    function loadPantosHubUsedSourceTransferId(
+        uint256 blockchainId,
+        uint256 sourceTransferId
+    ) internal view returns (bool) {
+        uint256 slot = uint256(
+            keccak256(
+                abi.encode(
+                    sourceTransferId,
+                    keccak256(abi.encode(blockchainId, 16))
+                )
+            )
+        );
+        bytes32 slotValue = loadPantosHubSlotValue(slot);
+        return toBool(slotValue);
+    }
+
+    function loadPantosHubValidatorFeeRecord(
+        uint256 blockchainId
+    ) internal view returns (PantosTypes.ValidatorFeeRecord memory) {
+        uint256 startSlot = uint256(keccak256(abi.encode(blockchainId, 17)));
+        bytes32 slotValue = loadPantosHubSlotValue(startSlot);
+        uint256 oldFactor = uint256(slotValue);
+        slotValue = loadPantosHubSlotValue(startSlot + 1);
+        uint256 newFactor = uint256(slotValue);
+        slotValue = loadPantosHubSlotValue(startSlot + 2);
+        uint256 validFrom = uint256(slotValue);
+        return PantosTypes.ValidatorFeeRecord(oldFactor, newFactor, validFrom);
+    }
+
+    function loadPantosHubMinimumValidatorFeeUpdatePeriod()
+        internal
+        view
+        returns (uint256)
+    {
+        bytes32 slotValue = loadPantosHubSlotValue(18);
+        return uint256(slotValue);
+    }
+
+    function loadPantosHubUnbondingPeriodServiceNodeDeposit()
+        internal
+        view
+        returns (uint256)
+    {
+        bytes32 slotValue = loadPantosHubSlotValue(19);
+        return uint256(slotValue);
+    }
+
+    function loadPantosHubIsServiceNodeUrlUsed(
+        bytes32 serviceNodeUrlHash
+    ) internal view returns (bool) {
+        uint256 slot = uint256(keccak256(abi.encode(serviceNodeUrlHash, 20)));
+        bytes32 slotValue = loadPantosHubSlotValue(slot);
+        return toBool(slotValue);
+    }
+
+    function loadPantosHubSlotValue(
+        uint256 slot
+    ) private view returns (bytes32) {
+        return vm.load(address(pantosHubProxy), bytes32(slot));
+    }
 }

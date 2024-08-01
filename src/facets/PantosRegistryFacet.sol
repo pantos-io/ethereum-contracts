@@ -8,7 +8,6 @@ import {IPantosToken} from "../interfaces/IPantosToken.sol";
 import {IPantosRegistry} from "../interfaces/IPantosRegistry.sol";
 
 import {PantosBaseFacet} from "./PantosBaseFacet.sol";
-import {PantosHubStorage} from "../PantosHubStorage.sol";
 
 /**
  * @title Pantos Registry facet
@@ -229,6 +228,7 @@ contract PantosRegistryFacet is IPantosRegistry, PantosBaseFacet {
         require(!tokenRecord.active, "PantosHub: token must not be active");
         // Store the token record
         tokenRecord.active = true;
+        s.tokenIndices[token] = s.tokens.length;
         s.tokens.push(token);
         emit TokenRegistered(token);
     }
@@ -261,15 +261,17 @@ contract PantosRegistryFacet is IPantosRegistry, PantosBaseFacet {
             }
         }
         // Remove the token address
-        uint numberTokens = s.tokens.length;
-        for (uint i = 0; i < numberTokens; i++) {
-            if (s.tokens[i] == token) {
-                s.tokens[i] = s.tokens[numberTokens - 1];
-                // slither-disable-next-line costly-loop
-                s.tokens.pop();
-                break;
-            }
+        uint256 tokenIndex = s.tokenIndices[token];
+        uint256 maxTokenIndex = s.tokens.length - 1;
+        assert(tokenIndex <= maxTokenIndex);
+        assert(s.tokens[tokenIndex] == token);
+        if (tokenIndex != maxTokenIndex) {
+            // Replace the removed token with the last token
+            address otherTokenAddress = s.tokens[maxTokenIndex];
+            s.tokenIndices[otherTokenAddress] = tokenIndex;
+            s.tokens[tokenIndex] = otherTokenAddress;
         }
+        s.tokens.pop();
         emit TokenUnregistered(token);
     }
 
@@ -389,6 +391,7 @@ contract PantosRegistryFacet is IPantosRegistry, PantosBaseFacet {
         serviceNodeRecord.url = url;
         serviceNodeRecord.deposit = deposit;
         serviceNodeRecord.withdrawalAddress = withdrawalAddress;
+        s.serviceNodeIndices[serviceNodeAddress] = s.serviceNodes.length;
         s.serviceNodes.push(serviceNodeAddress);
         s.isServiceNodeUrlUsed[urlHash] = true;
         emit ServiceNodeRegistered(serviceNodeAddress);
@@ -428,15 +431,19 @@ contract PantosRegistryFacet is IPantosRegistry, PantosBaseFacet {
         serviceNodeRecord.active = false;
         serviceNodeRecord.unregisterTime = block.timestamp;
         // Remove the service node address
-        uint numberServiceNodes = s.serviceNodes.length;
-        for (uint i = 0; i < numberServiceNodes; i++) {
-            if (s.serviceNodes[i] == serviceNodeAddress) {
-                s.serviceNodes[i] = s.serviceNodes[numberServiceNodes - 1];
-                // slither-disable-next-line costly-loop
-                s.serviceNodes.pop();
-                break;
-            }
+        uint256 serviceNodeIndex = s.serviceNodeIndices[serviceNodeAddress];
+        uint256 maxServiceNodeIndex = s.serviceNodes.length - 1;
+        assert(serviceNodeIndex <= maxServiceNodeIndex);
+        assert(s.serviceNodes[serviceNodeIndex] == serviceNodeAddress);
+        if (serviceNodeIndex != maxServiceNodeIndex) {
+            // Replace the removed service node with the last service node
+            address otherServiceNodeAddress = s.serviceNodes[
+                maxServiceNodeIndex
+            ];
+            s.serviceNodeIndices[otherServiceNodeAddress] = serviceNodeIndex;
+            s.serviceNodes[serviceNodeIndex] = otherServiceNodeAddress;
         }
+        s.serviceNodes.pop();
         emit ServiceNodeUnregistered(serviceNodeAddress);
     }
 
@@ -507,6 +514,7 @@ contract PantosRegistryFacet is IPantosRegistry, PantosBaseFacet {
         );
         serviceNodeRecord.active = true;
         serviceNodeRecord.unregisterTime = 0;
+        s.serviceNodeIndices[serviceNodeAddress] = s.serviceNodes.length;
         s.serviceNodes.push(serviceNodeAddress);
         emit ServiceNodeRegistered(serviceNodeAddress);
     }
