@@ -59,7 +59,7 @@ check-swarm-init:
     fi
 
 .PHONY: docker
-docker: check-swarm-init docker-build
+docker: check-swarm-init
 	@for i in $$(seq 1 $(INSTANCE_COUNT)); do \
         STACK_NAME="${STACK_BASE_NAME}-${STACK_IDENTIFIER}-$$i"; \
         export DATA_PATH=./data/$$STACK_NAME; \

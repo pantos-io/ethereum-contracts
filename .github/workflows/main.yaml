@@ -7,6 +7,7 @@ on:
 jobs:
   publish-docker:
     uses: ./.github/workflows/publish-docker.yaml
+    if: github.repository == 'pantos-io/ethereum-contracts'
     secrets: 'inherit'
     with:
       tag: development
