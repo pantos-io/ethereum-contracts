@@ -112,7 +112,7 @@ jobs:
       - name: Dump logs
         if: always()
         run: |
-          make docker-logs
+          make docker-logs || true
   
   static-analysis:
     name: Static analysis
