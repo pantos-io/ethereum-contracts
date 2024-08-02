@@ -86,5 +86,8 @@ docker-remove:
 docker-logs:
 	@for stack in $$(docker stack ls --format "{{.Name}}" | awk '/^${STACK_BASE_NAME}-${STACK_IDENTIFIER}/ {print}'); do \
         echo "Showing logs for stack $$stack"; \
-        docker stack logs $$stack; \
+        for service in $$(docker stack services --format "{{.Name}}" $$stack); do \
+            echo "Logs for service $$service in stack $$stack"; \
+            docker service logs --no-task-ids $$service; \
+        done; \
     done
