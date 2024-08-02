@@ -3,6 +3,9 @@ networks:
     driver: overlay
     name: pantos-ethereum-${STACK_IDENTIFIER-direct}-${INSTANCE-1}
     attachable: true
+  host:
+    name: host
+    external: true
 
 services:
   eth:
@@ -18,6 +21,7 @@ services:
           - ${DOCKER_REGISTRY-pantosio}/ethereum-node:${EXTRA_TAG-local}
     networks:
       pantos-ethereum:
+      host:
     environment:
       CHAIN_ID: 31337
     volumes:
@@ -50,6 +54,7 @@ services:
           - ${DOCKER_REGISTRY-pantosio}/ethereum-node:${EXTRA_TAG-local}
     networks:
       pantos-ethereum:
+      host:
     volumes:
       # Workaround so that we can also access the data locally
       # Without needing an additional container
