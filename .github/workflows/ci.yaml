@@ -108,6 +108,11 @@ jobs:
           
           echo "All containers are healthy"
           make docker-remove
+
+      - name: Dump logs
+        if: always()
+        run: |
+          make docker-logs
   
   static-analysis:
     name: Static analysis
