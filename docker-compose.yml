@@ -1,15 +1,12 @@
-name: pantos-ethereum
-
 networks:
   pantos-ethereum:
     driver: overlay
-    name: pantos-ethereum
+    name: pantos-ethereum-${STACK_IDENTIFIER-direct}-${INSTANCE-1}
     attachable: true
 
 services:
   eth:
     restart: always
-    platform: linux/amd64
     image: pantosio/ethereum-node:${DOCKER_TAG-local}
     build:
       context: .
@@ -26,10 +23,14 @@ services:
     volumes:
       # Workaround so that we can also access the data locally
       # Without needing an additional container
-      - eth-data:/data
-      - ./data/eth:/data2
+    - type: volume
+      source: eth-data
+      target: /data
+    - type: bind
+      source: "${DATA_PATH-./data}/eth"
+      target: /data2
     ports:
-      - 8545:8545
+      - 85${INSTANCE-1}0:8545
     healthcheck:
       test: ["CMD-SHELL", "cast block-number"]
       interval: 30s
@@ -38,7 +39,6 @@ services:
       start_period: 10s
   bnb:
     restart: always
-    platform: linux/amd64
     image: pantosio/ethereum-node:${DOCKER_TAG-local}
     build:
       context: .
@@ -53,12 +53,16 @@ services:
     volumes:
       # Workaround so that we can also access the data locally
       # Without needing an additional container
-      - bnb-data:/data
-      - ./data/bnb:/data2
+    - type: volume
+      source: bnb-data
+      target: /data
+    - type: bind
+      source: "${DATA_PATH-./data}/bnb"
+      target: /data2
     environment:
       CHAIN_ID: 31338
     ports:
-      - 8546:8545
+      - 85${INSTANCE-1}1:8545
     healthcheck:
       test: ["CMD-SHELL", "cast block-number"]
       interval: 30s
@@ -68,6 +72,6 @@ services:
 
 volumes:
   eth-data:
-    name: eth-data
+    name: eth-data-${STACK_IDENTIFIER-direct}-${INSTANCE-1}
   bnb-data:
-    name: bnb-data
+    name: bnb-data-${STACK_IDENTIFIER-direct}-${INSTANCE-1}

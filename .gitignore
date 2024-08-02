@@ -25,4 +25,7 @@ docs/
 # Development tool files
 *.swp
 find.sh
-data
+data/*
+!data/.gitkeep
+venv*
+*.log
