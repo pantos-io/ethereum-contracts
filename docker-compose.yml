@@ -23,8 +23,12 @@ services:
     volumes:
       # Workaround so that we can also access the data locally
       # Without needing an additional container
-      - eth-data:/data
-      - ./data/eth-${STACK_IDENTIFIER-direct}-${INSTANCE-1}:/data2
+    - type: volume
+      source: eth-data
+      target: /data
+    - type: bind
+      source: "${DATA_PATH-./data}/eth"
+      target: /data2
     ports:
       - 85${INSTANCE-1}0:8545
     healthcheck:
@@ -49,8 +53,12 @@ services:
     volumes:
       # Workaround so that we can also access the data locally
       # Without needing an additional container
-      - bnb-data:/data
-      - ./data/bnb-${STACK_IDENTIFIER-direct}-${INSTANCE-1}:/data2
+    - type: volume
+      source: bnb-data
+      target: /data
+    - type: bind
+      source: "${DATA_PATH-./data}/bnb"
+      target: /data2
     environment:
       CHAIN_ID: 31338
     ports:

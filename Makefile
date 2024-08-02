@@ -62,7 +62,13 @@ check-swarm-init:
 docker: check-swarm-init docker-build
 	@for i in $$(seq 1 $(INSTANCE_COUNT)); do \
         STACK_NAME="${STACK_BASE_NAME}-${STACK_IDENTIFIER}-$$i"; \
+        export DATA_PATH=./data/$$STACK_NAME; \
         export INSTANCE=$$i; \
+        echo "Deploying stack $$STACK_NAME"; \
+        for dir in $$(yq e '.services[].volumes[] | select(.source == "*$$${DATA_PATH}*") | .source' docker-compose.yml); do \
+            eval dir=$$dir; \
+            mkdir -p $$dir; \
+        done; \
         docker stack deploy -c docker-compose.yml $$STACK_NAME --with-registry-auth --detach=false $(ARGS); \
     done
 
@@ -73,4 +79,5 @@ docker-remove:
         docker stack rm $$stack --detach=false; \
 		echo "Removing volumes for stack $$stack"; \
         docker volume ls --format "{{.Name}}" | awk '/^$$stack/ {print}' | xargs -r docker volume rm; \
+        rm -Rf /data/$$stack; \
     done
