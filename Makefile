@@ -68,7 +68,7 @@ docker: check-swarm-init
             eval dir=$$dir; \
             mkdir -p $$dir; \
         done; \
-        docker compose -f docker-compose.yml -f docker-compose.ci.yml $(EXTRA_COMPOSE) up -d --wait --no-build $(ARGS); \
+        docker compose -f docker-compose.yml -f docker-compose.ci.yml $(EXTRA_COMPOSE) up -d --wait $(ARGS); \
     done
     # We need to use compose because swarm goes absolutely crazy on MacOS when using cross architecture
     # And can't pull the correct images
@@ -76,7 +76,7 @@ docker: check-swarm-init
 
 .PHONY: docker-local
 docker-local:
-    make docker EXTRA_COMPOSE="-f docker-compose.local.yml"
+	@make docker EXTRA_COMPOSE="-f docker-compose.local.yml"
 
 .PHONY: docker-remove
 docker-remove:
