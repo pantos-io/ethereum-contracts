@@ -1,0 +1,7 @@
+name: ${STACK_NAME-local}
+
+services:
+  eth:
+    platform: linux/amd64
+  bnb:
+    platform: linux/amd64

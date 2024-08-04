@@ -1,5 +1,4 @@
 STACK_BASE_NAME=stack-ethereum-contracts
-STACK_IDENTIFIER ?= direct
 INSTANCE_COUNT ?= 1
 
 .PHONY: build
@@ -47,7 +46,7 @@ analyze-mythril:
 
 .PHONY: docker-build
 docker-build:
-	docker buildx bake -f docker-compose.yml --load $(ARGS)
+	docker buildx bake -f docker-compose.yml --load --pull $(ARGS)
 
 .PHONY: check-swarm-init
 check-swarm-init:
@@ -59,9 +58,9 @@ check-swarm-init:
     fi
 
 .PHONY: docker
-docker: check-swarm-init docker-build
+docker: check-swarm-init
 	@for i in $$(seq 1 $(INSTANCE_COUNT)); do \
-        STACK_NAME="${STACK_BASE_NAME}-${STACK_IDENTIFIER}-$$i"; \
+        export STACK_NAME="${STACK_BASE_NAME}-${STACK_IDENTIFIER}-$$i"; \
         export DATA_PATH=./data/$$STACK_NAME; \
         export INSTANCE=$$i; \
         echo "Deploying stack $$STACK_NAME"; \
@@ -69,17 +68,35 @@ docker: check-swarm-init docker-build
             eval dir=$$dir; \
             mkdir -p $$dir; \
         done; \
-        docker stack deploy -c docker-compose.yml $$STACK_NAME --with-registry-auth --detach=false $(ARGS); \
+        docker compose -f docker-compose.yml -f docker-compose.ci.yml $(EXTRA_COMPOSE) up -d --wait --no-build $(ARGS); \
     done
+    # We need to use compose because swarm goes absolutely crazy on MacOS when using cross architecture
+    # And can't pull the correct images
+    # docker stack deploy -c docker-compose.yml $(EXTRA_COMPOSE) $$STACK_NAME --with-registry-auth --detach=false $(ARGS); \
+
+.PHONY: docker-local
+docker-local:
+    make docker EXTRA_COMPOSE="-f docker-compose.local.yml"
 
 .PHONY: docker-remove
 docker-remove:
-	@for stack in $$(docker stack ls --format "{{.Name}}" | awk '/^${STACK_BASE_NAME}-${STACK_IDENTIFIER}/ {print}'); do \
+	@STACK_NAME="${STACK_BASE_NAME}"; \
+    if [ -n "$(STACK_IDENTIFIER)" ]; then \
+        STACK_NAME="$$STACK_NAME-$(STACK_IDENTIFIER)"; \
+        echo "Removing the stack with identifier $(STACK_IDENTIFIER)"; \
+    else \
+        echo "** Removing all stacks **"; \
+    fi; \
+	for stack in $$(docker stack ls --format "{{.Name}}" | awk "/^$$STACK_NAME/ {print}"); do \
         echo "Removing stack $$stack"; \
         docker stack rm $$stack --detach=false; \
 		echo "Removing volumes for stack $$stack"; \
         docker volume ls --format "{{.Name}}" | awk '/^$$stack/ {print}' | xargs -r docker volume rm; \
         rm -Rf /data/$$stack; \
+    done;  \
+    for compose_stack in $$(docker compose ls --filter "name=$$STACK_NAME" --format json | jq -r '.[].Name' | awk "/^$$STACK_NAME/ {print}"); do \
+        echo "Removing Docker Compose stack $$compose_stack"; \
+        docker compose -p $$compose_stack down -v; \
     done
 
 .PHONY: docker-logs

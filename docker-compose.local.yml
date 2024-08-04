@@ -1,0 +1,19 @@
+networks:
+  pantos-ethereum:
+  host:
+    name: host
+    external: true
+
+services:
+  eth:
+    networks:
+      pantos-ethereum:
+      host:
+    ports:
+      - 85${INSTANCE-1}0:8545
+  bnb:
+    networks:
+      pantos-ethereum:
+      host:
+    ports:
+      - 85${INSTANCE-1}1:8545
