@@ -97,16 +97,7 @@ jobs:
       - name: Test
         timeout-minutes: 5
         run: |
-          make docker
-          echo "Waiting for the containers to become healthy..."
-          
-          # Loop until all containers are healthy
-          while docker ps --filter "health!=healthy" --filter "ancestor=$(docker compose config --services | xargs -I{} docker compose images -q {})" | grep -q .; do
-              echo "Some containers are not healthy yet, waiting..."
-              sleep 5
-          done
-          
-          echo "All containers are healthy"
+          make docker-local
           make docker-remove
 
       - name: Dump logs

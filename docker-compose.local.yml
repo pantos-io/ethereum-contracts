@@ -1,0 +1,14 @@
+networks:
+  pantos-ethereum:
+
+services:
+  eth:
+    networks:
+      pantos-ethereum:
+    ports:
+      - 85${INSTANCE-1}0:8545
+  bnb:
+    networks:
+      pantos-ethereum:
+    ports:
+      - 85${INSTANCE-1}1:8545
