@@ -5,12 +5,14 @@ import {IPantosHub} from "../src/interfaces/IPantosHub.sol";
 import {PantosForwarder} from "../src/PantosForwarder.sol";
 import {PantosToken} from "../src/PantosToken.sol";
 import {BitpandaEcosystemToken} from "../src/BitpandaEcosystemToken.sol";
+import {AccessController} from "../src/access/AccessController.sol";
 
 import {PantosHubDeployer, DeployedFacets} from "./helpers/PantosHubDeployer.s.sol";
 import {PantosForwarderDeployer} from "./helpers/PantosForwarderDeployer.s.sol";
 import {PantosWrapperDeployer} from "./helpers/PantosWrapperDeployer.s.sol";
 import {PantosTokenDeployer} from "./helpers/PantosTokenDeployer.s.sol";
 import {BitpandaEcosystemTokenDeployer} from "./helpers/BitpandaEcosystemTokenDeployer.s.sol";
+import {AccessControllerDeployer} from "./helpers/AccessControllerDeployer.s.sol";
 
 /**
  * @title DeployContracts
@@ -20,54 +22,98 @@ import {BitpandaEcosystemTokenDeployer} from "./helpers/BitpandaEcosystemTokenDe
  *
  * @dev Usage
  * forge script ./script/DeployContracts.s.sol --account <account> \
- *     --sender <sender> --rpc-url <rpc alias> --slow --force \
- *     --sig "run(address,uint256,uint256,uint256,address[])" <validator> <panSupply> \
- *     <bestSupply> <nextTransferId> <otherValidators>
+ *     --sender <sender> --rpc-url <rpc alias> --slow --force --sig \
+ *     "run(address,address,address,address,address,uint256,uint256,uint256,address[])" \
+ *     <validator> <deployer> <pauser> <mediumCriticalOps> <superCriticalOps> \
+ *     <panSupply> <bestSupply> <nextTransferId> <otherValidators>
  */
 contract DeployContracts is
     PantosHubDeployer,
     PantosForwarderDeployer,
     PantosWrapperDeployer,
     PantosTokenDeployer,
-    BitpandaEcosystemTokenDeployer
+    BitpandaEcosystemTokenDeployer,
+    AccessControllerDeployer
 {
     IPantosHub public pantosHubProxy;
     PantosForwarder public pantosForwarder;
     PantosToken public pantosToken;
     BitpandaEcosystemToken public bitpandaEcosystemToken;
+    AccessController public accessController;
+    address public deployer;
+    address public pauser;
+    address public mediumCriticalOps;
+    address public superCriticalOps;
 
     function exportContractAddresses() public {
         string memory blockchainName = determineBlockchain().name;
         string memory addresses;
         for (uint256 i; i < pantosWrappers.length; i++) {
             vm.serializeAddress(
-                addresses,
+                "addresses",
                 pantosWrappers[i].symbol(),
                 address(pantosWrappers[i])
             );
         }
 
-        vm.serializeAddress(addresses, "hub_proxy", address(pantosHubProxy));
-        vm.serializeAddress(addresses, "forwarder", address(pantosForwarder));
-        vm.serializeAddress(addresses, "pan", address(pantosToken));
+        vm.serializeAddress("addresses", "hub_proxy", address(pantosHubProxy));
+        vm.serializeAddress(
+            "addresses",
+            "forwarder",
+            address(pantosForwarder)
+        );
+        vm.serializeAddress("addresses", "pan", address(pantosToken));
+        vm.serializeAddress(
+            "addresses",
+            "access_controller",
+            address(accessController)
+        );
         addresses = vm.serializeAddress(
-            addresses,
+            "addresses",
             "best",
             address(bitpandaEcosystemToken)
         );
         vm.writeJson(addresses, string.concat(blockchainName, ".json"));
     }
 
+    function exportPantosRolesAddresses() public {
+        string memory blockchainName = determineBlockchain().name;
+        string memory roles;
+        vm.serializeAddress("roles", "deployer", deployer);
+        vm.serializeAddress("roles", "pauser", pauser);
+        vm.serializeAddress("roles", "medium_critical_ops", mediumCriticalOps);
+        roles = vm.serializeAddress(
+            "roles",
+            "super_critical_ops",
+            superCriticalOps
+        );
+        vm.writeJson(roles, string.concat(blockchainName, "_ROLES.json"));
+    }
+
     function run(
         address primaryValidator,
+        address _deployer,
+        address _pauser,
+        address _mediumCriticalOps,
+        address _superCriticalOps,
         uint256 panSupply,
         uint256 bestSupply,
         uint256 nextTransferId,
         address[] memory otherValidators
     ) public {
         vm.startBroadcast();
+        deployer = _deployer;
+        pauser = _pauser;
+        mediumCriticalOps = _mediumCriticalOps;
+        superCriticalOps = _superCriticalOps;
 
-        (pantosHubProxy, ) = deployPantosHub(nextTransferId);
+        accessController = deployAccessController(
+            pauser,
+            deployer,
+            mediumCriticalOps,
+            superCriticalOps
+        );
+        (pantosHubProxy, ) = deployPantosHub(nextTransferId, accessController);
 
         pantosForwarder = deployPantosForwarder();
         pantosToken = deployPantosToken(panSupply);
@@ -109,5 +155,6 @@ contract DeployContracts is
         vm.stopBroadcast();
 
         exportContractAddresses();
+        exportPantosRolesAddresses();
     }
 }
