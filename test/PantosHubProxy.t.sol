@@ -5,10 +5,7 @@ pragma solidity 0.8.26;
 import {IDiamondCut} from "@diamond/interfaces/IDiamondCut.sol";
 import {IDiamondLoupe} from "@diamond/interfaces/IDiamondLoupe.sol";
 import {IERC165} from "@diamond/interfaces/IERC165.sol";
-import {IERC173} from "@diamond/interfaces/IERC173.sol";
-import {DiamondCutFacet} from "@diamond/facets/DiamondCutFacet.sol";
 import {DiamondLoupeFacet} from "@diamond/facets/DiamondLoupeFacet.sol";
-import {OwnershipFacet} from "@diamond/facets/OwnershipFacet.sol";
 import {console2} from "forge-std/console2.sol";
 
 import {IPantosRegistry} from "../src/interfaces/IPantosRegistry.sol";
@@ -16,6 +13,8 @@ import {IPantosTransfer} from "../src/interfaces/IPantosTransfer.sol";
 import {PantosRegistryFacet} from "../src/facets/PantosRegistryFacet.sol";
 import {PantosTransferFacet} from "../src/facets/PantosTransferFacet.sol";
 import {PantosHubInit} from "../src/upgradeInitializers/PantosHubInit.sol";
+import {DiamondCutFacet} from "../src/facets/DiamondCutFacet.sol";
+import {AccessController} from "../src/access/AccessController.sol";
 
 import {PantosHubDeployer} from "./PantosHubDeployer.t.sol";
 import {DummyFacet} from "./helpers/DummyFacet.sol";
@@ -27,9 +26,11 @@ contract PantosHubProxyTest is PantosHubDeployer {
     event Response(bool success, bytes data);
 
     DummyFacet dummyFacet;
+    AccessController accessController;
 
     function setUp() public {
-        deployPantosHubProxyAndDiamondCutFacet();
+        accessController = deployAccessController();
+        deployPantosHubProxyAndDiamondCutFacet(accessController);
     }
 
     function test_fallback_sendEthToPantosHubUsingCall() external {
@@ -108,15 +109,12 @@ contract PantosHubProxyTest is PantosHubDeployer {
         IDiamondLoupe.Facet[] memory facets = IDiamondLoupe(
             address(pantosHubDiamond)
         ).facets();
-        assertEq(facets.length, 5);
+        assertEq(facets.length, 4);
         checkInitialCutFacets(facets);
     }
 
-    function test_diamondCut_ByNonOwner() external {
-        vm.startPrank(address(123));
-
+    function test_diamondCut_ByNonDeployer() external {
         dLoupe = new DiamondLoupeFacet();
-        ownerFacet = new OwnershipFacet();
         pantosRegistryFacet = new PantosRegistryFacet();
         pantosTransferFacet = new PantosTransferFacet();
 
@@ -128,7 +126,7 @@ contract PantosHubProxyTest is PantosHubDeployer {
             getInitializerArgs()
         );
 
-        vm.expectRevert("LibDiamond: Must be contract owner");
+        vm.expectRevert("PantosHub: Caller doesn't have role");
         // upgrade pantosHub diamond with facets using diamondCut
         IDiamondCut(address(pantosHubDiamond)).diamondCut(
             cut,
@@ -137,11 +135,8 @@ contract PantosHubProxyTest is PantosHubDeployer {
         );
     }
 
-    function test_diamondCut_ByNonOwnerWithoutInit() external {
-        vm.startPrank(address(123));
-
+    function test_diamondCut_ByNonDeployerWithoutInit() external {
         dLoupe = new DiamondLoupeFacet();
-        ownerFacet = new OwnershipFacet();
         pantosRegistryFacet = new PantosRegistryFacet();
         pantosTransferFacet = new PantosTransferFacet();
 
@@ -150,7 +145,7 @@ contract PantosHubProxyTest is PantosHubDeployer {
         // Prepare diamond cut and initializer data
         IDiamondCut.FacetCut[] memory cut = prepareFacetCuts();
 
-        vm.expectRevert("LibDiamond: Must be contract owner");
+        vm.expectRevert("PantosHub: Caller doesn't have role");
         // upgrade pantosHub diamond with facets using diamondCut
         IDiamondCut(address(pantosHubDiamond)).diamondCut(cut, address(0), "");
     }
@@ -170,6 +165,7 @@ contract PantosHubProxyTest is PantosHubDeployer {
         );
 
         vm.expectRevert("LibDiamondCut: New facet has no code");
+        vm.prank(DEPLOYER);
         IDiamondCut(address(pantosHubDiamond)).diamondCut(
             cut,
             address(pantosHubInit),
@@ -189,6 +185,7 @@ contract PantosHubProxyTest is PantosHubDeployer {
         );
 
         vm.expectRevert("LibDiamondCut: New facet has no code");
+        vm.prank(DEPLOYER);
         IDiamondCut(address(pantosHubDiamond)).diamondCut(cut, address(0), "");
     }
 
@@ -197,7 +194,7 @@ contract PantosHubProxyTest is PantosHubDeployer {
         IDiamondLoupe.Facet[] memory facets = IDiamondLoupe(
             address(pantosHubDiamond)
         ).facets();
-        assertEq(facets.length, 5);
+        assertEq(facets.length, 4);
         checkInitialCutFacets(facets);
         initializePantosHub();
         checkStatePantosHubAfterInit();
@@ -205,7 +202,7 @@ contract PantosHubProxyTest is PantosHubDeployer {
         reDeployRegistryAndTransferFacetsAndDiamondCut();
 
         facets = IDiamondLoupe(address(pantosHubDiamond)).facets();
-        assertEq(facets.length, 5);
+        assertEq(facets.length, 4);
         checkInitialCutFacets(facets);
         checkStatePantosHubAfterInit();
     }
@@ -217,14 +214,14 @@ contract PantosHubProxyTest is PantosHubDeployer {
         IDiamondLoupe.Facet[] memory facets = IDiamondLoupe(
             address(pantosHubDiamond)
         ).facets();
-        assertEq(facets.length, 5);
+        assertEq(facets.length, 4);
         checkInitialCutFacets(facets);
         checkStatePantosHubAfterDeployment();
 
         reDeployRegistryAndTransferFacetsAndDiamondCut();
 
         facets = IDiamondLoupe(address(pantosHubDiamond)).facets();
-        assertEq(facets.length, 5);
+        assertEq(facets.length, 4);
         checkInitialCutFacets(facets);
         checkStatePantosHubAfterDeployment();
     }
@@ -236,7 +233,7 @@ contract PantosHubProxyTest is PantosHubDeployer {
         IDiamondLoupe.Facet[] memory facets = IDiamondLoupe(
             address(pantosHubDiamond)
         ).facets();
-        assertEq(facets.length, 5);
+        assertEq(facets.length, 4);
         checkInitialCutFacets(facets);
 
         // prepare diamond cut to replace a facet with updated interface
@@ -264,6 +261,7 @@ contract PantosHubProxyTest is PantosHubDeployer {
             })
         );
 
+        vm.prank(DEPLOYER);
         IDiamondCut(address(pantosHubDiamond)).diamondCut(cut, address(0), "");
 
         facets = IDiamondLoupe(address(pantosHubDiamond)).facets();
@@ -278,7 +276,7 @@ contract PantosHubProxyTest is PantosHubDeployer {
         IDiamondLoupe.Facet[] memory facets = IDiamondLoupe(
             address(pantosHubDiamond)
         ).facets();
-        assertEq(facets.length, 5);
+        assertEq(facets.length, 4);
         checkInitialCutFacets(facets);
 
         initializePantosHub();
@@ -312,12 +310,13 @@ contract PantosHubProxyTest is PantosHubDeployer {
             })
         );
 
+        vm.prank(DEPLOYER);
         IDiamondCut(address(pantosHubDiamond)).diamondCut(cut, address(0), "");
 
         facets = IDiamondLoupe(address(pantosHubDiamond)).facets();
 
-        assertEq(facets[4].facetAddress, address(pantosTransferV2Facet));
-        assertEq(facets[4].functionSelectors.length, 4);
+        assertEq(facets[3].facetAddress, address(pantosTransferV2Facet));
+        assertEq(facets[3].functionSelectors.length, 4);
         // order of functionSelectors are not preserved
     }
 
@@ -326,7 +325,7 @@ contract PantosHubProxyTest is PantosHubDeployer {
         IDiamondLoupe.Facet[] memory facets = IDiamondLoupe(
             address(pantosHubDiamond)
         ).facets();
-        assertEq(facets.length, 5);
+        assertEq(facets.length, 4);
         checkInitialCutFacets(facets);
         initializePantosHub();
         checkStatePantosHubAfterInit();
@@ -346,9 +345,9 @@ contract PantosHubProxyTest is PantosHubDeployer {
         checkStatePantosHubAfterInit();
 
         facets = IDiamondLoupe(address(pantosHubDiamond)).facets();
-        assertEq(facets.length, 6);
+        assertEq(facets.length, 5);
         checkInitialCutFacets(facets);
-        assertEq(facets[5].functionSelectors, getDummyFacetSelectors());
+        assertEq(facets[4].functionSelectors, getDummyFacetSelectors());
     }
 
     function test_diamondCut_addNewFacetUsingReinitilizer() external {
@@ -356,7 +355,7 @@ contract PantosHubProxyTest is PantosHubDeployer {
         IDiamondLoupe.Facet[] memory facets = IDiamondLoupe(
             address(pantosHubDiamond)
         ).facets();
-        assertEq(facets.length, 5);
+        assertEq(facets.length, 4);
         checkInitialCutFacets(facets);
         initializePantosHub();
         checkStatePantosHubAfterInit();
@@ -373,9 +372,9 @@ contract PantosHubProxyTest is PantosHubDeployer {
         checkStatePantosHubAfterInit();
 
         facets = IDiamondLoupe(address(pantosHubDiamond)).facets();
-        assertEq(facets.length, 6);
+        assertEq(facets.length, 5);
         checkInitialCutFacets(facets);
-        assertEq(facets[5].functionSelectors, getDummyFacetSelectors());
+        assertEq(facets[4].functionSelectors, getDummyFacetSelectors());
     }
 
     function test_diamondCut_addNewFacetUsingReinitilizerTwice() external {
@@ -383,7 +382,7 @@ contract PantosHubProxyTest is PantosHubDeployer {
         IDiamondLoupe.Facet[] memory facets = IDiamondLoupe(
             address(pantosHubDiamond)
         ).facets();
-        assertEq(facets.length, 5);
+        assertEq(facets.length, 4);
         checkInitialCutFacets(facets);
         initializePantosHub();
         checkStatePantosHubAfterInit();
@@ -418,6 +417,7 @@ contract PantosHubProxyTest is PantosHubDeployer {
         );
 
         vm.expectRevert("PantosHubRenit: contract is already initialized");
+        vm.prank(DEPLOYER);
         IDiamondCut(address(pantosHubDiamond)).diamondCut(
             cut,
             address(pantosHubReinit),
@@ -433,9 +433,9 @@ contract PantosHubProxyTest is PantosHubDeployer {
         checkStatePantosHubAfterInit();
 
         facets = IDiamondLoupe(address(pantosHubDiamond)).facets();
-        assertEq(facets.length, 6);
+        assertEq(facets.length, 5);
         checkInitialCutFacets(facets);
-        assertEq(facets[5].functionSelectors, getDummyFacetSelectors());
+        assertEq(facets[4].functionSelectors, getDummyFacetSelectors());
     }
 
     function test_diamondCut_removeFacet() external {
@@ -443,14 +443,14 @@ contract PantosHubProxyTest is PantosHubDeployer {
         IDiamondLoupe.Facet[] memory facets = IDiamondLoupe(
             address(pantosHubDiamond)
         ).facets();
-        assertEq(facets.length, 5);
+        assertEq(facets.length, 4);
         initializePantosHub();
         deployNewDummyFacetsAndDiamondCut();
         checkStatePantosHubAfterInit();
         facets = IDiamondLoupe(address(pantosHubDiamond)).facets();
-        assertEq(facets.length, 6);
+        assertEq(facets.length, 5);
         checkInitialCutFacets(facets);
-        assertEq(facets[5].functionSelectors, getDummyFacetSelectors());
+        assertEq(facets[4].functionSelectors, getDummyFacetSelectors());
 
         // prepare diamond cut to remove a facet
         IDiamondCut.FacetCut[] memory cut = new IDiamondCut.FacetCut[](1);
@@ -461,10 +461,11 @@ contract PantosHubProxyTest is PantosHubDeployer {
                 functionSelectors: getDummyFacetSelectors()
             })
         );
+        vm.prank(DEPLOYER);
         IDiamondCut(address(pantosHubDiamond)).diamondCut(cut, address(0), "");
 
         facets = IDiamondLoupe(address(pantosHubDiamond)).facets();
-        assertEq(facets.length, 5);
+        assertEq(facets.length, 4);
         checkInitialCutFacets(facets);
         checkStatePantosHubAfterInit();
     }
@@ -476,7 +477,7 @@ contract PantosHubProxyTest is PantosHubDeployer {
             address(pantosHubDiamond)
         ).facets();
 
-        assertEq(facets.length, 5);
+        assertEq(facets.length, 4);
         checkInitialCutFacets(facets);
     }
 
@@ -488,7 +489,7 @@ contract PantosHubProxyTest is PantosHubDeployer {
             address(pantosHubDiamond)
         ).facets();
 
-        assertEq(facets.length, 5);
+        assertEq(facets.length, 4);
         checkInitialCutFacets(facets);
     }
 
@@ -500,7 +501,7 @@ contract PantosHubProxyTest is PantosHubDeployer {
             address(pantosHubDiamond)
         ).facets();
 
-        assertEq(facets.length, 5);
+        assertEq(facets.length, 4);
         checkInitialCutFacets(facets);
     }
 
@@ -570,7 +571,6 @@ contract PantosHubProxyTest is PantosHubDeployer {
         deployAllFacetsAndDiamondCut();
         initializePantosHub();
 
-        vm.startPrank(address(123));
         address[] memory facetAddresses = IDiamondLoupe(
             address(pantosHubDiamond)
         ).facetAddresses();
@@ -580,16 +580,11 @@ contract PantosHubProxyTest is PantosHubDeployer {
     function test_loupe_facetAddress_BeforePantosHubInit() external {
         deployAllFacetsAndDiamondCut();
 
-        vm.startPrank(address(123));
-
         address facetAddress = IDiamondLoupe(address(pantosHubDiamond))
             .facetAddress(IDiamondCut.diamondCut.selector);
         assertEq(facetAddress, address(dCutFacet));
 
-        bytes4[] memory selectors = getOwnershipSelectors();
-        checkLoupeFacetAddressForSelectors(selectors, address(ownerFacet));
-
-        selectors = getDiamondLoupeSelectors();
+        bytes4[] memory selectors = getDiamondLoupeSelectors();
         checkLoupeFacetAddressForSelectors(selectors, address(dLoupe));
 
         selectors = getPantosRegistrySelectors();
@@ -609,16 +604,11 @@ contract PantosHubProxyTest is PantosHubDeployer {
         deployAllFacetsAndDiamondCut();
         initializePantosHub();
 
-        vm.startPrank(address(123));
-
         address facetAddress = IDiamondLoupe(address(pantosHubDiamond))
             .facetAddress(IDiamondCut.diamondCut.selector);
         assertEq(facetAddress, address(dCutFacet));
 
-        bytes4[] memory selectors = getOwnershipSelectors();
-        checkLoupeFacetAddressForSelectors(selectors, address(ownerFacet));
-
-        selectors = getDiamondLoupeSelectors();
+        bytes4[] memory selectors = getDiamondLoupeSelectors();
         checkLoupeFacetAddressForSelectors(selectors, address(dLoupe));
 
         selectors = getPantosRegistrySelectors();
@@ -638,8 +628,6 @@ contract PantosHubProxyTest is PantosHubDeployer {
         deployAllFacetsAndDiamondCut();
         initializePantosHub();
 
-        vm.startPrank(address(123));
-
         address facetAddress = IDiamondLoupe(address(pantosHubDiamond))
             .facetAddress(DummyFacet.getNewAddress.selector);
         assertEq(facetAddress, address(0));
@@ -658,6 +646,7 @@ contract PantosHubProxyTest is PantosHubDeployer {
             })
         );
 
+        vm.prank(DEPLOYER);
         // upgrade pantosHub diamond with facets using diamondCut
         IDiamondCut(address(pantosHubDiamond)).diamondCut(cut, address(0), "");
     }
@@ -687,6 +676,7 @@ contract PantosHubProxyTest is PantosHubDeployer {
             PantosHubReinit.init,
             (args)
         );
+        vm.prank(DEPLOYER);
         // upgrade pantosHub diamond with facets using diamondCut
         IDiamondCut(address(pantosHubDiamond)).diamondCut(
             cut,
@@ -698,12 +688,11 @@ contract PantosHubProxyTest is PantosHubDeployer {
     function checkInitialCutFacetAdresses(
         address[] memory facetAddresses
     ) public {
-        assertEq(facetAddresses.length, 5);
+        assertEq(facetAddresses.length, 4);
         assertEq(facetAddresses[0], address(dCutFacet));
         assertEq(facetAddresses[1], address(dLoupe));
-        assertEq(facetAddresses[2], address(ownerFacet));
-        assertEq(facetAddresses[3], address(pantosRegistryFacet));
-        assertEq(facetAddresses[4], address(pantosTransferFacet));
+        assertEq(facetAddresses[2], address(pantosRegistryFacet));
+        assertEq(facetAddresses[3], address(pantosTransferFacet));
     }
 
     function checkLoupeFacetAddressForSelectors(
@@ -722,9 +711,8 @@ contract PantosHubProxyTest is PantosHubDeployer {
     ) public {
         assertEq(facets[0].facetAddress, address(dCutFacet));
         assertEq(facets[1].facetAddress, address(dLoupe));
-        assertEq(facets[2].facetAddress, address(ownerFacet));
-        assertEq(facets[3].facetAddress, address(pantosRegistryFacet));
-        assertEq(facets[4].facetAddress, address(pantosTransferFacet));
+        assertEq(facets[2].facetAddress, address(pantosRegistryFacet));
+        assertEq(facets[3].facetAddress, address(pantosTransferFacet));
 
         assertEq(facets[0].functionSelectors.length, 1);
         assertEq(
@@ -733,9 +721,8 @@ contract PantosHubProxyTest is PantosHubDeployer {
         );
 
         assertEq(facets[1].functionSelectors, getDiamondLoupeSelectors());
-        assertEq(facets[2].functionSelectors, getOwnershipSelectors());
-        assertEq(facets[3].functionSelectors, getPantosRegistrySelectors());
-        assertEq(facets[4].functionSelectors, getPantosTransferSelectors());
+        assertEq(facets[2].functionSelectors, getPantosRegistrySelectors());
+        assertEq(facets[3].functionSelectors, getPantosTransferSelectors());
     }
 
     function checkFacetsAfterTransferFacetV2Update(
@@ -744,9 +731,8 @@ contract PantosHubProxyTest is PantosHubDeployer {
     ) public {
         assertEq(facets[0].facetAddress, address(dCutFacet));
         assertEq(facets[1].facetAddress, address(dLoupe));
-        assertEq(facets[2].facetAddress, address(ownerFacet));
-        assertEq(facets[3].facetAddress, address(pantosRegistryFacet));
-        assertEq(facets[4].facetAddress, address(transferFacetV2));
+        assertEq(facets[2].facetAddress, address(pantosRegistryFacet));
+        assertEq(facets[3].facetAddress, address(transferFacetV2));
 
         assertEq(facets[0].functionSelectors.length, 1);
         assertEq(
@@ -755,9 +741,8 @@ contract PantosHubProxyTest is PantosHubDeployer {
         );
 
         assertEq(facets[1].functionSelectors, getDiamondLoupeSelectors());
-        assertEq(facets[2].functionSelectors, getOwnershipSelectors());
-        assertEq(facets[3].functionSelectors, getPantosRegistrySelectors());
-        assertEq(facets[4].functionSelectors, getPantosTransferV2Selectors());
+        assertEq(facets[2].functionSelectors, getPantosRegistrySelectors());
+        assertEq(facets[3].functionSelectors, getPantosTransferV2Selectors());
     }
 
     function getDummyFacetSelectors() public pure returns (bytes4[] memory) {

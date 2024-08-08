@@ -5,7 +5,6 @@ pragma solidity 0.8.26;
 import {LibDiamond} from "@diamond/libraries/LibDiamond.sol";
 import {IDiamondLoupe} from "@diamond/interfaces/IDiamondLoupe.sol";
 import {IDiamondCut} from "@diamond/interfaces/IDiamondCut.sol";
-import {IERC173} from "@diamond/interfaces/IERC173.sol";
 import {IERC165} from "@diamond/interfaces/IERC165.sol";
 
 import {PantosHubStorage} from "../PantosHubStorage.sol";
@@ -57,7 +56,6 @@ contract PantosHubInit {
         ds.supportedInterfaces[type(IERC165).interfaceId] = true;
         ds.supportedInterfaces[type(IDiamondCut).interfaceId] = true;
         ds.supportedInterfaces[type(IDiamondLoupe).interfaceId] = true;
-        ds.supportedInterfaces[type(IERC173).interfaceId] = true;
 
         // initialising PantosHubStorage
         ps.paused = true;

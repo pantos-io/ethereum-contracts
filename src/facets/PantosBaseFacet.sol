@@ -29,10 +29,10 @@ abstract contract PantosBaseFacet is PantosRoles {
                 storage acs = LibAccessControl.accessControlStorage();
             require(
                 acs.accessController.hasRole(DEPLOYER, msg.sender),
-                "Caller doesn't have role"
+                "PantosHub: Caller doesn't have role"
             );
-            _;
         }
+        _;
     }
 
     /**
@@ -70,7 +70,7 @@ abstract contract PantosBaseFacet is PantosRoles {
             .accessControlStorage();
         require(
             acs.accessController.hasRole(_role, msg.sender),
-            "Caller doesn't have role"
+            "PantosHub: Caller doesn't have role"
         );
         _;
     }
