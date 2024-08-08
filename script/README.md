@@ -61,11 +61,11 @@ Enter password: # (Hit enter for an empty password)
 
 With single validator
 ```bash
-$ forge script ./script/DeployContracts.s.sol --account local_deployer --password '' --sender 0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266 --rpc-url local-8545 -vvvv --sig "run(address,uint256,uint256,uint256,address[])" 0x88CE2c1d82328f84Dd197f63482A3B68E18cD707 100000000000000000 100000000000000000 0 []
+$ forge script ./script/DeployContracts.s.sol --account local_deployer --password '' --sender 0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266 --rpc-url local-8545 -vvvv --sig "run(address,address,address,address,address,uint256,uint256,uint256,address[])" 0x88CE2c1d82328f84Dd197f63482A3B68E18cD707 0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266 0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266 0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266 0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266 100000000000000000 100000000000000000 0 []
 ```
 With multiple validators
 ```
-$ forge script ./script/DeployContracts.s.sol --account local_deployer --password '' --sender 0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266 --rpc-url local-8545 -vvvv --sig "run(address,uint256,uint256,uint256,address[])" 0x88CE2c1d82328f84Dd197f63482A3B68E18cD707 100000000000000000 100000000000000000 0 [0xAa1ea8611639537A89Cb5925903Fd1fb28027DE9,0xBB2166dC315dC02F314597eCf867C3dfB45ED205,0xCC0DF974953820B649Bb67F167f01cd265Ea5B0A]
+$ forge script ./script/DeployContracts.s.sol --account local_deployer --password '' --sender 0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266 --rpc-url local-8545 -vvvv --sig "run(address,address,address,address,address,uint256,uint256,uint256,address[])" 0x88CE2c1d82328f84Dd197f63482A3B68E18cD707 0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266 0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266 0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266 0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266 100000000000000000 100000000000000000 0 [0xAa1ea8611639537A89Cb5925903Fd1fb28027DE9,0xBB2166dC315dC02F314597eCf867C3dfB45ED205,0xCC0DF974953820B649Bb67F167f01cd265Ea5B0A]
 ```
 
 ### RegisterExternalTokens
@@ -77,35 +77,35 @@ $ forge script ./script/RegisterExternalTokens.s.sol --account local_deployer --
 ### UpdateFeeFactors
 
 ```bash
-$ forge script ./script/UpdateFeeFactors.s.sol --account local_deployer --password '' --sender 0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266 --rpc-url local-8545 -vvvv --sig "run(address)"  0xe7f1725E7734CE288F8367e1Bb143E90bb3F0512
+$ forge script ./script/UpdateFeeFactors.s.sol --account local_deployer --password '' --sender 0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266 --rpc-url local-8545 -vvvv --sig "run(address)"  0x9fE46736679d2D9a65F0992F2272dE9f3c7fa6e0
 ```
 
 ### RedeployHub
 
 ```bash
-$ forge script ./script/redeploy/RedeployHub.s.sol --account local_deployer --password '' --sender 0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266 --rpc-url local-8545 -vvvv --sig "run(address)" 0xe7f1725E7734CE288F8367e1Bb143E90bb3F0512
+$ forge script ./script/redeploy/RedeployHub.s.sol --account local_deployer --password '' --sender 0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266 --rpc-url local-8545 -vvvv --sig "run(address)" 0x9fE46736679d2D9a65F0992F2272dE9f3c7fa6e0
 ```
 
 ### UpgradeHub
 
 ```bash
-$ forge script ./script/redeploy/UpgradeHub.s.sol --account local_deployer --password '' --sender 0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266 --rpc-url local-8545 -vvvv --sig "run(address)" 0xe7f1725E7734CE288F8367e1Bb143E90bb3F0512
+$ forge script ./script/redeploy/UpgradeHub.s.sol --account local_deployer --password '' --sender 0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266 --rpc-url local-8545 -vvvv --sig "run(address)" 0x9fE46736679d2D9a65F0992F2272dE9f3c7fa6e0
 ```
 
 ### RedeployForwarder
 
 ```bash
-$ forge script ./script/redeploy/RedeployForwarder.s.sol --account local_deployer --password '' --sender 0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266 --rpc-url local-8545 -vvvv --sig "run(address)" 0xe7f1725E7734CE288F8367e1Bb143E90bb3F0512
+$ forge script ./script/redeploy/RedeployForwarder.s.sol --account local_deployer --password '' --sender 0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266 --rpc-url local-8545 -vvvv --sig "run(address)" 0x9fE46736679d2D9a65F0992F2272dE9f3c7fa6e0
 ```
 
 ### RedeployHubAndForwarder
 
 ```bash
-$ forge script ./script/redeploy/RedeployHubAndForwarder.s.sol --account local_deployer --password '' --sender 0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266 --rpc-url local-8545 -vvvv --sig "run(address)" 0xe7f1725E7734CE288F8367e1Bb143E90bb3F0512
+$ forge script ./script/redeploy/RedeployHubAndForwarder.s.sol --account local_deployer --password '' --sender 0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266 --rpc-url local-8545 -vvvv --sig "run(address)" 0x9fE46736679d2D9a65F0992F2272dE9f3c7fa6e0
 ```
 
 ### UpgradeHubAndRedeployForwarder
 
 ```bash
-$ forge script ./script/redeploy/UpgradeHubAndRedeployForwarder.s.sol --account local_deployer --password '' --sender 0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266 --rpc-url local-8545 -vvvv --sig "run(address)" 0xe7f1725E7734CE288F8367e1Bb143E90bb3F0512
+$ forge script ./script/redeploy/UpgradeHubAndRedeployForwarder.s.sol --account local_deployer --password '' --sender 0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266 --rpc-url local-8545 -vvvv --sig "run(address)" 0x9fE46736679d2D9a65F0992F2272dE9f3c7fa6e0
 ```

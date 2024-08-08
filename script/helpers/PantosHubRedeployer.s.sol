@@ -8,10 +8,15 @@ import {PantosTypes} from "../../src/interfaces/PantosTypes.sol";
 import {IPantosHub} from "../../src/interfaces/IPantosHub.sol";
 import {PantosToken} from "../../src/PantosToken.sol";
 import {PantosForwarder} from "../../src/PantosForwarder.sol";
+import {AccessController} from "../../src/access/AccessController.sol";
 
+import {PantosBaseAddresses} from "../helpers/PantosBaseAddresses.s.sol";
 import {PantosHubDeployer} from "../helpers/PantosHubDeployer.s.sol";
 
-abstract contract PantosHubRedeployer is PantosHubDeployer {
+abstract contract PantosHubRedeployer is
+    PantosHubDeployer,
+    PantosBaseAddresses
+{
     bool private _initialized;
     /// @dev Mapping of BlockchainId enum to map of tokens to external tokens addresses
     mapping(address => mapping(BlockchainId => PantosTypes.ExternalTokenRecord))
@@ -20,6 +25,7 @@ abstract contract PantosHubRedeployer is PantosHubDeployer {
     IPantosHub private _oldPantosHubProxy;
     PantosForwarder private _pantosForwarder;
     PantosToken private _pantosToken;
+    AccessController private _accessController;
 
     modifier onlyPantosHubRedeployerInitialized() {
         require(_initialized, "PantosHubRedeployer: not initialized");
@@ -35,6 +41,12 @@ abstract contract PantosHubRedeployer is PantosHubDeployer {
             _oldPantosHubProxy.getPantosForwarder()
         );
         _pantosToken = PantosToken(_oldPantosHubProxy.getPantosToken());
+        readContractAddresses(determineBlockchain());
+        _accessController = AccessController(
+            vm.parseAddress(
+                getContractAddress(determineBlockchain(), "access_controller")
+            )
+        );
         readOwnedAndExternalTokens(_oldPantosHubProxy);
     }
 
@@ -223,5 +235,14 @@ abstract contract PantosHubRedeployer is PantosHubDeployer {
         returns (PantosToken)
     {
         return _pantosToken;
+    }
+
+    function getAccessController()
+        public
+        view
+        onlyPantosHubRedeployerInitialized
+        returns (AccessController)
+    {
+        return _accessController;
     }
 }
