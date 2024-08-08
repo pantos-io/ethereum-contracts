@@ -10,6 +10,7 @@ import {PantosTypes} from "../src/interfaces/PantosTypes.sol";
 import {PantosBaseToken} from "../src/PantosBaseToken.sol";
 import {PantosForwarder} from "../src/PantosForwarder.sol";
 import {PantosToken} from "../src/PantosToken.sol";
+import {AccessController} from "../src/access/AccessController.sol";
 
 abstract contract PantosBaseTest is Test {
     uint256 public constant BLOCK_TIMESTAMP = 1000;
@@ -55,6 +56,13 @@ abstract contract PantosBaseTest is Test {
         address(uint160(uint256(keccak256("ServiceNodeAddress1"))));
     address constant SERVICE_NODE_ADDRESS_2 =
         address(uint160(uint256(keccak256("ServiceNodeAddress2"))));
+    address constant DEPLOYER =
+        address(uint160(uint256(keccak256("Deployer"))));
+    address constant PAUSER = address(uint160(uint256(keccak256("Pauser"))));
+    address constant MEDIUM_CRITICAL_OPS =
+        address(uint160(uint256(keccak256("MediumCriticalOps"))));
+    address constant SUPER_CRITICAL_OPS =
+        address(uint160(uint256(keccak256("SuperCriticalOps"))));
     string constant SERVICE_NODE_URL = "service node url";
     string constant SERVICE_NODE_URL_1 = "https://servicenode1.pantos.io";
     string constant SERVICE_NODE_URL_2 = "https://servicenode2.pantos.io";
@@ -84,6 +92,16 @@ abstract contract PantosBaseTest is Test {
 
     Blockchain public otherBlockchain =
         Blockchain(BlockchainId.TEST_CHAIN2, "TEST_CHAIN2", 900000);
+
+    function deployAccessController() public returns (AccessController) {
+        return
+            new AccessController(
+                PAUSER,
+                DEPLOYER,
+                MEDIUM_CRITICAL_OPS,
+                SUPER_CRITICAL_OPS
+            );
+    }
 
     function deployer() public view returns (address) {
         return address(this);
@@ -171,6 +189,15 @@ abstract contract PantosBaseTest is Test {
             selector,
             address(111)
         );
+        modifierTest(callee, calldata_, revertMessage);
+    }
+
+    function onlyRoleTest(
+        address callee,
+        bytes memory calldata_
+    ) public virtual {
+        vm.startPrank(address(111));
+        bytes memory revertMessage = "PantosHub: Caller doesn't have role";
         modifierTest(callee, calldata_, revertMessage);
     }
 
