@@ -60,7 +60,9 @@ contract RedeployHubAndForwarder is
             nextTransferId,
             getAccessController()
         );
-        PantosForwarder newPantosForwarder = deployPantosForwarder();
+        PantosForwarder newPantosForwarder = deployPantosForwarder(
+            getAccessController()
+        );
         initializePantosHub(
             newPantosHubProxy,
             newPantosForwarder,

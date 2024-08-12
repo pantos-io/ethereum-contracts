@@ -2,13 +2,14 @@
 // slither-disable-next-line solc-version
 pragma solidity 0.8.26;
 
-import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 import {Pausable} from "@openzeppelin/contracts/utils/Pausable.sol";
 import {ECDSA} from "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 import {MessageHashUtils} from "@openzeppelin/contracts/utils/cryptography/MessageHashUtils.sol";
 import {Strings} from "@openzeppelin/contracts/utils/Strings.sol";
+import {IAccessControl} from "@openzeppelin/contracts/access/AccessControl.sol";
 
 import {PantosTypes} from "../src/interfaces/PantosTypes.sol";
+import {PantosRoles} from "./access/PantosRoles.sol";
 import {IPantosForwarder} from "./interfaces/IPantosForwarder.sol";
 import {IPantosHub} from "./interfaces/IPantosHub.sol";
 import {IPantosToken} from "./interfaces/IPantosToken.sol";
@@ -23,7 +24,9 @@ uint constant INVALID_VALIDATOR_NODE_INDEX = type(uint).max;
  *
  * @dev See {IPantosForwarder}.
  */
-contract PantosForwarder is IPantosForwarder, Ownable, Pausable {
+contract PantosForwarder is IPantosForwarder, Pausable, PantosRoles {
+    IAccessControl private immutable _accessController;
+
     address private _pantosHub;
 
     address private _pantosToken;
@@ -40,7 +43,8 @@ contract PantosForwarder is IPantosForwarder, Ownable, Pausable {
     // Used nonces of senders (to prevent replay attacks)
     mapping(address => mapping(uint256 => bool)) private _usedSenderNonces;
 
-    constructor() Ownable(msg.sender) {
+    constructor(address accessControllerAddress) {
+        _accessController = IAccessControl(accessControllerAddress);
         // Contract is paused until it is fully initialized
         _pause();
     }
@@ -58,16 +62,28 @@ contract PantosForwarder is IPantosForwarder, Ownable, Pausable {
     }
 
     /**
+     * @notice Modifier making sure that the function can only be called by the
+     * authorized role.
+     */
+    modifier onlyRole(bytes32 _role) {
+        require(
+            _accessController.hasRole(_role, msg.sender),
+            "PantosForwarder: caller doesn't have role"
+        );
+        _;
+    }
+
+    /**
      * @dev See {Pausable-_pause}.
      */
-    function pause() external whenNotPaused onlyOwner {
+    function pause() external whenNotPaused onlyRole(PAUSER) {
         _pause();
     }
 
     /**
      * @dev See {Pausable-_unpause}.
      */
-    function unpause() external whenPaused onlyOwner {
+    function unpause() external whenPaused onlyRole(SUPER_CRITICAL_OPS) {
         require(
             _pantosHub != address(0),
             "PantosForwarder: PantosHub has not been set"
@@ -92,7 +108,9 @@ contract PantosForwarder is IPantosForwarder, Ownable, Pausable {
      * @dev The function is only callable by the owner of the Pantos Forwarder
      * contract and can only be called when the contract is paused.
      */
-    function setPantosHub(address pantosHub) external whenPaused onlyOwner {
+    function setPantosHub(
+        address pantosHub
+    ) external whenPaused onlyRole(SUPER_CRITICAL_OPS) {
         require(
             pantosHub != address(0),
             "PantosForwarder: PantosHub must not be the zero account"
@@ -112,7 +130,7 @@ contract PantosForwarder is IPantosForwarder, Ownable, Pausable {
      */
     function setPantosToken(
         address pantosToken
-    ) external whenPaused onlyOwner {
+    ) external whenPaused onlyRole(DEPLOYER) {
         require(
             pantosToken != address(0),
             "PantosForwarder: PantosToken must not be the zero account"
@@ -133,7 +151,7 @@ contract PantosForwarder is IPantosForwarder, Ownable, Pausable {
      */
     function setMinimumValidatorNodeSignatures(
         uint256 minimumValidatorNodeSignatures
-    ) external whenPaused onlyOwner {
+    ) external whenPaused onlyRole(SUPER_CRITICAL_OPS) {
         require(
             minimumValidatorNodeSignatures > 0,
             "PantosForwarder: at least one signature required"
@@ -154,7 +172,7 @@ contract PantosForwarder is IPantosForwarder, Ownable, Pausable {
      */
     function addValidatorNode(
         address validatorNodeAddress
-    ) external whenPaused onlyOwner {
+    ) external whenPaused onlyRole(SUPER_CRITICAL_OPS) {
         require(
             validatorNodeAddress != address(0),
             "PantosForwarder: validator node address must not be zero"
@@ -190,7 +208,7 @@ contract PantosForwarder is IPantosForwarder, Ownable, Pausable {
      */
     function removeValidatorNode(
         address validatorNodeAddress
-    ) external whenPaused onlyOwner {
+    ) external whenPaused onlyRole(SUPER_CRITICAL_OPS) {
         require(
             validatorNodeAddress != address(0),
             "PantosForwarder: validator node address must not be zero"
