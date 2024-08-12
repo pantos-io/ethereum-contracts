@@ -26,9 +26,6 @@ services:
     - type: volume
       source: eth-data
       target: /data
-    - type: bind
-      source: "${DATA_PATH-./data}/eth"
-      target: /data2
     healthcheck:
       test: ["CMD-SHELL", "cast block-number"]
       interval: 30s
@@ -54,9 +51,6 @@ services:
     - type: volume
       source: bnb-data
       target: /data
-    - type: bind
-      source: "${DATA_PATH-./data}/bnb"
-      target: /data2
     environment:
       CHAIN_ID: 31338
     healthcheck:

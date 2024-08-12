@@ -64,11 +64,15 @@ docker: check-swarm-init
         export DATA_PATH=./data/$$STACK_NAME; \
         export INSTANCE=$$i; \
         echo "Deploying stack $$STACK_NAME"; \
-        for dir in $$(yq e '.services[].volumes[] | select(.source == "*$$${DATA_PATH}*") | .source' docker-compose.yml); do \
-            eval dir=$$dir; \
-            mkdir -p $$dir; \
-        done; \
         docker compose -f docker-compose.yml -f docker-compose.ci.yml $(EXTRA_COMPOSE) up -d --wait $(ARGS); \
+        for service in $$(yq e '.services | with_entries(select(.value.image | contains("ethereum-node"))) | keys | .[]' docker-compose.yml); do \
+            dir=$$DATA_PATH/$$service; \
+            echo "Copying data from $$service to $$dir"; \
+            mkdir -p $$dir; \
+            docker cp $$STACK_NAME-$$service-1:/data $$dir; \
+            mv $$dir/data/* $$dir; \
+            rmdir $$dir/data; \
+        done; \
     done
     # We need to use compose because swarm goes absolutely crazy on MacOS when using cross architecture
     # And can't pull the correct images
@@ -92,11 +96,12 @@ docker-remove:
         docker stack rm $$stack --detach=false; \
 		echo "Removing volumes for stack $$stack"; \
         docker volume ls --format "{{.Name}}" | awk '/^$$stack/ {print}' | xargs -r docker volume rm; \
-        rm -Rf /data/$$stack; \
+        rm -Rf ./data/$$stack; \
     done;  \
     for compose_stack in $$(docker compose ls --filter "name=$$STACK_NAME" --format json | jq -r '.[].Name' | awk "/^$$STACK_NAME/ {print}"); do \
         echo "Removing Docker Compose stack $$compose_stack"; \
         docker compose -p $$compose_stack down -v; \
+        rm -Rf ./data/$$compose_stack; \
     done
 
 .PHONY: docker-logs
