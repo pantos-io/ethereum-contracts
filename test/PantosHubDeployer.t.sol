@@ -5,10 +5,7 @@ pragma solidity 0.8.26;
 import {IDiamondCut} from "@diamond/interfaces/IDiamondCut.sol";
 import {IDiamondLoupe} from "@diamond/interfaces/IDiamondLoupe.sol";
 import {IERC165} from "@diamond/interfaces/IERC165.sol";
-import {IERC173} from "@diamond/interfaces/IERC173.sol";
-import {DiamondCutFacet} from "@diamond/facets/DiamondCutFacet.sol";
 import {DiamondLoupeFacet} from "@diamond/facets/DiamondLoupeFacet.sol";
-import {OwnershipFacet} from "@diamond/facets/OwnershipFacet.sol";
 
 import {PantosTypes} from "../src/interfaces/PantosTypes.sol";
 import {IPantosHub} from "../src/interfaces/IPantosHub.sol";
@@ -19,6 +16,8 @@ import {PantosTransferFacet} from "../src/facets/PantosTransferFacet.sol";
 import {PantosHubInit} from "../src/upgradeInitializers/PantosHubInit.sol";
 import {PantosHubProxy} from "../src/PantosHubProxy.sol";
 import {PantosBaseToken} from "../src/PantosBaseToken.sol";
+import {DiamondCutFacet} from "../src/facets/DiamondCutFacet.sol";
+import {AccessController} from "../src/access/AccessController.sol";
 
 import {PantosBaseTest} from "./PantosBaseTest.t.sol";
 
@@ -37,28 +36,28 @@ abstract contract PantosHubDeployer is PantosBaseTest {
     IPantosHub public pantosHubProxy;
     DiamondCutFacet public dCutFacet;
     DiamondLoupeFacet public dLoupe;
-    OwnershipFacet public ownerFacet;
     PantosRegistryFacet public pantosRegistryFacet;
     PantosTransferFacet public pantosTransferFacet;
     PantosHubInit public pantosHubInit;
 
-    function deployPantosHub() public {
-        deployPantosHubProxyAndDiamondCutFacet();
+    function deployPantosHub(AccessController accessController) public {
+        deployPantosHubProxyAndDiamondCutFacet(accessController);
         deployAllFacetsAndDiamondCut();
     }
 
     // deploy PantosHubProxy (diamond proxy) with diamondCut facet
-    function deployPantosHubProxyAndDiamondCutFacet() public {
+    function deployPantosHubProxyAndDiamondCutFacet(
+        AccessController accessController
+    ) public {
         dCutFacet = new DiamondCutFacet();
         pantosHubDiamond = new PantosHubProxy(
-            address(this),
-            address(dCutFacet)
+            address(dCutFacet),
+            address(accessController)
         );
     }
 
     function deployAllFacets() public {
         dLoupe = new DiamondLoupeFacet();
-        ownerFacet = new OwnershipFacet();
         pantosRegistryFacet = new PantosRegistryFacet();
         pantosTransferFacet = new PantosTransferFacet();
     }
@@ -75,6 +74,7 @@ abstract contract PantosHubDeployer is PantosBaseTest {
         );
 
         // upgrade pantosHub diamond with facets using diamondCut
+        vm.prank(DEPLOYER);
         IDiamondCut(address(pantosHubDiamond)).diamondCut(
             cut,
             address(pantosHubInit),
@@ -91,7 +91,7 @@ abstract contract PantosHubDeployer is PantosBaseTest {
         view
         returns (IDiamondCut.FacetCut[] memory)
     {
-        IDiamondCut.FacetCut[] memory cut = new IDiamondCut.FacetCut[](4);
+        IDiamondCut.FacetCut[] memory cut = new IDiamondCut.FacetCut[](3);
 
         // DiamondLoupeFacet
         cut[0] = (
@@ -102,17 +102,8 @@ abstract contract PantosHubDeployer is PantosBaseTest {
             })
         );
 
-        // OwnershipFacet
-        cut[1] = (
-            IDiamondCut.FacetCut({
-                facetAddress: address(ownerFacet),
-                action: IDiamondCut.FacetCutAction.Add,
-                functionSelectors: getOwnershipSelectors()
-            })
-        );
-
         // PantosRegistryFacet
-        cut[2] = (
+        cut[1] = (
             IDiamondCut.FacetCut({
                 facetAddress: address(pantosRegistryFacet),
                 action: IDiamondCut.FacetCutAction.Add,
@@ -121,7 +112,7 @@ abstract contract PantosHubDeployer is PantosBaseTest {
         );
 
         // PantosTransferFacet
-        cut[3] = (
+        cut[2] = (
             IDiamondCut.FacetCut({
                 facetAddress: address(pantosTransferFacet),
                 action: IDiamondCut.FacetCutAction.Add,
@@ -161,6 +152,7 @@ abstract contract PantosHubDeployer is PantosBaseTest {
     }
 
     function registerOtherBlockchainAtPantosHub() public {
+        vm.prank(SUPER_CRITICAL_OPS);
         pantosHubProxy.registerBlockchain(
             uint256(otherBlockchain.blockchainId),
             otherBlockchain.name,
@@ -173,6 +165,7 @@ abstract contract PantosHubDeployer is PantosBaseTest {
         if (!initialized) {
             _initializePantosHubValues();
 
+            vm.prank(SUPER_CRITICAL_OPS);
             // Unpause the hub contract after initialization
             pantosHubProxy.unpause();
             initialized = true;
@@ -180,12 +173,15 @@ abstract contract PantosHubDeployer is PantosBaseTest {
     }
 
     function _initializePantosHubValues() public {
-        mockPandasToken_getOwner(PANTOS_TOKEN_ADDRESS, deployer());
+        mockPandasToken_getOwner(PANTOS_TOKEN_ADDRESS, DEPLOYER);
 
         // Set the forwarder, PAN token, and primary validator addresses
+        vm.startPrank(SUPER_CRITICAL_OPS);
         pantosHubProxy.setPantosForwarder(PANTOS_FORWARDER_ADDRESS);
-        pantosHubProxy.setPantosToken(PANTOS_TOKEN_ADDRESS);
         pantosHubProxy.setPrimaryValidatorNode(validatorAddress);
+        vm.stopPrank();
+        vm.prank(DEPLOYER);
+        pantosHubProxy.setPantosToken(PANTOS_TOKEN_ADDRESS);
 
         registerOtherBlockchainAtPantosHub();
     }
@@ -215,6 +211,7 @@ abstract contract PantosHubDeployer is PantosBaseTest {
         );
 
         // upgrade pantosHub diamond with facets using diamondCut
+        vm.prank(DEPLOYER);
         IDiamondCut(address(pantosHubDiamond)).diamondCut(cut, address(0), "");
 
         // wrap in IPantosHub ABI to support easier calls
@@ -237,13 +234,11 @@ abstract contract PantosHubDeployer is PantosBaseTest {
         assertTrue(ierc165.supportsInterface(type(IERC165).interfaceId));
         assertTrue(ierc165.supportsInterface(type(IDiamondCut).interfaceId));
         assertTrue(ierc165.supportsInterface(type(IDiamondLoupe).interfaceId));
-        assertTrue(ierc165.supportsInterface(type(IERC173).interfaceId));
     }
 
     // checks pre InitPantosHub state
     function checkStatePantosHubAfterDeployment() public {
         checkSupportedInterfaces();
-        assertEq(pantosHubProxy.owner(), deployer());
         assertTrue(pantosHubProxy.paused());
         assertEq(pantosHubProxy.getNumberBlockchains(), 1);
         assertEq(pantosHubProxy.getNumberActiveBlockchains(), 1);
@@ -289,7 +284,6 @@ abstract contract PantosHubDeployer is PantosBaseTest {
     // checks state after InitPantosHub
     function checkStatePantosHubAfterInit() public {
         checkSupportedInterfaces();
-        assertEq(pantosHubProxy.owner(), deployer());
         assertFalse(pantosHubProxy.paused());
         assertEq(pantosHubProxy.getPantosToken(), PANTOS_TOKEN_ADDRESS);
         assertEq(
@@ -445,13 +439,6 @@ abstract contract PantosHubDeployer is PantosBaseTest {
         selectors[2] = IDiamondLoupe.facetFunctionSelectors.selector;
         selectors[3] = IDiamondLoupe.facets.selector;
         selectors[4] = IERC165.supportsInterface.selector;
-        return selectors;
-    }
-
-    function getOwnershipSelectors() public pure returns (bytes4[] memory) {
-        bytes4[] memory selectors = new bytes4[](2);
-        selectors[0] = IERC173.owner.selector;
-        selectors[1] = IERC173.transferOwnership.selector;
         return selectors;
     }
 
