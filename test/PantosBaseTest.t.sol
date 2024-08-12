@@ -192,15 +192,6 @@ abstract contract PantosBaseTest is Test {
         modifierTest(callee, calldata_, revertMessage);
     }
 
-    function onlyRoleTest(
-        address callee,
-        bytes memory calldata_
-    ) public virtual {
-        vm.startPrank(address(111));
-        bytes memory revertMessage = "PantosHub: Caller doesn't have role";
-        modifierTest(callee, calldata_, revertMessage);
-    }
-
     function onlyNativeTest(address callee, bytes memory calldata_) public {
         string memory revertMessage = "PantosWrapper: only possible on "
         "the native blockchain";

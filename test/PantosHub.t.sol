@@ -2910,4 +2910,13 @@ contract PantosHubTest is PantosHubDeployer {
         }
         checkServiceNodeIndices();
     }
+
+    function onlyRoleTest(
+        address callee,
+        bytes memory calldata_
+    ) public virtual {
+        vm.startPrank(address(111));
+        bytes memory revertMessage = "PantosHub: caller doesn't have role";
+        modifierTest(callee, calldata_, revertMessage);
+    }
 }

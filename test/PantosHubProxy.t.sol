@@ -126,7 +126,7 @@ contract PantosHubProxyTest is PantosHubDeployer {
             getInitializerArgs()
         );
 
-        vm.expectRevert("PantosHub: Caller doesn't have role");
+        vm.expectRevert("PantosHub: caller doesn't have role");
         // upgrade pantosHub diamond with facets using diamondCut
         IDiamondCut(address(pantosHubDiamond)).diamondCut(
             cut,
@@ -145,7 +145,7 @@ contract PantosHubProxyTest is PantosHubDeployer {
         // Prepare diamond cut and initializer data
         IDiamondCut.FacetCut[] memory cut = prepareFacetCuts();
 
-        vm.expectRevert("PantosHub: Caller doesn't have role");
+        vm.expectRevert("PantosHub: caller doesn't have role");
         // upgrade pantosHub diamond with facets using diamondCut
         IDiamondCut(address(pantosHubDiamond)).diamondCut(cut, address(0), "");
     }
