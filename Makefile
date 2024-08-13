@@ -60,6 +60,7 @@ check-swarm-init:
 .PHONY: docker
 docker: check-swarm-init
 	@for i in $$(seq 1 $(INSTANCE_COUNT)); do \
+        ( \
         export STACK_NAME="${STACK_BASE_NAME}-${STACK_IDENTIFIER}-$$i"; \
         export DATA_PATH=./data/$$STACK_NAME; \
         export INSTANCE=$$i; \
@@ -73,7 +74,9 @@ docker: check-swarm-init
             mv $$dir/data/* $$dir; \
             rmdir $$dir/data; \
         done; \
-    done
+        ) & \
+    done; \
+    wait
     # We need to use compose because swarm goes absolutely crazy on MacOS when using cross architecture
     # And can't pull the correct images
     # docker stack deploy -c docker-compose.yml $(EXTRA_COMPOSE) $$STACK_NAME --with-registry-auth --detach=false $(ARGS); \
@@ -92,17 +95,22 @@ docker-remove:
         echo "** Removing all stacks **"; \
     fi; \
 	for stack in $$(docker stack ls --format "{{.Name}}" | awk "/^$$STACK_NAME/ {print}"); do \
+        ( \
         echo "Removing stack $$stack"; \
         docker stack rm $$stack --detach=false; \
 		echo "Removing volumes for stack $$stack"; \
         docker volume ls --format "{{.Name}}" | awk '/^$$stack/ {print}' | xargs -r docker volume rm; \
         rm -Rf ./data/$$stack; \
+        ) & \
     done;  \
     for compose_stack in $$(docker compose ls --filter "name=$$STACK_NAME" --format json | jq -r '.[].Name' | awk "/^$$STACK_NAME/ {print}"); do \
+        ( \
         echo "Removing Docker Compose stack $$compose_stack"; \
         docker compose -p $$compose_stack down -v; \
         rm -Rf ./data/$$compose_stack; \
-    done
+        ) & \
+    done; \
+    wait
 
 .PHONY: docker-logs
 docker-logs:
