@@ -115,7 +115,7 @@ contract DeployContracts is
         );
         (pantosHubProxy, ) = deployPantosHub(nextTransferId, accessController);
 
-        pantosForwarder = deployPantosForwarder();
+        pantosForwarder = deployPantosForwarder(accessController);
         pantosToken = deployPantosToken(panSupply);
         bitpandaEcosystemToken = deployBitpandaEcosystemToken(bestSupply);
 
