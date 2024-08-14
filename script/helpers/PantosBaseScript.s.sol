@@ -107,19 +107,24 @@ abstract contract PantosBaseScript is Script {
 
         _chainIdToPantosBlockchainIdMapping[43114] = BlockchainId.AVALANCHE; // Avax mainnet
         _chainIdToPantosBlockchainIdMapping[43113] = BlockchainId.AVALANCHE; // Avax testnet
+        _chainIdToPantosBlockchainIdMapping[31339] = BlockchainId.AVALANCHE; // Local Avax dev
 
         _chainIdToPantosBlockchainIdMapping[137] = BlockchainId.POLYGON; // Polygon mainnet
         _chainIdToPantosBlockchainIdMapping[80001] = BlockchainId.POLYGON; // Polygon mumbai testnet
         _chainIdToPantosBlockchainIdMapping[80002] = BlockchainId.POLYGON; // Polygon amoy testnet
+        _chainIdToPantosBlockchainIdMapping[31340] = BlockchainId.POLYGON; // Local Polygon dev
 
         _chainIdToPantosBlockchainIdMapping[25] = BlockchainId.CRONOS; // Cronos mainnet
         _chainIdToPantosBlockchainIdMapping[338] = BlockchainId.CRONOS; // Cronos testnet
+        _chainIdToPantosBlockchainIdMapping[31341] = BlockchainId.CRONOS; // Local Cronos dev
 
         _chainIdToPantosBlockchainIdMapping[250] = BlockchainId.FANTOM; // FANTOM mainnet
         _chainIdToPantosBlockchainIdMapping[4002] = BlockchainId.FANTOM; // FANTOM testnet
+        _chainIdToPantosBlockchainIdMapping[31342] = BlockchainId.FANTOM; // Local FANTOM dev
 
         _chainIdToPantosBlockchainIdMapping[42220] = BlockchainId.CELO; // Celo mainnet
         _chainIdToPantosBlockchainIdMapping[44787] = BlockchainId.CELO; // Celo testnet
+        _chainIdToPantosBlockchainIdMapping[31343] = BlockchainId.CELO; // Local Celo dev
 
         Blockchain memory blockchain = determineBlockchain();
 
