@@ -13,3 +13,6 @@ jobs:
       tag: development
       architecture: amd64
       environment: main
+
+  test:
+    uses: pantos-io/e2e-testing/.github/workflows/ci.yaml@main
