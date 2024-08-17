@@ -15,4 +15,5 @@ jobs:
       environment: main
 
   test:
+    needs: publish-docker
     uses: pantos-io/e2e-testing/.github/workflows/ci.yaml@main
