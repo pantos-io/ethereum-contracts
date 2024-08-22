@@ -2,6 +2,7 @@
 // slither-disable-next-line solc-version
 pragma solidity 0.8.26;
 
+import {PantosRoles} from "../access/PantosRoles.sol";
 import {PantosTypes} from "../interfaces/PantosTypes.sol";
 import {IPantosForwarder} from "../interfaces/IPantosForwarder.sol";
 import {IPantosToken} from "../interfaces/IPantosToken.sol";
@@ -18,7 +19,12 @@ contract PantosRegistryFacet is IPantosRegistry, PantosBaseFacet {
     /**
      * @dev See {IPantosRegistry-pause}.
      */
-    function pause() external override whenNotPaused onlyRole(PAUSER) {
+    function pause()
+        external
+        override
+        whenNotPaused
+        onlyRole(PantosRoles.PAUSER)
+    {
         s.paused = true;
         emit Paused(msg.sender);
     }
@@ -31,7 +37,7 @@ contract PantosRegistryFacet is IPantosRegistry, PantosBaseFacet {
         external
         override
         whenPaused
-        onlyRole(SUPER_CRITICAL_OPS)
+        onlyRole(PantosRoles.SUPER_CRITICAL_OPS)
     {
         require(
             s.pantosForwarder != address(0),
@@ -55,7 +61,7 @@ contract PantosRegistryFacet is IPantosRegistry, PantosBaseFacet {
     // slither-disable-next-line timestamp
     function setPantosForwarder(
         address pantosForwarder
-    ) external override whenPaused onlyRole(SUPER_CRITICAL_OPS) {
+    ) external override whenPaused onlyRole(PantosRoles.SUPER_CRITICAL_OPS) {
         require(
             pantosForwarder != address(0),
             "PantosHub: PantosForwarder must not be the zero account"
@@ -70,7 +76,7 @@ contract PantosRegistryFacet is IPantosRegistry, PantosBaseFacet {
     // slither-disable-next-line timestamp
     function setPantosToken(
         address pantosToken
-    ) external override whenPaused onlyRole(DEPLOYER) {
+    ) external override whenPaused onlyRole(PantosRoles.DEPLOYER) {
         require(
             pantosToken != address(0),
             "PantosHub: PantosToken must not be the zero account"
@@ -89,7 +95,7 @@ contract PantosRegistryFacet is IPantosRegistry, PantosBaseFacet {
      */
     function setPrimaryValidatorNode(
         address primaryValidatorNodeAddress
-    ) external override whenPaused onlyRole(SUPER_CRITICAL_OPS) {
+    ) external override whenPaused onlyRole(PantosRoles.SUPER_CRITICAL_OPS) {
         require(
             primaryValidatorNodeAddress != address(0),
             "PantosHub: primary validator node address must not be zero"
@@ -106,7 +112,7 @@ contract PantosRegistryFacet is IPantosRegistry, PantosBaseFacet {
         string calldata name,
         uint256 feeFactor,
         uint256 feeFactorValidFrom
-    ) external override onlyRole(SUPER_CRITICAL_OPS) {
+    ) external override onlyRole(PantosRoles.SUPER_CRITICAL_OPS) {
         _registerBlockchain(blockchainId, name);
         _updateFeeFactor(blockchainId, feeFactor, feeFactorValidFrom);
     }
@@ -117,7 +123,7 @@ contract PantosRegistryFacet is IPantosRegistry, PantosBaseFacet {
     // slither-disable-next-line timestamp
     function unregisterBlockchain(
         uint256 blockchainId
-    ) external override onlyRole(SUPER_CRITICAL_OPS) {
+    ) external override onlyRole(PantosRoles.SUPER_CRITICAL_OPS) {
         // Validate the input parameter
         require(
             blockchainId != s.currentBlockchainId,
@@ -148,7 +154,7 @@ contract PantosRegistryFacet is IPantosRegistry, PantosBaseFacet {
     function updateBlockchainName(
         uint256 blockchainId,
         string calldata name
-    ) external override whenPaused onlyRole(MEDIUM_CRITICAL_OPS) {
+    ) external override whenPaused onlyRole(PantosRoles.MEDIUM_CRITICAL_OPS) {
         // Validate the input parameters
         require(
             bytes(name).length > 0,
@@ -174,7 +180,7 @@ contract PantosRegistryFacet is IPantosRegistry, PantosBaseFacet {
         uint256 blockchainId,
         uint256 newFactor,
         uint256 validFrom
-    ) external override onlyRole(MEDIUM_CRITICAL_OPS) {
+    ) external override onlyRole(PantosRoles.MEDIUM_CRITICAL_OPS) {
         _updateFeeFactor(blockchainId, newFactor, validFrom);
     }
 
@@ -183,7 +189,7 @@ contract PantosRegistryFacet is IPantosRegistry, PantosBaseFacet {
      */
     function setUnbondingPeriodServiceNodeDeposit(
         uint256 unbondingPeriodServiceNodeDeposit
-    ) public override onlyRole(MEDIUM_CRITICAL_OPS) {
+    ) public override onlyRole(PantosRoles.MEDIUM_CRITICAL_OPS) {
         s
             .unbondingPeriodServiceNodeDeposit = unbondingPeriodServiceNodeDeposit;
         emit UnbondingPeriodServiceNodeDepositUpdated(
@@ -196,7 +202,7 @@ contract PantosRegistryFacet is IPantosRegistry, PantosBaseFacet {
      */
     function setMinimumServiceNodeDeposit(
         uint256 minimumServiceNodeDeposit
-    ) public override whenPaused onlyRole(MEDIUM_CRITICAL_OPS) {
+    ) public override whenPaused onlyRole(PantosRoles.MEDIUM_CRITICAL_OPS) {
         s.minimumServiceNodeDeposit = minimumServiceNodeDeposit;
         emit MinimumServiceNodeDepositUpdated(minimumServiceNodeDeposit);
     }
@@ -206,7 +212,7 @@ contract PantosRegistryFacet is IPantosRegistry, PantosBaseFacet {
      */
     function setMinimumValidatorFeeUpdatePeriod(
         uint256 minimumValidatorFeeUpdatePeriod
-    ) external override onlyRole(MEDIUM_CRITICAL_OPS) {
+    ) external override onlyRole(PantosRoles.MEDIUM_CRITICAL_OPS) {
         s.minimumValidatorFeeUpdatePeriod = minimumValidatorFeeUpdatePeriod;
         emit MinimumValidatorFeeUpdatePeriodUpdated(
             minimumValidatorFeeUpdatePeriod
@@ -822,7 +828,7 @@ contract PantosRegistryFacet is IPantosRegistry, PantosBaseFacet {
     function _registerBlockchain(
         uint256 blockchainId,
         string memory name
-    ) private onlyRole(SUPER_CRITICAL_OPS) {
+    ) private onlyRole(PantosRoles.SUPER_CRITICAL_OPS) {
         // Validate the input parameters
         require(
             bytes(name).length > 0,

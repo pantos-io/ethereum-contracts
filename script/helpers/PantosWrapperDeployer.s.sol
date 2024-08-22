@@ -6,6 +6,7 @@ import {console2} from "forge-std/console2.sol";
 
 import {IPantosHub} from "../../src/interfaces/IPantosHub.sol";
 import {PantosForwarder} from "../../src/PantosForwarder.sol";
+import {AccessController} from "../../src/access/AccessController.sol";
 import {PantosWrapper} from "../../src/PantosWrapper.sol";
 import {PantosAvaxWrapper} from "../../src/wrappers/PantosAvaxWrapper.sol";
 import {PantosBnbWrapper} from "../../src/wrappers/PantosBnbWrapper.sol";
@@ -20,29 +21,43 @@ import {PantosBaseScript} from "./PantosBaseScript.s.sol";
 abstract contract PantosWrapperDeployer is PantosBaseScript {
     PantosWrapper[] public pantosWrappers;
 
-    function deployCoinWrappers() public {
+    function deployCoinWrappers(AccessController accessController) public {
         Blockchain memory blockchain = determineBlockchain();
 
         bool native = blockchain.blockchainId == BlockchainId.AVALANCHE;
-        pantosWrappers.push(new PantosAvaxWrapper(native));
+        pantosWrappers.push(
+            new PantosAvaxWrapper(native, address(accessController))
+        );
 
         native = blockchain.blockchainId == BlockchainId.BNB_CHAIN;
-        pantosWrappers.push(new PantosBnbWrapper(native));
+        pantosWrappers.push(
+            new PantosBnbWrapper(native, address(accessController))
+        );
 
         native = blockchain.blockchainId == BlockchainId.CELO;
-        pantosWrappers.push(new PantosCeloWrapper(native));
+        pantosWrappers.push(
+            new PantosCeloWrapper(native, address(accessController))
+        );
 
         native = blockchain.blockchainId == BlockchainId.CRONOS;
-        pantosWrappers.push(new PantosCronosWrapper(native));
+        pantosWrappers.push(
+            new PantosCronosWrapper(native, address(accessController))
+        );
 
         native = blockchain.blockchainId == BlockchainId.ETHEREUM;
-        pantosWrappers.push(new PantosEtherWrapper(native));
+        pantosWrappers.push(
+            new PantosEtherWrapper(native, address(accessController))
+        );
 
         native = blockchain.blockchainId == BlockchainId.FANTOM;
-        pantosWrappers.push(new PantosFantomWrapper(native));
+        pantosWrappers.push(
+            new PantosFantomWrapper(native, address(accessController))
+        );
 
         native = blockchain.blockchainId == BlockchainId.POLYGON;
-        pantosWrappers.push(new PantosMaticWrapper(native));
+        pantosWrappers.push(
+            new PantosMaticWrapper(native, address(accessController))
+        );
 
         console2.log("All %s wrappers deployed", pantosWrappers.length);
     }

@@ -7,7 +7,7 @@ pragma solidity 0.8.26;
  *
  * @notice Pantos roles defined as bytes32 constants.
  */
-contract PantosRoles {
+library PantosRoles {
     // Access Control Roles
     bytes32 internal constant PAUSER = keccak256("PAUSER");
     bytes32 internal constant DEPLOYER = keccak256("DEPLOYER");

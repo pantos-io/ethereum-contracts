@@ -3,6 +3,7 @@
 pragma solidity 0.8.26;
 
 import {AccessControl} from "@openzeppelin/contracts/access/AccessControl.sol";
+
 import {PantosRoles} from "./PantosRoles.sol";
 
 /**
@@ -10,7 +11,7 @@ import {PantosRoles} from "./PantosRoles.sol";
  *
  * @notice Access control contract to manage Pantos roles and permissions.
  */
-contract AccessController is AccessControl, PantosRoles {
+contract AccessController is AccessControl {
     /**
      * @notice Initialize access controller with roles.
      *
@@ -25,9 +26,9 @@ contract AccessController is AccessControl, PantosRoles {
         address _mediumCriticalOps,
         address _superCriticalOps
     ) {
-        _grantRole(PAUSER, _pauser);
-        _grantRole(DEPLOYER, _deployer);
-        _grantRole(MEDIUM_CRITICAL_OPS, _mediumCriticalOps);
-        _grantRole(SUPER_CRITICAL_OPS, _superCriticalOps);
+        _grantRole(PantosRoles.PAUSER, _pauser);
+        _grantRole(PantosRoles.DEPLOYER, _deployer);
+        _grantRole(PantosRoles.MEDIUM_CRITICAL_OPS, _mediumCriticalOps);
+        _grantRole(PantosRoles.SUPER_CRITICAL_OPS, _superCriticalOps);
     }
 }

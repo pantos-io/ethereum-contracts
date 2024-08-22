@@ -16,6 +16,15 @@ contract PantosAvaxWrapper is PantosCoinWrapper {
     uint8 private constant _DECIMALS = 18;
 
     constructor(
-        bool native
-    ) PantosCoinWrapper(_NAME, _SYMBOL, _DECIMALS, native) {}
+        bool native,
+        address accessControllerAddress
+    )
+        PantosCoinWrapper(
+            _NAME,
+            _SYMBOL,
+            _DECIMALS,
+            native,
+            accessControllerAddress
+        )
+    {}
 }

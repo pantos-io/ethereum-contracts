@@ -198,6 +198,15 @@ abstract contract PantosBaseTest is Test {
         modifierTest(callee, calldata_, revertMessage);
     }
 
+    function onlyRoleTest(
+        address callee,
+        bytes memory calldata_
+    ) public virtual {
+        vm.startPrank(address(111));
+        bytes memory revertMessage = "PantosRBAC: caller doesn't have role";
+        modifierTest(callee, calldata_, revertMessage);
+    }
+
     function whenPausedTest(
         address callee,
         bytes memory calldata_

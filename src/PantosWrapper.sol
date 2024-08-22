@@ -4,6 +4,8 @@ pragma solidity 0.8.26;
 import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import {ERC20Pausable} from "@openzeppelin/contracts/token/ERC20/extensions/ERC20Pausable.sol";
 
+import {PantosRBAC} from "./access/PantosRBAC.sol";
+import {PantosRoles} from "./access/PantosRoles.sol";
 import {IBEP20} from "./interfaces/IBEP20.sol";
 import {IPantosWrapper} from "./interfaces/IPantosWrapper.sol";
 import {PantosBaseToken} from "./PantosBaseToken.sol";
@@ -18,7 +20,8 @@ import {PantosBaseToken} from "./PantosBaseToken.sol";
 abstract contract PantosWrapper is
     IPantosWrapper,
     PantosBaseToken,
-    ERC20Pausable
+    ERC20Pausable,
+    PantosRBAC
 {
     bool private immutable _native;
 
@@ -26,8 +29,12 @@ abstract contract PantosWrapper is
         string memory name_,
         string memory symbol_,
         uint8 decimals_,
-        bool native
-    ) PantosBaseToken(name_, symbol_, decimals_) {
+        bool native,
+        address accessControllerAddress
+    )
+        PantosBaseToken(name_, symbol_, decimals_)
+        PantosRBAC(accessControllerAddress)
+    {
         _native = native;
         // Contract is paused until it is fully initialized
         _pause();
@@ -59,14 +66,18 @@ abstract contract PantosWrapper is
     /**
      * @dev See {Pausable-_pause).
      */
-    function pause() external whenNotPaused onlyOwner {
+    function pause() external whenNotPaused onlyRole(PantosRoles.PAUSER) {
         _pause();
     }
 
     /**
      * @dev See {Pausable-_unpause).
      */
-    function unpause() external whenPaused onlyOwner {
+    function unpause()
+        external
+        whenPaused
+        onlyRole(PantosRoles.SUPER_CRITICAL_OPS)
+    {
         require(
             getPantosForwarder() != address(0),
             "PantosWrapper: PantosForwarder has not been set"

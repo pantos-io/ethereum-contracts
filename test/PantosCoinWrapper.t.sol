@@ -7,6 +7,7 @@ import {console2} from "forge-std/console2.sol";
 
 import {PantosWrapper} from "../src/PantosWrapper.sol";
 import {PantosCoinWrapper} from "../src/PantosCoinWrapper.sol";
+import {AccessController} from "../src/access/AccessController.sol";
 
 import {PantosBaseTest} from "./PantosBaseTest.t.sol";
 
@@ -19,12 +20,16 @@ contract PantosCoinWrapperTest is PantosBaseTest {
     string constant SYMBOL = "TEST";
     uint8 constant DECIMALS = 18;
 
+    AccessController public accessController;
+
     function setUp() public {
+        accessController = deployAccessController();
         pantosCoinWrapper = new PantosCoinWrapper(
             NAME,
             SYMBOL,
             DECIMALS,
-            true
+            true,
+            address(accessController)
         );
     }
 
@@ -54,9 +59,11 @@ contract PantosCoinWrapperTest is PantosBaseTest {
             NAME,
             SYMBOL,
             DECIMALS,
-            false
+            false,
+            address(accessController)
         );
         pantosCoinWrapper_.setPantosForwarder(PANTOS_FORWARDER_ADDRESS);
+        vm.prank(SUPER_CRITICAL_OPS);
         pantosCoinWrapper_.unpause();
         bytes memory calldata_ = abi.encodeWithSelector(
             PantosCoinWrapper.wrap.selector
@@ -91,9 +98,11 @@ contract PantosCoinWrapperTest is PantosBaseTest {
             NAME,
             SYMBOL,
             DECIMALS,
-            false
+            false,
+            address(accessController)
         );
         pantosCoinWrapper_.setPantosForwarder(PANTOS_FORWARDER_ADDRESS);
+        vm.prank(SUPER_CRITICAL_OPS);
         pantosCoinWrapper_.unpause();
         bytes memory calldata_ = abi.encodeWithSelector(
             PantosCoinWrapper.wrap.selector
@@ -109,6 +118,7 @@ contract PantosCoinWrapperTest is PantosBaseTest {
 
     function initializePantosCoinWrapper() public {
         pantosCoinWrapper.setPantosForwarder(PANTOS_FORWARDER_ADDRESS);
+        vm.prank(SUPER_CRITICAL_OPS);
         pantosCoinWrapper.unpause();
     }
 

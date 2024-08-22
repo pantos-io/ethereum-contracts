@@ -7,6 +7,8 @@ import {ERC20Burnable} from "@openzeppelin/contracts/token/ERC20/extensions/ERC2
 import {ERC20Capped} from "@openzeppelin/contracts/token/ERC20/extensions/ERC20Capped.sol";
 import {ERC20Pausable} from "@openzeppelin/contracts/token/ERC20/extensions/ERC20Pausable.sol";
 
+import {PantosRBAC} from "./access/PantosRBAC.sol";
+import {PantosRoles} from "./access/PantosRoles.sol";
 import {PantosBaseToken} from "./PantosBaseToken.sol";
 
 /**
@@ -16,7 +18,8 @@ contract BitpandaEcosystemToken is
     PantosBaseToken,
     ERC20Burnable,
     ERC20Capped,
-    ERC20Pausable
+    ERC20Pausable,
+    PantosRBAC
 {
     string private constant _NAME = "Bitpanda Ecosystem Token";
 
@@ -31,8 +34,13 @@ contract BitpandaEcosystemToken is
      * @dev msg.sender receives all existing tokens
      */
     constructor(
-        uint256 initialSupply
-    ) PantosBaseToken(_NAME, _SYMBOL, _DECIMALS) ERC20Capped(_MAX_SUPPLY) {
+        uint256 initialSupply,
+        address accessControllerAddress
+    )
+        PantosBaseToken(_NAME, _SYMBOL, _DECIMALS)
+        ERC20Capped(_MAX_SUPPLY)
+        PantosRBAC(accessControllerAddress)
+    {
         require(
             initialSupply <= _MAX_SUPPLY,
             "BitpandaEcosystemToken: maximum supply exceeded"
@@ -56,14 +64,18 @@ contract BitpandaEcosystemToken is
     /**
      * @dev See {Pausable-_pause)
      */
-    function pause() external whenNotPaused onlyOwner {
+    function pause() external whenNotPaused onlyRole(PantosRoles.PAUSER) {
         _pause();
     }
 
     /**
      * @dev See {Pausable-_unpause)
      */
-    function unpause() external whenPaused onlyOwner {
+    function unpause()
+        external
+        whenPaused
+        onlyRole(PantosRoles.SUPER_CRITICAL_OPS)
+    {
         require(
             getPantosForwarder() != address(0),
             "BitpandaEcosystemToken: PantosForwarder has not been set"
