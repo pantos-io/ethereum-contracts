@@ -116,10 +116,13 @@ contract DeployContracts is
         (pantosHubProxy, ) = deployPantosHub(nextTransferId, accessController);
 
         pantosForwarder = deployPantosForwarder(accessController);
-        pantosToken = deployPantosToken(panSupply);
-        bitpandaEcosystemToken = deployBitpandaEcosystemToken(bestSupply);
+        pantosToken = deployPantosToken(panSupply, accessController);
+        bitpandaEcosystemToken = deployBitpandaEcosystemToken(
+            bestSupply,
+            accessController
+        );
 
-        deployCoinWrappers();
+        deployCoinWrappers(accessController);
 
         initializePantosHub(
             pantosHubProxy,

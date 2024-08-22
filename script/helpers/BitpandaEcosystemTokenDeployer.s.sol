@@ -7,15 +7,18 @@ import {console2} from "forge-std/console2.sol";
 import {IPantosHub} from "../../src/interfaces/IPantosHub.sol";
 import {PantosForwarder} from "../../src/PantosForwarder.sol";
 import {BitpandaEcosystemToken} from "../../src/BitpandaEcosystemToken.sol";
+import {AccessController} from "../../src/access/AccessController.sol";
 
 import {PantosBaseScript} from "./PantosBaseScript.s.sol";
 
 abstract contract BitpandaEcosystemTokenDeployer is PantosBaseScript {
     function deployBitpandaEcosystemToken(
-        uint256 initialSupply
+        uint256 initialSupply,
+        AccessController accessController
     ) public returns (BitpandaEcosystemToken) {
         BitpandaEcosystemToken bitpandaEcosystemToken = new BitpandaEcosystemToken(
-                initialSupply
+                initialSupply,
+                address(accessController)
             );
         console2.log(
             "%s deployed; paused=%s; address=%s",

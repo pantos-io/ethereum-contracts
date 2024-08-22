@@ -5,6 +5,7 @@ pragma solidity 0.8.26;
 import {IDiamondCut} from "@diamond/interfaces/IDiamondCut.sol";
 import {LibDiamond} from "@diamond/libraries/LibDiamond.sol";
 
+import {PantosRoles} from "../access/PantosRoles.sol";
 import {PantosBaseFacet} from "./PantosBaseFacet.sol";
 
 /**
@@ -23,7 +24,7 @@ contract DiamondCutFacet is IDiamondCut, PantosBaseFacet {
         FacetCut[] calldata _diamondCut,
         address _init,
         bytes calldata _calldata
-    ) external override onlyRole(DEPLOYER) {
+    ) external override onlyRole(PantosRoles.DEPLOYER) {
         LibDiamond.diamondCut(_diamondCut, _init, _calldata);
     }
 }

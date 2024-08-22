@@ -1466,14 +1466,4 @@ contract PantosForwarderTest is PantosBaseTest {
                 )
             );
     }
-
-    function onlyRoleTest(
-        address callee,
-        bytes memory calldata_
-    ) public virtual {
-        vm.startPrank(address(111));
-        bytes
-            memory revertMessage = "PantosForwarder: caller doesn't have role";
-        modifierTest(callee, calldata_, revertMessage);
-    }
 }

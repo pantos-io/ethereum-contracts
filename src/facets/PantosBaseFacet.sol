@@ -16,7 +16,7 @@ import {LibAccessControl} from "../libraries/LibAccessControl.sol";
  * duplicate methods accidentally. App storage PantosHubStorage declaration 
  * should be the first thing.
  */
-abstract contract PantosBaseFacet is PantosRoles {
+abstract contract PantosBaseFacet {
     // Application of the App Storage pattern
     PantosHubStorage internal s;
     /**
@@ -28,7 +28,7 @@ abstract contract PantosBaseFacet is PantosRoles {
             LibAccessControl.AccessControlStorage
                 storage acs = LibAccessControl.accessControlStorage();
             require(
-                acs.accessController.hasRole(DEPLOYER, msg.sender),
+                acs.accessController.hasRole(PantosRoles.DEPLOYER, msg.sender),
                 "PantosHub: caller doesn't have role"
             );
         }

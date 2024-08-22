@@ -6,12 +6,19 @@ import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import {ERC20Capped} from "@openzeppelin/contracts/token/ERC20/extensions/ERC20Capped.sol";
 import {ERC20Pausable} from "@openzeppelin/contracts/token/ERC20/extensions/ERC20Pausable.sol";
 
+import {PantosRBAC} from "./access/PantosRBAC.sol";
+import {PantosRoles} from "./access/PantosRoles.sol";
 import {PantosBaseToken} from "./PantosBaseToken.sol";
 
 /**
  * @title Pantos token
  */
-contract PantosToken is PantosBaseToken, ERC20Capped, ERC20Pausable {
+contract PantosToken is
+    PantosBaseToken,
+    ERC20Capped,
+    ERC20Pausable,
+    PantosRBAC
+{
     string private constant _NAME = "Pantos";
 
     string private constant _SYMBOL = "PAN";
@@ -25,8 +32,13 @@ contract PantosToken is PantosBaseToken, ERC20Capped, ERC20Pausable {
      * @dev msg.sender receives all existing tokens
      */
     constructor(
-        uint256 initialSupply
-    ) PantosBaseToken(_NAME, _SYMBOL, _DECIMALS) ERC20Capped(_MAX_SUPPLY) {
+        uint256 initialSupply,
+        address accessControllerAddress
+    )
+        PantosBaseToken(_NAME, _SYMBOL, _DECIMALS)
+        ERC20Capped(_MAX_SUPPLY)
+        PantosRBAC(accessControllerAddress)
+    {
         require(
             initialSupply <= _MAX_SUPPLY,
             "PantosToken: maximum supply exceeded"
@@ -50,14 +62,18 @@ contract PantosToken is PantosBaseToken, ERC20Capped, ERC20Pausable {
     /**
      * @dev See {Pausable-_pause)
      */
-    function pause() external whenNotPaused onlyOwner {
+    function pause() external whenNotPaused onlyRole(PantosRoles.PAUSER) {
         _pause();
     }
 
     /**
      * @dev See {Pausable-_unpause)
      */
-    function unpause() external whenPaused onlyOwner {
+    function unpause()
+        external
+        whenPaused
+        onlyRole(PantosRoles.SUPER_CRITICAL_OPS)
+    {
         require(
             getPantosForwarder() != address(0),
             "PantosToken: PantosForwarder has not been set"

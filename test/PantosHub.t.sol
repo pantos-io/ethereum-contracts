@@ -2914,7 +2914,7 @@ contract PantosHubTest is PantosHubDeployer {
     function onlyRoleTest(
         address callee,
         bytes memory calldata_
-    ) public virtual {
+    ) public override {
         vm.startPrank(address(111));
         bytes memory revertMessage = "PantosHub: caller doesn't have role";
         modifierTest(callee, calldata_, revertMessage);
