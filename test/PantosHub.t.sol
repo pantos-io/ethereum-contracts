@@ -507,7 +507,9 @@ contract PantosHubTest is PantosHubDeployer {
         assertEq(storedStruct.updateTime, updateTime);
     }
 
-    function test_initiateValidatorFeeFactorUpdate_ByNonMediumCriticalOps() external {
+    function test_initiateValidatorFeeFactorUpdate_ByNonMediumCriticalOps()
+        external
+    {
         bytes memory calldata_ = abi.encodeWithSelector(
             IPantosRegistry.initiateValidatorFeeFactorUpdate.selector,
             uint256(thisBlockchain.blockchainId),
@@ -898,7 +900,9 @@ contract PantosHubTest is PantosHubDeployer {
         assertEq(storedStruct.updateTime, updateTime);
     }
 
-    function test_initiateParameterUpdateDelayUpdate_ByNonMediumCriticalOps() external {
+    function test_initiateParameterUpdateDelayUpdate_ByNonMediumCriticalOps()
+        external
+    {
         bytes memory calldata_ = abi.encodeWithSelector(
             IPantosRegistry.initiateParameterUpdateDelayUpdate.selector,
             PARAMETER_UPDATE_DELAY + 1
@@ -906,7 +910,6 @@ contract PantosHubTest is PantosHubDeployer {
 
         onlyRoleTest(address(pantosHubProxy), calldata_);
     }
-
 
     function test_executeParameterUpdateDelayUpdate() external {
         initializePantosHub();

@@ -260,7 +260,10 @@ contract PantosRegistryFacet is IPantosRegistry, PantosBaseFacet {
      * @dev See
      * {IPantosRegistry-executeUnbondingPeriodServiceNodeDepositUpdate}.
      */
-    function executeUnbondingPeriodServiceNodeDepositUpdate() external override {
+    function executeUnbondingPeriodServiceNodeDepositUpdate()
+        external
+        override
+    {
         _executeUpdatableUint256Update(s.unbondingPeriodServiceNodeDeposit);
         emit UnbondingPeriodServiceNodeDepositUpdateExecuted(
             s.unbondingPeriodServiceNodeDeposit.currentValue
