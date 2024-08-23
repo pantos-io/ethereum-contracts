@@ -14,7 +14,11 @@ contract PantosTokenTest is PantosBaseTokenTest {
     PantosTokenHarness public pantosToken;
 
     function setUp() public {
-        pantosToken = new PantosTokenHarness(INITIAL_SUPPLY_PAN);
+        accessController = deployAccessController();
+        pantosToken = new PantosTokenHarness(
+            INITIAL_SUPPLY_PAN,
+            address(accessController)
+        );
     }
 
     function test_SetUpState() external {
@@ -26,6 +30,7 @@ contract PantosTokenTest is PantosBaseTokenTest {
     function test_pause_AfterInitialization() external {
         initializeToken();
 
+        vm.prank(PAUSER);
         pantosToken.pause();
 
         assertTrue(pantosToken.paused());
@@ -40,13 +45,13 @@ contract PantosTokenTest is PantosBaseTokenTest {
         whenNotPausedTest(address(pantosToken), calldata_);
     }
 
-    function test_pause_ByNonOwner() external {
+    function test_pause_ByNonPauser() external {
         initializeToken();
         bytes memory calldata_ = abi.encodeWithSelector(
             PantosToken.pause.selector
         );
 
-        onlyOwnerTest(address(pantosToken), calldata_);
+        onlyRoleTest(address(pantosToken), calldata_);
     }
 
     function test_unpause_AfterDeploy() external {
@@ -64,13 +69,13 @@ contract PantosTokenTest is PantosBaseTokenTest {
         whenPausedTest(address(pantosToken), calldata_);
     }
 
-    function test_unpause_ByNonOwner() external {
+    function test_unpause_ByNonSuperCriticalOps() external {
         pantosToken.setPantosForwarder(PANTOS_FORWARDER_ADDRESS);
         bytes memory calldata_ = abi.encodeWithSelector(
             PantosToken.unpause.selector
         );
 
-        onlyOwnerTest(address(pantosToken), calldata_);
+        onlyRoleTest(address(pantosToken), calldata_);
     }
 
     function test_unpause_WithNoForwarderSet() external {
@@ -78,6 +83,7 @@ contract PantosTokenTest is PantosBaseTokenTest {
             abi.encodePacked("PantosToken: PantosForwarder has not been set")
         );
 
+        vm.prank(SUPER_CRITICAL_OPS);
         pantosToken.unpause();
     }
 
@@ -130,6 +136,7 @@ contract PantosTokenTest is PantosBaseTokenTest {
 
     function initializeToken() public override {
         pantosToken.setPantosForwarder(PANTOS_FORWARDER_ADDRESS);
+        vm.prank(SUPER_CRITICAL_OPS);
         pantosToken.unpause();
     }
 
@@ -148,7 +155,10 @@ contract PantosTokenTest is PantosBaseTokenTest {
 }
 
 contract PantosTokenHarness is PantosToken {
-    constructor(uint256 initialSupply) PantosToken(initialSupply) {}
+    constructor(
+        uint256 initialSupply,
+        address accessController
+    ) PantosToken(initialSupply, accessController) {}
 
     function exposed_unsetPantosForwarder() external {
         _unsetPantosForwarder();

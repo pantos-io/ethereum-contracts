@@ -7,6 +7,7 @@ import {console2} from "forge-std/console2.sol";
 import {IPantosHub} from "../../src/interfaces/IPantosHub.sol";
 import {PantosToken} from "../../src/PantosToken.sol";
 import {PantosForwarder} from "../../src/PantosForwarder.sol";
+import {AccessController} from "../../src/access/AccessController.sol";
 
 import {PantosBaseAddresses} from "../helpers/PantosBaseAddresses.s.sol";
 import {PantosForwarderDeployer} from "../helpers/PantosForwarderDeployer.s.sol";
@@ -22,6 +23,7 @@ abstract contract PantosForwarderRedeployer is
     bool private _initialized;
     IPantosHub private _pantosHubProxy;
     PantosToken private _pantosToken;
+    AccessController private _accessController;
 
     modifier onlyPantosForwarderRedeployerInitialized() {
         require(_initialized, "PantosHubRedeployer: not initialized");
@@ -34,6 +36,11 @@ abstract contract PantosForwarderRedeployer is
         _pantosHubProxy = IPantosHub(pantosHubProxyAddress);
         _pantosToken = PantosToken(_pantosHubProxy.getPantosToken());
         readContractAddresses(determineBlockchain());
+        _accessController = AccessController(
+            vm.parseAddress(
+                getContractAddress(determineBlockchain(), "access_controller")
+            )
+        );
         _initialized = true;
     }
 
@@ -41,7 +48,9 @@ abstract contract PantosForwarderRedeployer is
         public
         returns (PantosForwarder)
     {
-        PantosForwarder pantosForwarder = deployPantosForwarder();
+        PantosForwarder pantosForwarder = deployPantosForwarder(
+            _accessController
+        );
         address[] memory validatorNodeAddresses;
 
         // Trying to call newly added function.

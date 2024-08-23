@@ -13,8 +13,17 @@ contract PantosCoinWrapper is PantosWrapper {
         string memory name_,
         string memory symbol_,
         uint8 decimals_,
-        bool native
-    ) PantosWrapper(name_, symbol_, decimals_, native) {}
+        bool native,
+        address accessControllerAddress
+    )
+        PantosWrapper(
+            name_,
+            symbol_,
+            decimals_,
+            native,
+            accessControllerAddress
+        )
+    {}
 
     /**
      * @dev See {PantosWrapper-wrap}.

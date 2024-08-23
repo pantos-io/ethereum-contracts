@@ -7,12 +7,16 @@ import {IDiamondCut} from "@diamond/interfaces/IDiamondCut.sol";
 import {IPantosHub} from "../src/interfaces/IPantosHub.sol";
 import {PantosRegistryFacet} from "../src/facets/PantosRegistryFacet.sol";
 import {PantosHubInit} from "../src/upgradeInitializers/PantosHubInit.sol";
+import {AccessController} from "../src/access/AccessController.sol";
 
 import {PantosHubDeployer} from "./PantosHubDeployer.t.sol";
 
 contract PantosHubInitTest is PantosHubDeployer {
+    AccessController accessController;
+
     function setUp() public {
-        deployPantosHubProxyAndDiamondCutFacet();
+        accessController = deployAccessController();
+        deployPantosHubProxyAndDiamondCutFacet(accessController);
     }
 
     function test_init() external {
@@ -29,6 +33,7 @@ contract PantosHubInitTest is PantosHubDeployer {
             getInitializerArgs()
         );
 
+        vm.prank(DEPLOYER);
         IDiamondCut(address(pantosHubDiamond)).diamondCut(
             cut,
             address(pantosHubInit),
@@ -50,6 +55,7 @@ contract PantosHubInitTest is PantosHubDeployer {
         );
 
         vm.expectRevert("PantosHubInit: contract is already initialized");
+        vm.prank(DEPLOYER);
         IDiamondCut(address(pantosHubDiamond)).diamondCut(
             cut2,
             address(pantosHubInit),
@@ -68,6 +74,7 @@ contract PantosHubInitTest is PantosHubDeployer {
         bytes memory initializerData = prepareInitializerData(args);
         vm.expectRevert("PantosHubInit: blockchain name must not be empty");
 
+        vm.prank(DEPLOYER);
         IDiamondCut(address(pantosHubDiamond)).diamondCut(
             cut,
             address(pantosHubInit),
@@ -84,6 +91,7 @@ contract PantosHubInitTest is PantosHubDeployer {
         bytes memory initializerData = prepareInitializerData(args);
         vm.expectRevert("PantosHubInit: validator fee factor must be >= 1");
 
+        vm.prank(DEPLOYER);
         IDiamondCut(address(pantosHubDiamond)).diamondCut(
             cut,
             address(pantosHubInit),
@@ -103,6 +111,7 @@ contract PantosHubInitTest is PantosHubDeployer {
             getInitializerArgs()
         );
 
+        vm.prank(DEPLOYER);
         IDiamondCut(address(pantosHubDiamond)).diamondCut(
             cut,
             address(pantosHubInit),
@@ -123,6 +132,7 @@ contract PantosHubInitTest is PantosHubDeployer {
             getInitializerArgs()
         );
 
+        vm.prank(DEPLOYER);
         IDiamondCut(address(pantosHubDiamond)).diamondCut(
             cut,
             address(pantosHubInit),

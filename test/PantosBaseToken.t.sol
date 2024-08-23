@@ -8,12 +8,15 @@ import {console2} from "forge-std/console2.sol";
 
 import {PantosBaseToken} from "../src/PantosBaseToken.sol";
 import {BitpandaEcosystemToken} from "../src/BitpandaEcosystemToken.sol";
+import {AccessController} from "../src/access/AccessController.sol";
 
 import {PantosBaseTest} from "./PantosBaseTest.t.sol";
 
 abstract contract PantosBaseTokenTest is PantosBaseTest {
     address public constant PANTOS_FORWARDER_ADDRESS =
         address(uint160(uint256(keccak256("PantosForwarderAddress"))));
+
+    AccessController public accessController;
 
     function initializeToken() public virtual;
 

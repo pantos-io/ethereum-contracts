@@ -6,15 +6,20 @@ import {console2} from "forge-std/console2.sol";
 
 import {PantosForwarder} from "../../src/PantosForwarder.sol";
 import {PantosToken} from "../../src/PantosToken.sol";
+import {AccessController} from "../../src/access/AccessController.sol";
 
 import {Constants} from "./Constants.s.sol";
 import {PantosBaseScript} from "./PantosBaseScript.s.sol";
 
 abstract contract PantosTokenDeployer is PantosBaseScript {
     function deployPantosToken(
-        uint256 initialSupply
+        uint256 initialSupply,
+        AccessController accessController
     ) public returns (PantosToken) {
-        PantosToken pantosToken = new PantosToken(initialSupply);
+        PantosToken pantosToken = new PantosToken(
+            initialSupply,
+            address(accessController)
+        );
         console2.log(
             "%s deployed; paused=%s; address=%s",
             pantosToken.name(),

@@ -9,6 +9,7 @@ import {console2} from "forge-std/console2.sol";
 import {IPantosToken} from "../src/interfaces/IPantosToken.sol";
 import {PantosWrapper} from "../src/PantosWrapper.sol";
 import {PantosTokenWrapper} from "../src/PantosTokenWrapper.sol";
+import {AccessController} from "../src/access/AccessController.sol";
 
 import {PantosBaseTest} from "./PantosBaseTest.t.sol";
 
@@ -23,18 +24,23 @@ contract PantosTokenWrapperTest is PantosBaseTest {
     address constant PANTOS_FORWARDER_ADDRESS =
         address(uint160(uint256(keccak256("PantosForwarderAddress"))));
 
+    AccessController public accessController;
+
     function setUp() public {
+        accessController = deployAccessController();
         pantosTokenWrapper = new PantosTokenWrapperHarness(
             NAME,
             SYMBOL,
             DECIMALS,
-            WRAPPED_TOKEN_ADDRESS
+            WRAPPED_TOKEN_ADDRESS,
+            address(accessController)
         );
     }
 
     function test_pause_AfterInitialization() external {
         initializePantosTokenWrapper();
 
+        vm.prank(PAUSER);
         pantosTokenWrapper.pause();
 
         assertTrue(pantosTokenWrapper.paused());
@@ -49,13 +55,13 @@ contract PantosTokenWrapperTest is PantosBaseTest {
         whenNotPausedTest(address(pantosTokenWrapper), calldata_);
     }
 
-    function test_pause_ByNonOwner() external {
+    function test_pause_ByNonPauser() external {
         initializePantosTokenWrapper();
         bytes memory calldata_ = abi.encodeWithSelector(
             PantosWrapper.pause.selector
         );
 
-        onlyOwnerTest(address(pantosTokenWrapper), calldata_);
+        onlyRoleTest(address(pantosTokenWrapper), calldata_);
     }
 
     function test_unpause_AfterDeploy() external {
@@ -73,13 +79,13 @@ contract PantosTokenWrapperTest is PantosBaseTest {
         whenPausedTest(address(pantosTokenWrapper), calldata_);
     }
 
-    function test_unpause_ByNonOwner() external {
+    function test_unpause_ByNonSuperCriticalOps() external {
         pantosTokenWrapper.setPantosForwarder(PANTOS_FORWARDER_ADDRESS);
         bytes memory calldata_ = abi.encodeWithSelector(
             PantosWrapper.unpause.selector
         );
 
-        onlyOwnerTest(address(pantosTokenWrapper), calldata_);
+        onlyRoleTest(address(pantosTokenWrapper), calldata_);
     }
 
     function test_unpause_WithNoForwarderSet() external {
@@ -87,6 +93,7 @@ contract PantosTokenWrapperTest is PantosBaseTest {
             abi.encodePacked("PantosWrapper: PantosForwarder has not been set")
         );
 
+        vm.prank(SUPER_CRITICAL_OPS);
         pantosTokenWrapper.unpause();
     }
 
@@ -171,9 +178,11 @@ contract PantosTokenWrapperTest is PantosBaseTest {
             NAME,
             SYMBOL,
             DECIMALS,
-            ADDRESS_ZERO
+            ADDRESS_ZERO,
+            address(accessController)
         );
         pantosTokenWrapper_.setPantosForwarder(PANTOS_FORWARDER_ADDRESS);
+        vm.prank(SUPER_CRITICAL_OPS);
         pantosTokenWrapper_.unpause();
         bytes memory calldata_ = abi.encodeWithSelector(
             PantosTokenWrapper.wrap.selector
@@ -220,9 +229,11 @@ contract PantosTokenWrapperTest is PantosBaseTest {
             NAME,
             SYMBOL,
             DECIMALS,
-            ADDRESS_ZERO
+            ADDRESS_ZERO,
+            address(accessController)
         );
         pantosTokenWrapper_.setPantosForwarder(PANTOS_FORWARDER_ADDRESS);
+        vm.prank(SUPER_CRITICAL_OPS);
         pantosTokenWrapper_.unpause();
         bytes memory calldata_ = abi.encodeWithSelector(
             PantosTokenWrapper.unwrap.selector,
@@ -245,7 +256,8 @@ contract PantosTokenWrapperTest is PantosBaseTest {
             NAME,
             SYMBOL,
             DECIMALS,
-            ADDRESS_ZERO
+            ADDRESS_ZERO,
+            address(accessController)
         );
 
         assertEq(pantosTokenWrapper_.isNative(), false);
@@ -307,6 +319,7 @@ contract PantosTokenWrapperTest is PantosBaseTest {
 
     function initializePantosTokenWrapper() public {
         pantosTokenWrapper.setPantosForwarder(PANTOS_FORWARDER_ADDRESS);
+        vm.prank(SUPER_CRITICAL_OPS);
         pantosTokenWrapper.unpause();
     }
 }
@@ -316,8 +329,17 @@ contract PantosTokenWrapperHarness is PantosTokenWrapper {
         string memory name,
         string memory symbol,
         uint8 decimals,
-        address wrappedToken
-    ) PantosTokenWrapper(name, symbol, decimals, wrappedToken) {}
+        address wrappedToken,
+        address accessController
+    )
+        PantosTokenWrapper(
+            name,
+            symbol,
+            decimals,
+            wrappedToken,
+            accessController
+        )
+    {}
 
     function exposed_update(
         address from,
