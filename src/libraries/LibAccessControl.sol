@@ -36,10 +36,10 @@ library LibAccessControl {
     /**
      * @notice Set the access controller.
      *
-     * @param _accessController Address of the access controller.
+     * @param accessController_ Address of the access controller.
      */
-    function setAccessController(address _accessController) internal {
+    function setAccessController(address accessController_) internal {
         AccessControlStorage storage acs = accessControlStorage();
-        acs.accessController = IAccessControl(_accessController);
+        acs.accessController = IAccessControl(accessController_);
     }
 }

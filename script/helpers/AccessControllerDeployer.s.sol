@@ -2,7 +2,7 @@
 pragma solidity 0.8.26;
 
 /* solhint-disable no-console*/
-import {console2} from "forge-std/console2.sol";
+import {console} from "forge-std/console.sol";
 
 import {AccessController} from "../../src/access/AccessController.sol";
 
@@ -19,12 +19,12 @@ abstract contract AccessControllerDeployer {
             mediumCriticalOps,
             superCriticalOps
         );
-        console2.log(
+        console.log(
             "AccessController deployed; address=%s; deployer=%s",
             address(accessController),
             deployer
         );
-        console2.log(
+        console.log(
             "AccessController: pauser=%s; mediumCriticalOps=%s; "
             "superCriticalOps=%s",
             pauser,

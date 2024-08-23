@@ -28,18 +28,18 @@ contract PantosHubProxy {
     /**
      * @notice Add intial diamond cut facet and set access controller.
      *
-     * @param _diamondCutFacet Diamond facet address.
-     * @param _accessController Access controller address.
+     * @param diamondCutFacet_ Diamond facet address.
+     * @param accessController_ Access controller address.
      */
-    constructor(address _diamondCutFacet, address _accessController) payable {
-        LibAccessControl.setAccessController(_accessController);
+    constructor(address diamondCutFacet_, address accessController_) payable {
+        LibAccessControl.setAccessController(accessController_);
 
         // Add the diamondCut external function from the diamondCutFacet
         IDiamondCut.FacetCut[] memory cut = new IDiamondCut.FacetCut[](1);
         bytes4[] memory functionSelectors = new bytes4[](1);
         functionSelectors[0] = IDiamondCut.diamondCut.selector;
         cut[0] = IDiamondCut.FacetCut({
-            facetAddress: _diamondCutFacet,
+            facetAddress: diamondCutFacet_,
             action: IDiamondCut.FacetCutAction.Add,
             functionSelectors: functionSelectors
         });

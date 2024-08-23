@@ -24,7 +24,7 @@ import {AccessControllerDeployer} from "./helpers/AccessControllerDeployer.s.sol
  * forge script ./script/DeployContracts.s.sol --account <account> \
  *     --sender <sender> --rpc-url <rpc alias> --slow --force --sig \
  *     "run(address,address,address,address,address,uint256,uint256,uint256,address[])" \
- *     <validator> <deployer> <pauser> <mediumCriticalOps> <superCriticalOps> \
+ *     <validator> <pauser> <deployer> <mediumCriticalOps> <superCriticalOps> \
  *     <panSupply> <bestSupply> <nextTransferId> <otherValidators>
  */
 contract DeployContracts is
@@ -40,8 +40,8 @@ contract DeployContracts is
     PantosToken public pantosToken;
     BitpandaEcosystemToken public bitpandaEcosystemToken;
     AccessController public accessController;
-    address public deployer;
     address public pauser;
+    address public deployer;
     address public mediumCriticalOps;
     address public superCriticalOps;
 
@@ -92,20 +92,20 @@ contract DeployContracts is
 
     function run(
         address primaryValidator,
-        address _deployer,
-        address _pauser,
-        address _mediumCriticalOps,
-        address _superCriticalOps,
+        address pauser_,
+        address deployer_,
+        address mediumCriticalOps_,
+        address superCriticalOps_,
         uint256 panSupply,
         uint256 bestSupply,
         uint256 nextTransferId,
         address[] memory otherValidators
     ) public {
         vm.startBroadcast();
-        deployer = _deployer;
-        pauser = _pauser;
-        mediumCriticalOps = _mediumCriticalOps;
-        superCriticalOps = _superCriticalOps;
+        pauser = pauser_;
+        deployer = deployer_;
+        mediumCriticalOps = mediumCriticalOps_;
+        superCriticalOps = superCriticalOps_;
 
         accessController = deployAccessController(
             pauser,

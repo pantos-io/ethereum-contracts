@@ -15,20 +15,20 @@ contract AccessController is AccessControl {
     /**
      * @notice Initialize access controller with roles.
      *
-     * @param _pauser Address of the pauser role.
-     * @param _deployer Address of the deployer role.
-     * @param _mediumCriticalOps Address of the medium critical operations role.
-     * @param _superCriticalOps Address of the super critical operations role.
+     * @param pauser_ Address of the pauser role.
+     * @param deployer_ Address of the deployer role.
+     * @param mediumCriticalOps_ Address of the medium critical operations role.
+     * @param superCriticalOps_ Address of the super critical operations role.
      */
     constructor(
-        address _pauser,
-        address _deployer,
-        address _mediumCriticalOps,
-        address _superCriticalOps
+        address pauser_,
+        address deployer_,
+        address mediumCriticalOps_,
+        address superCriticalOps_
     ) {
-        _grantRole(PantosRoles.PAUSER, _pauser);
-        _grantRole(PantosRoles.DEPLOYER, _deployer);
-        _grantRole(PantosRoles.MEDIUM_CRITICAL_OPS, _mediumCriticalOps);
-        _grantRole(PantosRoles.SUPER_CRITICAL_OPS, _superCriticalOps);
+        _grantRole(PantosRoles.PAUSER, pauser_);
+        _grantRole(PantosRoles.DEPLOYER, deployer_);
+        _grantRole(PantosRoles.MEDIUM_CRITICAL_OPS, mediumCriticalOps_);
+        _grantRole(PantosRoles.SUPER_CRITICAL_OPS, superCriticalOps_);
     }
 }

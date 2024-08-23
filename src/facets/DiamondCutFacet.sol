@@ -16,15 +16,15 @@ import {PantosBaseFacet} from "./PantosBaseFacet.sol";
  */
 contract DiamondCutFacet is IDiamondCut, PantosBaseFacet {
     /**
-     * @param _diamondCut Contains the facet addresses and function selectors
-     * @param _init The address of the contract or facet to execute _calldata
-     * @param _calldata A function call, including function selector and arguments
+     * @param diamondCut_ Contains the facet addresses and function selectors
+     * @param init_ The address of the contract or facet to execute _calldata
+     * @param calldata_ A function call, including function selector and arguments
      */
     function diamondCut(
-        FacetCut[] calldata _diamondCut,
-        address _init,
-        bytes calldata _calldata
+        FacetCut[] calldata diamondCut_,
+        address init_,
+        bytes calldata calldata_
     ) external override onlyRole(PantosRoles.DEPLOYER) {
-        LibDiamond.diamondCut(_diamondCut, _init, _calldata);
+        LibDiamond.diamondCut(diamondCut_, init_, calldata_);
     }
 }
