@@ -31,8 +31,10 @@ RUN anvil --port 8545 --chain-id 31337 --state-interval 1 --dump-state anvil-sta
     while ! nc -z 127.0.0.1 8545; do echo 'Waiting for anvil to be available'; sleep 1; done && \
     forge script ./script/DeployContracts.s.sol --account local_deployer \
     --password '' --sender 0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266 --rpc-url local-8545 \
-    --sig "run(address,uint256,uint256,uint256,address[])" 0x88CE2c1d82328f84Dd197f63482A3B68E18cD707 \
-    100000000000000000 100000000000000000 0 [] --broadcast && \
+    --sig "run(address,address,address,address,address,uint256,uint256,uint256,address[])" \
+    0x88CE2c1d82328f84Dd197f63482A3B68E18cD707 0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266 \
+    0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266 0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266 \
+    0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266 100000000000000000 100000000000000000 0 [] --broadcast && \
     # Convert the Ethereum json to an env file and copy it over
     for chain in ETHEREUM BNB_CHAIN AVALANCHE POLYGON CRONOS FANTOM CELO; do \
         file="$chain.json"; \
