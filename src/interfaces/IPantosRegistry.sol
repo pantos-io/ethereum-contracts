@@ -36,11 +36,17 @@ interface IPantosRegistry {
     event PrimaryValidatorNodeUpdated(address primaryValidatorNodeAddress);
 
     /**
-     * @notice Event that is emitted when a new blockchain is registered.
+     * @notice Event that is emitted when a new blockchain is
+     * registered.
      *
-     * @param blockchainId The id of the blockchain.
+     * @param blockchainId The ID of the new blockchain.
+     * @param validatorFeeFactor The validator fee factor of the new
+     * blockchain.
      */
-    event BlockchainRegistered(uint256 blockchainId);
+    event BlockchainRegistered(
+        uint256 blockchainId,
+        uint256 validatorFeeFactor
+    );
 
     /**
      * @notice Event that is emitted when an already registerd blockchain
@@ -84,50 +90,104 @@ interface IPantosRegistry {
     event ServiceNodeUrlUpdated(address serviceNode);
 
     /**
-     * @notice Event that is emitted when the unbonding period for the
-     * service node deposit is updated.
+     * @notice Event that is emitted when an update of the unbonding
+     * period for service node deposits is initiated.
      *
-     * @param unbondingPeriodServiceNodeDeposit The new unbonding period
-     * for the service node deposit (in seconds).
+     * @param newUnbondingPeriodServiceNodeDeposit The new unbonding
+     * period (in seconds) for service node deposits.
+     * @param earliestUpdateTime The earliest time when the update can
+     * be executed.
      */
-    event UnbondingPeriodServiceNodeDepositUpdated(
-        uint256 unbondingPeriodServiceNodeDeposit
+    event UnbondingPeriodServiceNodeDepositUpdateInitiated(
+        uint256 newUnbondingPeriodServiceNodeDeposit,
+        uint256 earliestUpdateTime
     );
 
     /**
-     * @notice Event that is emitted when the minimum service node
-     * deposit is updated.
+     * @notice Event that is emitted when an update of the unbonding
+     * period for service node deposits is executed.
      *
-     * @param minimumServiceNodeDeposit The new minimum service node
+     * @param newUnbondingPeriodServiceNodeDeposit The new unbonding
+     * period (in seconds) for service node deposits.
+     */
+    event UnbondingPeriodServiceNodeDepositUpdateExecuted(
+        uint256 newUnbondingPeriodServiceNodeDeposit
+    );
+
+    /**
+     * @notice Event that is emitted when an update of the minimum
+     * service node deposit is initiated.
+     *
+     * @param newMinimumServiceNodeDeposit The new minimum service node
+     * deposit.
+     * @param earliestUpdateTime The earliest time when the update can
+     * be executed.
+     */
+    event MinimumServiceNodeDepositUpdateInitiated(
+        uint256 newMinimumServiceNodeDeposit,
+        uint256 earliestUpdateTime
+    );
+
+    /**
+     * @notice Event that is emitted when an update of the minimum
+     * service node deposit is executed.
+     *
+     * @param newMinimumServiceNodeDeposit The new minimum service node
      * deposit.
      */
-    event MinimumServiceNodeDepositUpdated(uint256 minimumServiceNodeDeposit);
+    event MinimumServiceNodeDepositUpdateExecuted(
+        uint256 newMinimumServiceNodeDeposit
+    );
 
     /**
-     * @notice Event that is emitted when the minimum validator fee update
-     * period is updated.
+     * @notice Event that is emitted when an update of a validator fee
+     * factor is initiated.
      *
-     * @param minimumValidatorFeeUpdatePeriod The new minimum validator fee
-     * update period.
+     * @param blockchainId The ID of the blockchain the validator fee
+     * factor is updated for.
+     * @param newValidatorFeeFactor The new validator fee factor.
+     * @param earliestUpdateTime The earliest time when the update can
+     * be executed.
      */
-    event MinimumValidatorFeeUpdatePeriodUpdated(
-        uint256 minimumValidatorFeeUpdatePeriod
+    event ValidatorFeeFactorUpdateInitiated(
+        uint256 blockchainId,
+        uint256 newValidatorFeeFactor,
+        uint256 earliestUpdateTime
     );
 
     /**
-     * @notice Event that is emitted when validator fee is updated for a given
-     * blockchain.
-     * @param blockchainId The id of the blockchain.
-     * @param oldFactor Old fee factor.
-     * @param newFactor New fee factor.
-     * @param validFrom The timestamp from which the fee factor becomes valid.
+     * @notice Event that is emitted when an update of a validator fee
+     * factor is executed.
+     *
+     * @param blockchainId The ID of the blockchain the validator fee
+     * factor is updated for.
+     * @param newValidatorFeeFactor The new validator fee factor.
      */
-    event ValidatorFeeUpdated(
+    event ValidatorFeeFactorUpdateExecuted(
         uint256 blockchainId,
-        uint256 oldFactor,
-        uint256 newFactor,
-        uint256 validFrom
+        uint256 newValidatorFeeFactor
     );
+
+    /**
+     * @notice Event that is emitted when an update of the parameter
+     * update delay is initiated.
+     *
+     * @param newParameterUpdateDelay The new parameter update delay.
+     * @param earliestUpdateTime The earliest time when the update can
+     * be executed.
+     */
+    event ParameterUpdateDelayUpdateInitiated(
+        uint256 newParameterUpdateDelay,
+        uint256 earliestUpdateTime
+    );
+
+    /**
+     * @notice Event that is emitted when an update of the parameter
+     * update delay is executed.
+     *
+     * @param newParameterUpdateDelay The new parameter update delay.
+     */
+    event ParameterUpdateDelayUpdateExecuted(uint256 newParameterUpdateDelay);
 
     /**
      * @notice Pauses the Pantos Hub.
@@ -182,19 +242,17 @@ interface IPantosRegistry {
      * @notice Used by the owner of the Pantos Hub contract to register a new
      * blockchain.
      *
-     * @param blockchainId The id of the blockchain to be registered.
-     * @param name The name of the blockchain to be registered.
-     * @param feeFactor The fee factor to be used for that blockchain.
-     * @param feeFactorValidFrom The timestamp from which the fee factor for
-     * the new blockchain becomes valid.
+     * @param blockchainId The ID of the new blockchain.
+     * @param name The name of the new blockchain.
+     * @param validatorFeeFactor The validator fee factor of the new
+     * blockchain.
      *
      * @dev The function can only be called by the Pantos Hub owner.
      */
     function registerBlockchain(
         uint256 blockchainId,
         string calldata name,
-        uint256 feeFactor,
-        uint256 feeFactorValidFrom
+        uint256 validatorFeeFactor
     ) external;
 
     /**
@@ -221,58 +279,90 @@ interface IPantosRegistry {
     ) external;
 
     /**
-     * @notice Used by the owner of the Pantos Hub contract to update the fee
-     * factor of a registered blockchain.
+     * @notice Initiate an update of a validator fee factor.
      *
-     * @param blockchainId The id of the blockchain for which the fee factor is
-     * updated.
-     * @param newFactor The new fee factor.
-     * @param validFrom The timestamp from which the new fee factor becomes
-     * valid.
-     */
-    function updateFeeFactor(
-        uint256 blockchainId,
-        uint256 newFactor,
-        uint256 validFrom
-    ) external;
-
-    /**
-     * @notice Used by the owner of the Pantos Hub contract to update
-     * the unbonding period for the service node deposit.
-     *
-     * @param unbondingPeriodServiceNodeDeposit The new unbonding period
-     * for the service node deposit (in seconds).
+     * @param blockchainId The ID of the blockchain the validator fee
+     * factor is updated for.
+     * @param newValidatorFeeFactor The new validator fee factor.
      *
      * @dev The function can only be called by the Pantos Hub owner.
      */
-    function setUnbondingPeriodServiceNodeDeposit(
-        uint256 unbondingPeriodServiceNodeDeposit
+    function initiateValidatorFeeFactorUpdate(
+        uint256 blockchainId,
+        uint256 newValidatorFeeFactor
     ) external;
 
     /**
-     * @notice Used by the owner of the Pantos Hub contract to update
-     * the minimum service node deposit.
+     * @notice Execute an update of a validator fee factor.
      *
-     * @param minimumServiceNodeDeposit The new minimum service node
+     * @param blockchainId The ID of the blockchain the validator fee
+     * factor is updated for.
+     *
+     * @dev The function can only be called when the time delay after
+     * an initiated update has elapsed.
+     */
+    function executeValidatorFeeFactorUpdate(uint256 blockchainId) external;
+
+    /**
+     * @notice Initiate an update of the unbonding period for service
+     * node deposits.
+     *
+     * @param newUnbondingPeriodServiceNodeDeposit The new unbonding
+     * period (in seconds) for service node deposits.
+     *
+     * @dev The function can only be called by the Pantos Hub owner.
+     */
+    function initiateUnbondingPeriodServiceNodeDepositUpdate(
+        uint256 newUnbondingPeriodServiceNodeDeposit
+    ) external;
+
+    /**
+     * @notice Execute an update of the unbonding period for service
+     * node deposits.
+     *
+     * @dev The function can only be called when the time delay after
+     * an initiated update has elapsed.
+     */
+    function executeUnbondingPeriodServiceNodeDepositUpdate() external;
+
+    /**
+     * @notice Initiate an update of the minimum service node deposit.
+     *
+     * @param newMinimumServiceNodeDeposit The new minimum service node
      * deposit.
      *
-     * @dev The function can only be called by the Pantos Hub owner and
-     * if the contract is paused.
+     * @dev The function can only be called by the Pantos Hub owner.
      */
-    function setMinimumServiceNodeDeposit(
-        uint256 minimumServiceNodeDeposit
+    function initiateMinimumServiceNodeDepositUpdate(
+        uint256 newMinimumServiceNodeDeposit
     ) external;
 
     /**
-     * @notice Used by the owner of the Pantos Hub contract to update the
-     * minimum validator fee update period.
+     * @notice Execute an update of the minimum service node deposit.
      *
-     * @param minimumValidatorFeeUpdatePeriod The new minimum validator
-     * fee update period.
+     * @dev The function can only be called when the time delay after
+     * an initiated update has elapsed.
      */
-    function setMinimumValidatorFeeUpdatePeriod(
-        uint256 minimumValidatorFeeUpdatePeriod
+    function executeMinimumServiceNodeDepositUpdate() external;
+
+    /**
+     * @notice Initiate an update of the parameter update delay.
+     *
+     * @param newParameterUpdateDelay The new parameter update delay.
+     *
+     * @dev The function can only be called by the Pantos Hub owner.
+     */
+    function initiateParameterUpdateDelayUpdate(
+        uint256 newParameterUpdateDelay
     ) external;
+
+    /**
+     * @notice Execute an update of the parameter update delay.
+     *
+     * @dev The function can only be called when the time delay after
+     * an initiated update has elapsed.
+     */
+    function executeParameterUpdateDelayUpdate() external;
 
     /**
      * @notice Allows a user to register a token with the Pantos Hub. The user
@@ -518,24 +608,40 @@ interface IPantosRegistry {
     ) external view returns (PantosTypes.BlockchainRecord memory);
 
     /**
-     * @notice Returns the minimum deposit required to register a service node
-     * at the Pantos Hub.
-     *
-     * @return The minimum required deposit to register a service node at the
-     * Pantos Hub.
+     * @return The current minimum required deposit to register a
+     * service node at the Pantos Hub.
      */
-    function getMinimumServiceNodeDeposit() external view returns (uint256);
+    function getCurrentMinimumServiceNodeDeposit()
+        external
+        view
+        returns (uint256);
 
     /**
-     * @notice Returns the unbonding period of the service node deposit
-     * (in seconds).
-     *
-     * @return The unbonding period of the service node deposit.
+     * @return All data related to the minimum required deposit to
+     * register a service node at the Pantos Hub.
+     */
+    function getMinimumServiceNodeDeposit()
+        external
+        view
+        returns (PantosTypes.UpdatableUint256 memory);
+
+    /**
+     * @return The current unbonding period (in seconds) for service
+     * node deposits.
+     */
+    function getCurrentUnbondingPeriodServiceNodeDeposit()
+        external
+        view
+        returns (uint256);
+
+    /**
+     * @return All data related to the unbonding period (in seconds) for
+     * service node deposits.
      */
     function getUnbondingPeriodServiceNodeDeposit()
         external
         view
-        returns (uint256);
+        returns (PantosTypes.UpdatableUint256 memory);
 
     /**
      * @notice Returns a list of all tokens registered in the Pantos Hub which
@@ -601,33 +707,41 @@ interface IPantosRegistry {
     ) external view returns (PantosTypes.ServiceNodeRecord memory);
 
     /**
-     * @notice Returns a fee record for a specific blockchain id.
+     * @param blockchainId The ID of the blockchain to get the validator
+     * fee factor for.
      *
-     * @param blockchainId The blockchain id for which the fee record is
-     * requested.
-     *
-     * @return A FeeRecord data structure.
-     *
-     * @dev More information about the FeeRecord data structure can be found at
-     * {PantosTypes-FeeRecord}.
-     */
-    function getValidatorFeeRecord(
-        uint256 blockchainId
-    ) external view returns (PantosTypes.ValidatorFeeRecord memory);
-
-    /**
-     * @notice Returns the fee update period in uint.
-     *
-     * @return The minimum validator fee update period as uint.
-     *
-     * @dev The minimum validator fee update period is the minimum
-     * amount of time in seconds between two fee updates for a specific
+     * @return The current validator fee factor for the given
      * blockchain.
      */
-    function getMinimumValidatorFeeUpdatePeriod()
+    function getCurrentValidatorFeeFactor(
+        uint256 blockchainId
+    ) external view returns (uint256);
+
+    /**
+     * @param blockchainId The ID of the blockchain to get the validator
+     * fee factor for.
+     *
+     * @return All data related to the validator fee factor for the
+     * given blockchain.
+     */
+    function getValidatorFeeFactor(
+        uint256 blockchainId
+    ) external view returns (PantosTypes.UpdatableUint256 memory);
+
+    /**
+     * @return The current time delay for updating Pantos Hub
+     * parameters.
+     */
+    function getCurrentParameterUpdateDelay() external view returns (uint256);
+
+    /**
+     * @return All data related to the time delay for updating Pantos
+     * Hub parameters.
+     */
+    function getParameterUpdateDelay()
         external
         view
-        returns (uint256);
+        returns (PantosTypes.UpdatableUint256 memory);
 
     /**
      * @notice Takes the service node address and returns whether the

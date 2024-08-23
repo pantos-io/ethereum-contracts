@@ -229,7 +229,8 @@ contract PantosHubTest is PantosHubDeployer {
     function test_registerBlockchain() external {
         vm.expectEmit();
         emit IPantosRegistry.BlockchainRegistered(
-            uint256(otherBlockchain.blockchainId)
+            uint256(otherBlockchain.blockchainId),
+            otherBlockchain.feeFactor
         );
 
         registerOtherBlockchainAtPantosHub();
@@ -238,22 +239,19 @@ contract PantosHubTest is PantosHubDeployer {
             memory otherBlockchainRecord = pantosHubProxy.getBlockchainRecord(
                 uint256(otherBlockchain.blockchainId)
             );
-        PantosTypes.ValidatorFeeRecord
-            memory otherBlockchainValidatorFeeRecord = pantosHubProxy
-                .getValidatorFeeRecord(uint256(otherBlockchain.blockchainId));
+        PantosTypes.UpdatableUint256
+            memory otherBlockchainValidatorFeeFactor = pantosHubProxy
+                .getValidatorFeeFactor(uint256(otherBlockchain.blockchainId));
         assertEq(otherBlockchainRecord.name, otherBlockchain.name);
         assertEq(otherBlockchainRecord.active, true);
         assertEq(pantosHubProxy.getNumberBlockchains(), 2);
         assertEq(pantosHubProxy.getNumberActiveBlockchains(), 2);
         assertEq(
-            otherBlockchainValidatorFeeRecord.newFactor,
+            otherBlockchainValidatorFeeFactor.currentValue,
             otherBlockchain.feeFactor
         );
-        assertEq(otherBlockchainValidatorFeeRecord.oldFactor, 0);
-        assertEq(
-            otherBlockchainValidatorFeeRecord.validFrom,
-            FEE_FACTOR_VALID_FROM
-        );
+        assertEq(otherBlockchainValidatorFeeFactor.pendingValue, 0);
+        assertEq(otherBlockchainValidatorFeeFactor.updateTime, 0);
     }
 
     function test_registerBlockchain_AgainAfterUnregistration() external {
@@ -263,7 +261,8 @@ contract PantosHubTest is PantosHubDeployer {
         );
         vm.expectEmit();
         emit IPantosRegistry.BlockchainRegistered(
-            uint256(otherBlockchain.blockchainId)
+            uint256(otherBlockchain.blockchainId),
+            otherBlockchain.feeFactor
         );
 
         registerOtherBlockchainAtPantosHub();
@@ -272,22 +271,19 @@ contract PantosHubTest is PantosHubDeployer {
             memory otherBlockchainRecord = pantosHubProxy.getBlockchainRecord(
                 uint256(otherBlockchain.blockchainId)
             );
-        PantosTypes.ValidatorFeeRecord
-            memory otherBlockchainValidatorFeeRecord = pantosHubProxy
-                .getValidatorFeeRecord(uint256(otherBlockchain.blockchainId));
+        PantosTypes.UpdatableUint256
+            memory otherBlockchainValidatorFeeFactor = pantosHubProxy
+                .getValidatorFeeFactor(uint256(otherBlockchain.blockchainId));
         assertEq(otherBlockchainRecord.name, otherBlockchain.name);
         assertEq(otherBlockchainRecord.active, true);
         assertEq(pantosHubProxy.getNumberBlockchains(), 2);
         assertEq(pantosHubProxy.getNumberActiveBlockchains(), 2);
         assertEq(
-            otherBlockchainValidatorFeeRecord.newFactor,
+            otherBlockchainValidatorFeeFactor.currentValue,
             otherBlockchain.feeFactor
         );
-        assertEq(otherBlockchainValidatorFeeRecord.oldFactor, 0);
-        assertEq(
-            otherBlockchainValidatorFeeRecord.validFrom,
-            FEE_FACTOR_VALID_FROM
-        );
+        assertEq(otherBlockchainValidatorFeeFactor.pendingValue, 0);
+        assertEq(otherBlockchainValidatorFeeFactor.updateTime, 0);
     }
 
     function test_registerBlockchain_ByNonOwner() external {
@@ -295,8 +291,7 @@ contract PantosHubTest is PantosHubDeployer {
             IPantosRegistry.registerBlockchain.selector,
             uint256(otherBlockchain.blockchainId),
             otherBlockchain.name,
-            otherBlockchain.feeFactor,
-            FEE_FACTOR_VALID_FROM
+            otherBlockchain.feeFactor
         );
 
         onlyOwnerTest(address(pantosHubProxy), calldata_);
@@ -308,8 +303,7 @@ contract PantosHubTest is PantosHubDeployer {
         pantosHubProxy.registerBlockchain(
             uint256(otherBlockchain.blockchainId),
             "",
-            otherBlockchain.feeFactor,
-            FEE_FACTOR_VALID_FROM
+            otherBlockchain.feeFactor
         );
     }
 
@@ -452,184 +446,489 @@ contract PantosHubTest is PantosHubDeployer {
         );
     }
 
-    function test_updateFeeFactor_oldFactorNotValidYet() external {
+    function test_initiateValidatorFeeFactorUpdate() external {
         initializePantosHub();
-        uint256 thisBlockchainId = uint256(thisBlockchain.blockchainId);
-        uint256 newFactor = thisBlockchain.feeFactor + 100;
-        uint256 validFrom = FEE_FACTOR_VALID_FROM + 100;
-        pantosHubProxy.updateFeeFactor(thisBlockchainId, newFactor, validFrom);
+        uint256 blockchainId = uint256(thisBlockchain.blockchainId);
+        uint256 currentValue = thisBlockchain.feeFactor;
+        uint256 newValue = currentValue + 1;
+        uint256 updateTime = BLOCK_TIMESTAMP + PARAMETER_UPDATE_DELAY;
+
+        PantosTypes.UpdatableUint256 memory storedStruct;
+        storedStruct = loadPantosHubValidatorFeeFactor(blockchainId);
+        assertEq(storedStruct.currentValue, currentValue);
+        assertEq(storedStruct.pendingValue, 0);
+        assertEq(storedStruct.updateTime, 0);
+
         vm.expectEmit();
-        emit IPantosRegistry.ValidatorFeeUpdated(
-            thisBlockchainId,
-            0,
-            newFactor,
-            validFrom
+        emit IPantosRegistry.ValidatorFeeFactorUpdateInitiated(
+            blockchainId,
+            newValue,
+            updateTime
         );
 
-        pantosHubProxy.updateFeeFactor(thisBlockchainId, newFactor, validFrom);
-
-        PantosTypes.ValidatorFeeRecord
-            memory validatorFeeRecord = pantosHubProxy.getValidatorFeeRecord(
-                thisBlockchainId
-            );
-        assertEq(validatorFeeRecord.newFactor, newFactor);
-        assertEq(validatorFeeRecord.oldFactor, 0);
-        assertEq(validatorFeeRecord.validFrom, validFrom);
-    }
-
-    function test_updateFeeFactor_oldFactorValid() external {
-        vm.warp(FEE_FACTOR_VALID_FROM);
-        initializePantosHub();
-        uint256 thisBlockchainId = uint256(thisBlockchain.blockchainId);
-        uint256 newFactor = thisBlockchain.feeFactor + 100;
-        uint256 validFrom = FEE_FACTOR_VALID_FROM + 100;
-        pantosHubProxy.updateFeeFactor(thisBlockchainId, newFactor, validFrom);
-        vm.expectEmit();
-        emit IPantosRegistry.ValidatorFeeUpdated(
-            thisBlockchainId,
-            thisBlockchain.feeFactor,
-            newFactor,
-            validFrom
+        pantosHubProxy.initiateValidatorFeeFactorUpdate(
+            blockchainId,
+            newValue
         );
 
-        pantosHubProxy.updateFeeFactor(thisBlockchainId, newFactor, validFrom);
-
-        PantosTypes.ValidatorFeeRecord
-            memory validatorFeeRecord = pantosHubProxy.getValidatorFeeRecord(
-                thisBlockchainId
-            );
-        assertEq(validatorFeeRecord.newFactor, newFactor);
-        assertEq(validatorFeeRecord.oldFactor, thisBlockchain.feeFactor);
-        assertEq(validatorFeeRecord.validFrom, validFrom);
+        storedStruct = loadPantosHubValidatorFeeFactor(blockchainId);
+        assertEq(storedStruct.currentValue, currentValue);
+        assertEq(storedStruct.pendingValue, newValue);
+        assertEq(storedStruct.updateTime, updateTime);
     }
 
-    function test_updateFeeFactor_ByNonOwner() external {
+    function test_initiateValidatorFeeFactorUpdate_ByNonOwner() external {
         bytes memory calldata_ = abi.encodeWithSelector(
-            IPantosRegistry.updateFeeFactor.selector,
+            IPantosRegistry.initiateValidatorFeeFactorUpdate.selector,
             uint256(thisBlockchain.blockchainId),
-            0,
-            0
+            thisBlockchain.feeFactor + 1
         );
 
         onlyOwnerTest(address(pantosHubProxy), calldata_);
     }
 
-    function test_updateFeeFactor_WithUnsupportedBlockchain() external {
+    function test_initiateValidatorFeeFactorUpdate_ZeroFeeFactor() external {
         initializePantosHub();
-        vm.expectRevert("PantosHub: blockchain ID not supported");
+        vm.expectRevert("PantosHub: new validator fee factor must be >= 1");
 
-        pantosHubProxy.updateFeeFactor(
+        pantosHubProxy.initiateValidatorFeeFactorUpdate(
+            uint256(thisBlockchain.blockchainId),
+            0
+        );
+    }
+
+    function test_initiateValidatorFeeFactorUpdate_InactiveBlockchain()
+        external
+    {
+        initializePantosHub();
+        vm.expectRevert("PantosHub: blockchain must be active");
+
+        pantosHubProxy.initiateValidatorFeeFactorUpdate(
             uint256(type(BlockchainId).max) + 1,
-            0,
-            0
+            thisBlockchain.feeFactor + 1
         );
     }
 
-    function test_updateFeeFactor_WithFeeFactor1() external {
+    function test_executeValidatorFeeFactorUpdate() external {
         initializePantosHub();
-        vm.expectRevert("PantosHub: newFactor must be >= 1");
-
-        pantosHubProxy.updateFeeFactor(
-            uint256(thisBlockchain.blockchainId),
-            0,
-            0
+        uint256 blockchainId = uint256(thisBlockchain.blockchainId);
+        uint256 currentValue = thisBlockchain.feeFactor;
+        uint256 newValue = currentValue + 1;
+        uint256 updateTime = BLOCK_TIMESTAMP + PARAMETER_UPDATE_DELAY;
+        pantosHubProxy.initiateValidatorFeeFactorUpdate(
+            blockchainId,
+            newValue
         );
-    }
+        vm.warp(updateTime);
 
-    function test_updateFeeFactor_ValidFromNotLargeEnough() external {
-        initializePantosHub();
-        vm.expectRevert(
-            "PantosHub: validFrom must be larger than "
-            "(block timestamp + minimum update period)"
-        );
+        PantosTypes.UpdatableUint256 memory storedStruct;
+        storedStruct = loadPantosHubValidatorFeeFactor(blockchainId);
+        assertEq(storedStruct.currentValue, currentValue);
+        assertEq(storedStruct.pendingValue, newValue);
+        assertEq(storedStruct.updateTime, updateTime);
 
-        pantosHubProxy.updateFeeFactor(
-            uint256(thisBlockchain.blockchainId),
-            1,
-            block.timestamp - 1
-        );
-    }
-
-    function test_setUnbondingPeriodServiceNodeDeposit() external {
-        uint256 unbondingPeriodServiceNodeDeposit = 1;
         vm.expectEmit();
-        emit IPantosRegistry.UnbondingPeriodServiceNodeDepositUpdated(
-            unbondingPeriodServiceNodeDeposit
+        emit IPantosRegistry.ValidatorFeeFactorUpdateExecuted(
+            blockchainId,
+            newValue
         );
 
-        pantosHubProxy.setUnbondingPeriodServiceNodeDeposit(
-            unbondingPeriodServiceNodeDeposit
-        );
+        pantosHubProxy.executeValidatorFeeFactorUpdate(blockchainId);
 
-        assertEq(
-            pantosHubProxy.getUnbondingPeriodServiceNodeDeposit(),
-            unbondingPeriodServiceNodeDeposit
-        );
+        storedStruct = loadPantosHubValidatorFeeFactor(blockchainId);
+        assertEq(storedStruct.currentValue, newValue);
     }
 
-    function test_setUnbondingPeriodServiceNodeDeposit_ByNonOwner() external {
-        bytes memory calldata_ = abi.encodeWithSelector(
-            IPantosRegistry.setUnbondingPeriodServiceNodeDeposit.selector,
-            1
-        );
-
-        onlyOwnerTest(address(pantosHubProxy), calldata_);
-    }
-
-    function test_setMinimumServiceNodeDeposit() external {
-        uint256 minimumServiceNodeDeposit = 1;
-        vm.expectEmit();
-        emit IPantosRegistry.MinimumServiceNodeDepositUpdated(
-            minimumServiceNodeDeposit
-        );
-
-        pantosHubProxy.setMinimumServiceNodeDeposit(minimumServiceNodeDeposit);
-
-        assertEq(
-            pantosHubProxy.getMinimumServiceNodeDeposit(),
-            minimumServiceNodeDeposit
-        );
-    }
-
-    function test_setMinimumServiceNodeDeposit_WhenNotPaused() external {
+    function test_executeValidatorFeeFactorUpdate_InactiveBlockchain()
+        external
+    {
         initializePantosHub();
-        bytes memory calldata_ = abi.encodeWithSelector(
-            IPantosRegistry.setMinimumServiceNodeDeposit.selector,
-            1
-        );
+        vm.expectRevert("PantosHub: blockchain must be active");
 
-        whenPausedTest(address(pantosHubProxy), calldata_);
+        pantosHubProxy.executeValidatorFeeFactorUpdate(
+            uint256(type(BlockchainId).max) + 1
+        );
     }
 
-    function test_setMinimumServiceNodeDeposit_ByNonOwner() external {
+    function test_executeValidatorFeeFactorUpdate_NoUpdateTime() external {
+        initializePantosHub();
+        uint256 blockchainId = uint256(thisBlockchain.blockchainId);
+        PantosTypes.UpdatableUint256 memory storedStruct;
+        storedStruct = loadPantosHubValidatorFeeFactor(blockchainId);
+        assertEq(storedStruct.updateTime, 0);
+
+        vm.expectRevert("PantosHub: no pending update");
+
+        pantosHubProxy.executeValidatorFeeFactorUpdate(blockchainId);
+    }
+
+    function test_executeValidatorFeeFactorUpdate_NoUpdatedValue() external {
+        initializePantosHub();
+        uint256 blockchainId = uint256(thisBlockchain.blockchainId);
+        pantosHubProxy.initiateValidatorFeeFactorUpdate(
+            blockchainId,
+            thisBlockchain.feeFactor
+        );
+        vm.warp(BLOCK_TIMESTAMP + PARAMETER_UPDATE_DELAY);
+
+        PantosTypes.UpdatableUint256 memory storedStruct;
+        storedStruct = loadPantosHubValidatorFeeFactor(blockchainId);
+        assertEq(storedStruct.pendingValue, storedStruct.currentValue);
+        assertGt(storedStruct.updateTime, 0);
+
+        vm.expectRevert("PantosHub: no pending update");
+
+        pantosHubProxy.executeValidatorFeeFactorUpdate(blockchainId);
+    }
+
+    function test_executeValidatorFeeFactorUpdate_TooEarly() external {
+        initializePantosHub();
+        uint256 blockchainId = uint256(thisBlockchain.blockchainId);
+        pantosHubProxy.initiateValidatorFeeFactorUpdate(
+            blockchainId,
+            thisBlockchain.feeFactor + 1
+        );
+
+        PantosTypes.UpdatableUint256 memory storedStruct;
+        storedStruct = loadPantosHubValidatorFeeFactor(blockchainId);
+        assertNotEq(storedStruct.pendingValue, storedStruct.currentValue);
+        assertGt(storedStruct.updateTime, 0);
+        assertLt(BLOCK_TIMESTAMP, storedStruct.updateTime);
+
+        vm.expectRevert("PantosHub: update time not reached");
+
+        pantosHubProxy.executeValidatorFeeFactorUpdate(blockchainId);
+    }
+
+    function test_initiateUnbondingPeriodServiceNodeDepositUpdate() external {
+        initializePantosHub();
+        uint256 currentValue = SERVICE_NODE_DEPOSIT_UNBONDING_PERIOD;
+        uint256 newValue = currentValue + 1;
+        uint256 updateTime = BLOCK_TIMESTAMP + PARAMETER_UPDATE_DELAY;
+
+        PantosTypes.UpdatableUint256 memory storedStruct;
+        storedStruct = loadPantosHubUnbondingPeriodServiceNodeDeposit();
+        assertEq(storedStruct.currentValue, currentValue);
+        assertEq(storedStruct.pendingValue, 0);
+        assertEq(storedStruct.updateTime, 0);
+
+        vm.expectEmit();
+        emit IPantosRegistry.UnbondingPeriodServiceNodeDepositUpdateInitiated(
+            newValue,
+            updateTime
+        );
+
+        pantosHubProxy.initiateUnbondingPeriodServiceNodeDepositUpdate(
+            newValue
+        );
+
+        storedStruct = loadPantosHubUnbondingPeriodServiceNodeDeposit();
+        assertEq(storedStruct.currentValue, currentValue);
+        assertEq(storedStruct.pendingValue, newValue);
+        assertEq(storedStruct.updateTime, updateTime);
+    }
+
+    function test_initiateUnbondingPeriodServiceNodeDepositUpdate_ByNonOwner()
+        external
+    {
         bytes memory calldata_ = abi.encodeWithSelector(
-            IPantosRegistry.setMinimumServiceNodeDeposit.selector,
-            1
+            IPantosRegistry
+                .initiateUnbondingPeriodServiceNodeDepositUpdate
+                .selector,
+            SERVICE_NODE_DEPOSIT_UNBONDING_PERIOD + 1
         );
 
         onlyOwnerTest(address(pantosHubProxy), calldata_);
     }
 
-    function test_setMinimumValidatorFeeUpdatePeriod() external {
-        uint256 minimumValidatorFeeUpdatePeriod = 1;
+    function test_executeUnbondingPeriodServiceNodeDepositUpdate() external {
+        initializePantosHub();
+        uint256 currentValue = SERVICE_NODE_DEPOSIT_UNBONDING_PERIOD;
+        uint256 newValue = currentValue + 1;
+        uint256 updateTime = BLOCK_TIMESTAMP + PARAMETER_UPDATE_DELAY;
+        pantosHubProxy.initiateUnbondingPeriodServiceNodeDepositUpdate(
+            newValue
+        );
+        vm.warp(updateTime);
 
-        pantosHubProxy.setMinimumValidatorFeeUpdatePeriod(
-            minimumValidatorFeeUpdatePeriod
+        PantosTypes.UpdatableUint256 memory storedStruct;
+        storedStruct = loadPantosHubUnbondingPeriodServiceNodeDeposit();
+        assertEq(storedStruct.currentValue, currentValue);
+        assertEq(storedStruct.pendingValue, newValue);
+        assertEq(storedStruct.updateTime, updateTime);
+
+        vm.expectEmit();
+        emit IPantosRegistry.UnbondingPeriodServiceNodeDepositUpdateExecuted(
+            newValue
         );
 
-        assertEq(
-            pantosHubProxy.getMinimumValidatorFeeUpdatePeriod(),
-            minimumValidatorFeeUpdatePeriod
-        );
+        pantosHubProxy.executeUnbondingPeriodServiceNodeDepositUpdate();
+
+        storedStruct = loadPantosHubUnbondingPeriodServiceNodeDeposit();
+        assertEq(storedStruct.currentValue, newValue);
     }
 
-    function test_setMinimumValidatorFeeUpdatePeriod_ByNonOwner() external {
+    function test_executeUnbondingPeriodServiceNodeDepositUpdate_NoUpdateTime()
+        external
+    {
+        initializePantosHub();
+        PantosTypes.UpdatableUint256 memory storedStruct;
+        storedStruct = loadPantosHubUnbondingPeriodServiceNodeDeposit();
+        assertEq(storedStruct.updateTime, 0);
+
+        vm.expectRevert("PantosHub: no pending update");
+
+        pantosHubProxy.executeUnbondingPeriodServiceNodeDepositUpdate();
+    }
+
+    function test_executeUnbondingPeriodServiceNodeDepositUpdate_NoUpdatedValue()
+        external
+    {
+        initializePantosHub();
+        pantosHubProxy.initiateUnbondingPeriodServiceNodeDepositUpdate(
+            SERVICE_NODE_DEPOSIT_UNBONDING_PERIOD
+        );
+        vm.warp(BLOCK_TIMESTAMP + PARAMETER_UPDATE_DELAY);
+
+        PantosTypes.UpdatableUint256 memory storedStruct;
+        storedStruct = loadPantosHubUnbondingPeriodServiceNodeDeposit();
+        assertEq(storedStruct.pendingValue, storedStruct.currentValue);
+        assertGt(storedStruct.updateTime, 0);
+
+        vm.expectRevert("PantosHub: no pending update");
+
+        pantosHubProxy.executeUnbondingPeriodServiceNodeDepositUpdate();
+    }
+
+    function test_executeUnbondingPeriodServiceNodeDepositUpdate_TooEarly()
+        external
+    {
+        initializePantosHub();
+        pantosHubProxy.initiateUnbondingPeriodServiceNodeDepositUpdate(
+            SERVICE_NODE_DEPOSIT_UNBONDING_PERIOD + 1
+        );
+
+        PantosTypes.UpdatableUint256 memory storedStruct;
+        storedStruct = loadPantosHubUnbondingPeriodServiceNodeDeposit();
+        assertNotEq(storedStruct.pendingValue, storedStruct.currentValue);
+        assertGt(storedStruct.updateTime, 0);
+        assertLt(BLOCK_TIMESTAMP, storedStruct.updateTime);
+
+        vm.expectRevert("PantosHub: update time not reached");
+
+        pantosHubProxy.executeUnbondingPeriodServiceNodeDepositUpdate();
+    }
+
+    function test_initiateMinimumServiceNodeDepositUpdate() external {
+        initializePantosHub();
+        uint256 currentValue = MINIMUM_SERVICE_NODE_DEPOSIT;
+        uint256 newValue = currentValue + 1;
+        uint256 updateTime = BLOCK_TIMESTAMP + PARAMETER_UPDATE_DELAY;
+
+        PantosTypes.UpdatableUint256 memory storedStruct;
+        storedStruct = loadPantosHubMinimumServiceNodeDeposit();
+        assertEq(storedStruct.currentValue, currentValue);
+        assertEq(storedStruct.pendingValue, 0);
+        assertEq(storedStruct.updateTime, 0);
+
+        vm.expectEmit();
+        emit IPantosRegistry.MinimumServiceNodeDepositUpdateInitiated(
+            newValue,
+            updateTime
+        );
+
+        pantosHubProxy.initiateMinimumServiceNodeDepositUpdate(newValue);
+
+        storedStruct = loadPantosHubMinimumServiceNodeDeposit();
+        assertEq(storedStruct.currentValue, currentValue);
+        assertEq(storedStruct.pendingValue, newValue);
+        assertEq(storedStruct.updateTime, updateTime);
+    }
+
+    function test_initiateMinimumServiceNodeDepositUpdate_ByNonOwner()
+        external
+    {
         bytes memory calldata_ = abi.encodeWithSelector(
-            IPantosRegistry.setMinimumValidatorFeeUpdatePeriod.selector,
-            1
+            IPantosRegistry.initiateMinimumServiceNodeDepositUpdate.selector,
+            MINIMUM_SERVICE_NODE_DEPOSIT + 1
         );
 
         onlyOwnerTest(address(pantosHubProxy), calldata_);
+    }
+
+    function test_executeMinimumServiceNodeDepositUpdate() external {
+        initializePantosHub();
+        uint256 currentValue = MINIMUM_SERVICE_NODE_DEPOSIT;
+        uint256 newValue = currentValue + 1;
+        uint256 updateTime = BLOCK_TIMESTAMP + PARAMETER_UPDATE_DELAY;
+        pantosHubProxy.initiateMinimumServiceNodeDepositUpdate(newValue);
+        vm.warp(updateTime);
+
+        PantosTypes.UpdatableUint256 memory storedStruct;
+        storedStruct = loadPantosHubMinimumServiceNodeDeposit();
+        assertEq(storedStruct.currentValue, currentValue);
+        assertEq(storedStruct.pendingValue, newValue);
+        assertEq(storedStruct.updateTime, updateTime);
+
+        vm.expectEmit();
+        emit IPantosRegistry.MinimumServiceNodeDepositUpdateExecuted(newValue);
+
+        pantosHubProxy.executeMinimumServiceNodeDepositUpdate();
+
+        storedStruct = loadPantosHubMinimumServiceNodeDeposit();
+        assertEq(storedStruct.currentValue, newValue);
+    }
+
+    function test_executeMinimumServiceNodeDepositUpdate_NoUpdateTime()
+        external
+    {
+        initializePantosHub();
+        PantosTypes.UpdatableUint256 memory storedStruct;
+        storedStruct = loadPantosHubMinimumServiceNodeDeposit();
+        assertEq(storedStruct.updateTime, 0);
+
+        vm.expectRevert("PantosHub: no pending update");
+
+        pantosHubProxy.executeMinimumServiceNodeDepositUpdate();
+    }
+
+    function test_executeMinimumServiceNodeDepositUpdate_NoUpdatedValue()
+        external
+    {
+        initializePantosHub();
+        pantosHubProxy.initiateMinimumServiceNodeDepositUpdate(
+            MINIMUM_SERVICE_NODE_DEPOSIT
+        );
+        vm.warp(BLOCK_TIMESTAMP + PARAMETER_UPDATE_DELAY);
+
+        PantosTypes.UpdatableUint256 memory storedStruct;
+        storedStruct = loadPantosHubMinimumServiceNodeDeposit();
+        assertEq(storedStruct.pendingValue, storedStruct.currentValue);
+        assertGt(storedStruct.updateTime, 0);
+
+        vm.expectRevert("PantosHub: no pending update");
+
+        pantosHubProxy.executeMinimumServiceNodeDepositUpdate();
+    }
+
+    function test_executeMinimumServiceNodeDepositUpdate_TooEarly() external {
+        initializePantosHub();
+        pantosHubProxy.initiateMinimumServiceNodeDepositUpdate(
+            MINIMUM_SERVICE_NODE_DEPOSIT + 1
+        );
+
+        PantosTypes.UpdatableUint256 memory storedStruct;
+        storedStruct = loadPantosHubMinimumServiceNodeDeposit();
+        assertNotEq(storedStruct.pendingValue, storedStruct.currentValue);
+        assertGt(storedStruct.updateTime, 0);
+        assertLt(BLOCK_TIMESTAMP, storedStruct.updateTime);
+
+        vm.expectRevert("PantosHub: update time not reached");
+
+        pantosHubProxy.executeMinimumServiceNodeDepositUpdate();
+    }
+
+    function test_initiateParameterUpdateDelayUpdate() external {
+        initializePantosHub();
+        uint256 currentValue = PARAMETER_UPDATE_DELAY;
+        uint256 newValue = currentValue + 1;
+        uint256 updateTime = BLOCK_TIMESTAMP + PARAMETER_UPDATE_DELAY;
+
+        PantosTypes.UpdatableUint256 memory storedStruct;
+        storedStruct = loadPantosHubParameterUpdateDelay();
+        assertEq(storedStruct.currentValue, currentValue);
+        assertEq(storedStruct.pendingValue, 0);
+        assertEq(storedStruct.updateTime, 0);
+
+        vm.expectEmit();
+        emit IPantosRegistry.ParameterUpdateDelayUpdateInitiated(
+            newValue,
+            updateTime
+        );
+
+        pantosHubProxy.initiateParameterUpdateDelayUpdate(newValue);
+
+        storedStruct = loadPantosHubParameterUpdateDelay();
+        assertEq(storedStruct.currentValue, currentValue);
+        assertEq(storedStruct.pendingValue, newValue);
+        assertEq(storedStruct.updateTime, updateTime);
+    }
+
+    function test_initiateParameterUpdateDelayUpdate_ByNonOwner() external {
+        bytes memory calldata_ = abi.encodeWithSelector(
+            IPantosRegistry.initiateParameterUpdateDelayUpdate.selector,
+            PARAMETER_UPDATE_DELAY + 1
+        );
+
+        onlyOwnerTest(address(pantosHubProxy), calldata_);
+    }
+
+    function test_executeParameterUpdateDelayUpdate() external {
+        initializePantosHub();
+        uint256 currentValue = PARAMETER_UPDATE_DELAY;
+        uint256 newValue = currentValue + 1;
+        uint256 updateTime = BLOCK_TIMESTAMP + PARAMETER_UPDATE_DELAY;
+        pantosHubProxy.initiateParameterUpdateDelayUpdate(newValue);
+        vm.warp(updateTime);
+
+        PantosTypes.UpdatableUint256 memory storedStruct;
+        storedStruct = loadPantosHubParameterUpdateDelay();
+        assertEq(storedStruct.currentValue, currentValue);
+        assertEq(storedStruct.pendingValue, newValue);
+        assertEq(storedStruct.updateTime, updateTime);
+
+        vm.expectEmit();
+        emit IPantosRegistry.ParameterUpdateDelayUpdateExecuted(newValue);
+
+        pantosHubProxy.executeParameterUpdateDelayUpdate();
+
+        storedStruct = loadPantosHubParameterUpdateDelay();
+        assertEq(storedStruct.currentValue, newValue);
+    }
+
+    function test_executeParameterUpdateDelayUpdate_NoUpdateTime() external {
+        initializePantosHub();
+        PantosTypes.UpdatableUint256 memory storedStruct;
+        storedStruct = loadPantosHubParameterUpdateDelay();
+        assertEq(storedStruct.updateTime, 0);
+
+        vm.expectRevert("PantosHub: no pending update");
+
+        pantosHubProxy.executeParameterUpdateDelayUpdate();
+    }
+
+    function test_executeParameterUpdateDelayUpdate_NoUpdatedValue() external {
+        initializePantosHub();
+        pantosHubProxy.initiateParameterUpdateDelayUpdate(
+            PARAMETER_UPDATE_DELAY
+        );
+        vm.warp(BLOCK_TIMESTAMP + PARAMETER_UPDATE_DELAY);
+
+        PantosTypes.UpdatableUint256 memory storedStruct;
+        storedStruct = loadPantosHubParameterUpdateDelay();
+        assertEq(storedStruct.pendingValue, storedStruct.currentValue);
+        assertGt(storedStruct.updateTime, 0);
+
+        vm.expectRevert("PantosHub: no pending update");
+
+        pantosHubProxy.executeParameterUpdateDelayUpdate();
+    }
+
+    function test_executeParameterUpdateDelayUpdate_TooEarly() external {
+        initializePantosHub();
+        pantosHubProxy.initiateParameterUpdateDelayUpdate(
+            PARAMETER_UPDATE_DELAY + 1
+        );
+
+        PantosTypes.UpdatableUint256 memory storedStruct;
+        storedStruct = loadPantosHubParameterUpdateDelay();
+        assertNotEq(storedStruct.pendingValue, storedStruct.currentValue);
+        assertGt(storedStruct.updateTime, 0);
+        assertLt(BLOCK_TIMESTAMP, storedStruct.updateTime);
+
+        vm.expectRevert("PantosHub: update time not reached");
+
+        pantosHubProxy.executeParameterUpdateDelayUpdate();
     }
 
     function test_registerToken() external {
@@ -1181,7 +1480,9 @@ contract PantosHubTest is PantosHubDeployer {
         serviceNodeRegistered[2] = false;
 
         initializePantosHub();
-        pantosHubProxy.setUnbondingPeriodServiceNodeDeposit(0);
+        pantosHubProxy.initiateUnbondingPeriodServiceNodeDepositUpdate(0);
+        vm.warp(BLOCK_TIMESTAMP + PARAMETER_UPDATE_DELAY);
+        pantosHubProxy.executeUnbondingPeriodServiceNodeDepositUpdate();
         mockIerc20_transfer(
             PANTOS_TOKEN_ADDRESS,
             SERVICE_NODE_WITHDRAWAL_ADDRESS,
@@ -1513,10 +1814,11 @@ contract PantosHubTest is PantosHubDeployer {
 
     function test_increaseServiceNodeDeposit_WithNotEnoughDeposit() external {
         registerServiceNode();
-        pantosHubProxy.pause();
-        pantosHubProxy.setMinimumServiceNodeDeposit(
+        pantosHubProxy.initiateMinimumServiceNodeDepositUpdate(
             MINIMUM_SERVICE_NODE_DEPOSIT + 2
         );
+        vm.warp(BLOCK_TIMESTAMP + PARAMETER_UPDATE_DELAY);
+        pantosHubProxy.executeMinimumServiceNodeDepositUpdate();
         vm.prank(SERVICE_NODE_ADDRESS);
         vm.expectRevert(
             "PantosHub: new deposit must be at least the minimum "
@@ -1534,10 +1836,11 @@ contract PantosHubTest is PantosHubDeployer {
             1,
             true
         );
-        pantosHubProxy.pause();
-        pantosHubProxy.setMinimumServiceNodeDeposit(
+        pantosHubProxy.initiateMinimumServiceNodeDepositUpdate(
             MINIMUM_SERVICE_NODE_DEPOSIT - 1
         );
+        vm.warp(BLOCK_TIMESTAMP + PARAMETER_UPDATE_DELAY);
+        pantosHubProxy.executeMinimumServiceNodeDepositUpdate();
         vm.prank(SERVICE_NODE_WITHDRAWAL_ADDRESS);
         vm.expectCall(
             PANTOS_TOKEN_ADDRESS,
@@ -1563,10 +1866,11 @@ contract PantosHubTest is PantosHubDeployer {
             1,
             true
         );
-        pantosHubProxy.pause();
-        pantosHubProxy.setMinimumServiceNodeDeposit(
+        pantosHubProxy.initiateMinimumServiceNodeDepositUpdate(
             MINIMUM_SERVICE_NODE_DEPOSIT - 1
         );
+        vm.warp(BLOCK_TIMESTAMP + PARAMETER_UPDATE_DELAY);
+        pantosHubProxy.executeMinimumServiceNodeDepositUpdate();
         vm.prank(SERVICE_NODE_ADDRESS);
         vm.expectCall(
             PANTOS_TOKEN_ADDRESS,
@@ -1725,7 +2029,7 @@ contract PantosHubTest is PantosHubDeployer {
         pantosHubProxy.transfer(transferRequest(), "");
     }
 
-    function test_transferFrom_WithOldFactors() external {
+    function test_transferFrom() external {
         registerTokenAndExternalToken();
         registerServiceNode();
         mockPandasToken_getPantosForwarder(
@@ -1750,51 +2054,6 @@ contract PantosHubTest is PantosHubDeployer {
             SERVICE_NODE_ADDRESS
         );
         vm.prank(SERVICE_NODE_ADDRESS);
-        vm.expectCall(
-            PANTOS_FORWARDER_ADDRESS,
-            abi.encodeWithSelector(
-                IPantosForwarder.verifyAndForwardTransferFrom.selector,
-                0,
-                0,
-                transferFromRequest(),
-                ""
-            )
-        );
-
-        uint256 transferId = pantosHubProxy.transferFrom(
-            transferFromRequest(),
-            ""
-        );
-        assertEq(transferId, NEXT_TRANSFER_ID);
-        assertEq(pantosHubProxy.getNextTransferId(), NEXT_TRANSFER_ID + 1);
-    }
-
-    function test_transferFrom_WithNewFactors() external {
-        registerTokenAndExternalToken();
-        registerServiceNode();
-        mockPandasToken_getPantosForwarder(
-            PANDAS_TOKEN_ADDRESS,
-            PANTOS_FORWARDER_ADDRESS
-        );
-        mockPantosForwarder_verifyAndForwardTransferFrom(
-            PANTOS_FORWARDER_ADDRESS,
-            transferFromRequest(),
-            ""
-        );
-        vm.expectEmit();
-        emit IPantosTransfer.TransferFrom(
-            NEXT_TRANSFER_ID,
-            uint256(otherBlockchain.blockchainId),
-            transferSender,
-            vm.toString(TRANSFER_RECIPIENT),
-            PANDAS_TOKEN_ADDRESS,
-            EXTERNAL_PANDAS_TOKEN_ADDRESS,
-            TRANSFER_AMOUNT,
-            TRANSFER_FEE,
-            SERVICE_NODE_ADDRESS
-        );
-        vm.prank(SERVICE_NODE_ADDRESS);
-        vm.warp(FEE_FACTOR_VALID_FROM);
         vm.expectCall(
             PANTOS_FORWARDER_ADDRESS,
             abi.encodeWithSelector(
@@ -2095,10 +2354,11 @@ contract PantosHubTest is PantosHubDeployer {
             PANDAS_TOKEN_ADDRESS,
             PANTOS_FORWARDER_ADDRESS
         );
-        pantosHubProxy.pause();
-        pantosHubProxy.setMinimumServiceNodeDeposit(
+        pantosHubProxy.initiateMinimumServiceNodeDepositUpdate(
             MINIMUM_SERVICE_NODE_DEPOSIT + 1
         );
+        vm.warp(BLOCK_TIMESTAMP + PARAMETER_UPDATE_DELAY);
+        pantosHubProxy.executeMinimumServiceNodeDepositUpdate();
         vm.expectRevert("PantosHub: service node must have enough deposit");
 
         pantosHubProxy.verifyTransfer(transferRequest(), "");
@@ -2399,21 +2659,45 @@ contract PantosHubTest is PantosHubDeployer {
             );
 
         assertEq(thisBlockchainRecord.name, thisBlockchain.name);
-        assertEq(thisBlockchainRecord.active, true);
+        assertTrue(thisBlockchainRecord.active);
+    }
+
+    function test_getCurrentMinimumServiceNodeDeposit() external {
+        assertEq(
+            pantosHubProxy.getCurrentMinimumServiceNodeDeposit(),
+            MINIMUM_SERVICE_NODE_DEPOSIT
+        );
     }
 
     function test_getMinimumServiceNodeDeposit() external {
+        PantosTypes.UpdatableUint256
+            memory minimumServiceNodeDeposit = pantosHubProxy
+                .getMinimumServiceNodeDeposit();
         assertEq(
-            MINIMUM_SERVICE_NODE_DEPOSIT,
-            pantosHubProxy.getMinimumServiceNodeDeposit()
+            minimumServiceNodeDeposit.currentValue,
+            MINIMUM_SERVICE_NODE_DEPOSIT
+        );
+        assertEq(minimumServiceNodeDeposit.pendingValue, 0);
+        assertEq(minimumServiceNodeDeposit.updateTime, 0);
+    }
+
+    function test_getCurrentUnbondingPeriodServiceNodeDeposit() external {
+        assertEq(
+            pantosHubProxy.getCurrentUnbondingPeriodServiceNodeDeposit(),
+            SERVICE_NODE_DEPOSIT_UNBONDING_PERIOD
         );
     }
 
     function test_getUnbondingPeriodServiceNodeDeposit() external {
+        PantosTypes.UpdatableUint256
+            memory unbondingPeriodServiceNodeDeposit = pantosHubProxy
+                .getUnbondingPeriodServiceNodeDeposit();
         assertEq(
-            SERVICE_NODE_DEPOSIT_UNBONDING_PERIOD,
-            pantosHubProxy.getUnbondingPeriodServiceNodeDeposit()
+            unbondingPeriodServiceNodeDeposit.currentValue,
+            SERVICE_NODE_DEPOSIT_UNBONDING_PERIOD
         );
+        assertEq(unbondingPeriodServiceNodeDeposit.pendingValue, 0);
+        assertEq(unbondingPeriodServiceNodeDeposit.updateTime, 0);
     }
 
     function test_getTokens_WhenOnlyPantosTokenRegistered() external {
@@ -2530,30 +2814,37 @@ contract PantosHubTest is PantosHubDeployer {
         assertEq(pantosHubProxy.getNextTransferId(), 0);
     }
 
-    function test_getValidatorFeeRecord() external {
-        PantosTypes.ValidatorFeeRecord
-            memory thisBlockchainValidatorFeeRecord = pantosHubProxy
-                .getValidatorFeeRecord(uint256(thisBlockchain.blockchainId));
-
+    function test_getCurrentValidatorFeeFactor() external {
         assertEq(
-            thisBlockchainValidatorFeeRecord.newFactor,
+            pantosHubProxy.getCurrentValidatorFeeFactor(
+                uint256(thisBlockchain.blockchainId)
+            ),
             thisBlockchain.feeFactor
         );
-        assertEq(thisBlockchainValidatorFeeRecord.oldFactor, 0);
+    }
+
+    function test_getValidatorFeeFactor() external {
+        PantosTypes.UpdatableUint256 memory validatorFeeFactor = pantosHubProxy
+            .getValidatorFeeFactor(uint256(thisBlockchain.blockchainId));
+        assertEq(validatorFeeFactor.currentValue, thisBlockchain.feeFactor);
+        assertEq(validatorFeeFactor.pendingValue, 0);
+        assertEq(validatorFeeFactor.updateTime, 0);
+    }
+
+    function test_getCurrentParameterUpdateDelay() external {
         assertEq(
-            thisBlockchainValidatorFeeRecord.validFrom,
-            FEE_FACTOR_VALID_FROM
+            pantosHubProxy.getCurrentParameterUpdateDelay(),
+            PARAMETER_UPDATE_DELAY
         );
     }
 
-    function test_getMinimumValidatorFeeUpdatePeriod_WhenSet() external {
-        pantosHubProxy.setMinimumValidatorFeeUpdatePeriod(1);
-
-        assertEq(pantosHubProxy.getMinimumValidatorFeeUpdatePeriod(), 1);
-    }
-
-    function test_getMinimumValidatorFeeUpdatePeriod_WhenNotSet() external {
-        assertEq(pantosHubProxy.getMinimumValidatorFeeUpdatePeriod(), 0);
+    function test_getParameterUpdateDelay() external {
+        PantosTypes.UpdatableUint256
+            memory parameterUpdateDelay = pantosHubProxy
+                .getParameterUpdateDelay();
+        assertEq(parameterUpdateDelay.currentValue, PARAMETER_UPDATE_DELAY);
+        assertEq(parameterUpdateDelay.pendingValue, 0);
+        assertEq(parameterUpdateDelay.updateTime, 0);
     }
 
     function test_owner() external {

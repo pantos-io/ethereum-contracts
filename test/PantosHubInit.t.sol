@@ -80,28 +80,9 @@ contract PantosHubInitTest is PantosHubDeployer {
         pantosHubInit = new PantosHubInit();
         IDiamondCut.FacetCut[] memory cut = prepareFacetCuts();
         PantosHubInit.Args memory args = getInitializerArgs();
-        args.feeFactor = 0;
+        args.validatorFeeFactor = 0;
         bytes memory initializerData = prepareInitializerData(args);
-        vm.expectRevert("PantosHubInit: newFactor must be >= 1");
-
-        IDiamondCut(address(pantosHubDiamond)).diamondCut(
-            cut,
-            address(pantosHubInit),
-            initializerData
-        );
-    }
-
-    function test_init_FeeFactorValidFromNotLargeEnough() external {
-        deployAllFacets();
-        pantosHubInit = new PantosHubInit();
-        IDiamondCut.FacetCut[] memory cut = prepareFacetCuts();
-        PantosHubInit.Args memory args = getInitializerArgs();
-        args.feeFactorValidFrom = block.timestamp - 1;
-        bytes memory initializerData = prepareInitializerData(args);
-        vm.expectRevert(
-            "PantosHubInit: validFrom must be larger than "
-            "(block timestamp + minimum update period)"
-        );
+        vm.expectRevert("PantosHubInit: validator fee factor must be >= 1");
 
         IDiamondCut(address(pantosHubDiamond)).diamondCut(
             cut,

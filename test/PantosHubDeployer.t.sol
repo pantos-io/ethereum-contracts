@@ -141,9 +141,8 @@ abstract contract PantosHubDeployer is PantosBaseTest {
             blockchainName: thisBlockchain.name,
             minimumServiceNodeDeposit: MINIMUM_SERVICE_NODE_DEPOSIT,
             unbondingPeriodServiceNodeDeposit: SERVICE_NODE_DEPOSIT_UNBONDING_PERIOD,
-            feeFactor: thisBlockchain.feeFactor,
-            feeFactorValidFrom: FEE_FACTOR_VALID_FROM,
-            minimumValidatorFeeUpdatePeriod: MINIMUM_VALIDATOR_FEE_UPDATE_PERIOD,
+            validatorFeeFactor: thisBlockchain.feeFactor,
+            parameterUpdateDelay: PARAMETER_UPDATE_DELAY,
             nextTransferId: 0
         });
         return args;
@@ -164,8 +163,7 @@ abstract contract PantosHubDeployer is PantosBaseTest {
         pantosHubProxy.registerBlockchain(
             uint256(otherBlockchain.blockchainId),
             otherBlockchain.name,
-            otherBlockchain.feeFactor,
-            FEE_FACTOR_VALID_FROM
+            otherBlockchain.feeFactor
         );
     }
 
@@ -240,120 +238,103 @@ abstract contract PantosHubDeployer is PantosBaseTest {
         assertTrue(ierc165.supportsInterface(type(IERC173).interfaceId));
     }
 
-    // checks pre InitPantosHub state
-    function checkStatePantosHubAfterDeployment() public {
+    function checkStatePantosHub(
+        bool paused,
+        uint256 numberBlockchains,
+        uint256 numberActiveBlockchains
+    ) private {
         checkSupportedInterfaces();
         assertEq(pantosHubProxy.owner(), deployer());
-        assertTrue(pantosHubProxy.paused());
-        assertEq(pantosHubProxy.getNumberBlockchains(), 1);
-        assertEq(pantosHubProxy.getNumberActiveBlockchains(), 1);
+        assertEq(pantosHubProxy.paused(), paused);
+        assertEq(pantosHubProxy.getNumberBlockchains(), numberBlockchains);
         assertEq(
-            pantosHubProxy.getMinimumValidatorFeeUpdatePeriod(),
-            MINIMUM_VALIDATOR_FEE_UPDATE_PERIOD
+            pantosHubProxy.getNumberActiveBlockchains(),
+            numberActiveBlockchains
         );
 
         PantosTypes.BlockchainRecord
             memory thisBlockchainRecord = pantosHubProxy.getBlockchainRecord(
                 uint256(thisBlockchain.blockchainId)
             );
-        PantosTypes.ValidatorFeeRecord
-            memory thisBlockchainValidatorFeeRecord = pantosHubProxy
-                .getValidatorFeeRecord(uint256(thisBlockchain.blockchainId));
-
         assertEq(thisBlockchainRecord.name, thisBlockchain.name);
-        assertEq(thisBlockchainRecord.active, true);
+        assertTrue(thisBlockchainRecord.active);
         assertEq(
             pantosHubProxy.getCurrentBlockchainId(),
             uint256(thisBlockchain.blockchainId)
         );
+
+        PantosTypes.UpdatableUint256
+            memory thisBlockchainValidatorFeeFactor = pantosHubProxy
+                .getValidatorFeeFactor(uint256(thisBlockchain.blockchainId));
         assertEq(
-            thisBlockchainValidatorFeeRecord.newFactor,
+            thisBlockchainValidatorFeeFactor.currentValue,
             thisBlockchain.feeFactor
         );
-        assertEq(thisBlockchainValidatorFeeRecord.oldFactor, 0);
+        assertEq(thisBlockchainValidatorFeeFactor.pendingValue, 0);
+        assertEq(thisBlockchainValidatorFeeFactor.updateTime, 0);
+
+        PantosTypes.UpdatableUint256
+            memory minimumServiceNodeDeposit = pantosHubProxy
+                .getMinimumServiceNodeDeposit();
         assertEq(
-            thisBlockchainValidatorFeeRecord.validFrom,
-            FEE_FACTOR_VALID_FROM
-        );
-        assertEq(
-            pantosHubProxy.getMinimumServiceNodeDeposit(),
+            minimumServiceNodeDeposit.currentValue,
             MINIMUM_SERVICE_NODE_DEPOSIT
         );
+        assertEq(minimumServiceNodeDeposit.pendingValue, 0);
+        assertEq(minimumServiceNodeDeposit.updateTime, 0);
+
+        PantosTypes.UpdatableUint256
+            memory parameterUpdateDelay = pantosHubProxy
+                .getParameterUpdateDelay();
+        assertEq(parameterUpdateDelay.currentValue, PARAMETER_UPDATE_DELAY);
+        assertEq(parameterUpdateDelay.pendingValue, 0);
+        assertEq(parameterUpdateDelay.updateTime, 0);
+
+        PantosTypes.UpdatableUint256
+            memory unbondingPeriodServiceNodeDeposit = pantosHubProxy
+                .getUnbondingPeriodServiceNodeDeposit();
         assertEq(
-            pantosHubProxy.getUnbondingPeriodServiceNodeDeposit(),
+            unbondingPeriodServiceNodeDeposit.currentValue,
             SERVICE_NODE_DEPOSIT_UNBONDING_PERIOD
         );
+        assertEq(unbondingPeriodServiceNodeDeposit.pendingValue, 0);
+        assertEq(unbondingPeriodServiceNodeDeposit.updateTime, 0);
+
         assertEq(pantosHubProxy.getNextTransferId(), 0);
+    }
+
+    // checks pre InitPantosHub state
+    function checkStatePantosHubAfterDeployment() public {
+        checkStatePantosHub(true, 1, 1);
     }
 
     // checks state after InitPantosHub
     function checkStatePantosHubAfterInit() public {
-        checkSupportedInterfaces();
-        assertEq(pantosHubProxy.owner(), deployer());
-        assertFalse(pantosHubProxy.paused());
+        checkStatePantosHub(false, 2, 2);
+
         assertEq(pantosHubProxy.getPantosToken(), PANTOS_TOKEN_ADDRESS);
         assertEq(
             pantosHubProxy.getPantosForwarder(),
             PANTOS_FORWARDER_ADDRESS
         );
         assertEq(pantosHubProxy.getPrimaryValidatorNode(), validatorAddress);
-        assertEq(pantosHubProxy.getNumberBlockchains(), 2);
-        assertEq(pantosHubProxy.getNumberActiveBlockchains(), 2);
-        assertEq(
-            pantosHubProxy.getMinimumValidatorFeeUpdatePeriod(),
-            MINIMUM_VALIDATOR_FEE_UPDATE_PERIOD
-        );
-        PantosTypes.BlockchainRecord
-            memory thisBlockchainRecord = pantosHubProxy.getBlockchainRecord(
-                uint256(thisBlockchain.blockchainId)
-            );
-        PantosTypes.ValidatorFeeRecord
-            memory thisBlockchainValidatorFeeRecord = pantosHubProxy
-                .getValidatorFeeRecord(uint256(thisBlockchain.blockchainId));
-        assertEq(thisBlockchainRecord.name, thisBlockchain.name);
-        assertEq(thisBlockchainRecord.active, true);
-        assertEq(
-            pantosHubProxy.getCurrentBlockchainId(),
-            uint256(thisBlockchain.blockchainId)
-        );
-        assertEq(
-            thisBlockchainValidatorFeeRecord.newFactor,
-            thisBlockchain.feeFactor
-        );
-        assertEq(thisBlockchainValidatorFeeRecord.oldFactor, 0);
-        assertEq(
-            thisBlockchainValidatorFeeRecord.validFrom,
-            FEE_FACTOR_VALID_FROM
-        );
+
         PantosTypes.BlockchainRecord
             memory otherBlockchainRecord = pantosHubProxy.getBlockchainRecord(
                 uint256(otherBlockchain.blockchainId)
             );
-
-        PantosTypes.ValidatorFeeRecord
-            memory otherBlockchainValidatorFeeRecord = pantosHubProxy
-                .getValidatorFeeRecord(uint256(otherBlockchain.blockchainId));
         assertEq(otherBlockchainRecord.name, otherBlockchain.name);
-        assertEq(otherBlockchainRecord.active, true);
+        assertTrue(otherBlockchainRecord.active);
+
+        PantosTypes.UpdatableUint256
+            memory otherBlockchainValidatorFeeFactor = pantosHubProxy
+                .getValidatorFeeFactor(uint256(otherBlockchain.blockchainId));
         assertEq(
-            otherBlockchainValidatorFeeRecord.newFactor,
+            otherBlockchainValidatorFeeFactor.currentValue,
             otherBlockchain.feeFactor
         );
-        assertEq(otherBlockchainValidatorFeeRecord.oldFactor, 0);
-        assertEq(
-            otherBlockchainValidatorFeeRecord.validFrom,
-            FEE_FACTOR_VALID_FROM
-        );
-
-        assertEq(
-            pantosHubProxy.getMinimumServiceNodeDeposit(),
-            MINIMUM_SERVICE_NODE_DEPOSIT
-        );
-        assertEq(
-            pantosHubProxy.getUnbondingPeriodServiceNodeDeposit(),
-            SERVICE_NODE_DEPOSIT_UNBONDING_PERIOD
-        );
-        assertEq(pantosHubProxy.getNextTransferId(), 0);
+        assertEq(otherBlockchainValidatorFeeFactor.pendingValue, 0);
+        assertEq(otherBlockchainValidatorFeeFactor.updateTime, 0);
     }
 
     function getPantosRegistrySelectors()
@@ -361,63 +342,90 @@ abstract contract PantosHubDeployer is PantosBaseTest {
         pure
         returns (bytes4[] memory)
     {
-        bytes4[] memory selectors = new bytes4[](42);
-        selectors[0] = IPantosRegistry.setPantosForwarder.selector;
-        selectors[1] = IPantosRegistry.setPantosToken.selector;
-        selectors[2] = IPantosRegistry.setPrimaryValidatorNode.selector;
-        selectors[3] = IPantosRegistry.registerBlockchain.selector;
-        selectors[4] = IPantosRegistry.unregisterBlockchain.selector;
-        selectors[5] = IPantosRegistry.updateBlockchainName.selector;
-        selectors[6] = IPantosRegistry.updateFeeFactor.selector;
-        selectors[7] = IPantosRegistry
-            .setUnbondingPeriodServiceNodeDeposit
+        bytes4[] memory selectors = new bytes4[](50);
+        uint i = 0;
+
+        selectors[i++] = IPantosRegistry.setPantosForwarder.selector;
+        selectors[i++] = IPantosRegistry.setPantosToken.selector;
+        selectors[i++] = IPantosRegistry.setPrimaryValidatorNode.selector;
+        selectors[i++] = IPantosRegistry.registerBlockchain.selector;
+        selectors[i++] = IPantosRegistry.unregisterBlockchain.selector;
+        selectors[i++] = IPantosRegistry.updateBlockchainName.selector;
+        selectors[i++] = IPantosRegistry
+            .initiateValidatorFeeFactorUpdate
             .selector;
-        selectors[8] = IPantosRegistry.setMinimumServiceNodeDeposit.selector;
-        selectors[9] = IPantosRegistry
-            .setMinimumValidatorFeeUpdatePeriod
+        selectors[i++] = IPantosRegistry
+            .executeValidatorFeeFactorUpdate
             .selector;
-        selectors[10] = IPantosRegistry.registerToken.selector;
-        selectors[11] = IPantosRegistry.unregisterToken.selector;
-        selectors[12] = IPantosRegistry.registerExternalToken.selector;
-        selectors[13] = IPantosRegistry.unregisterExternalToken.selector;
-        selectors[14] = IPantosRegistry.registerServiceNode.selector;
-        selectors[15] = IPantosRegistry.unregisterServiceNode.selector;
-        selectors[16] = IPantosRegistry.withdrawServiceNodeDeposit.selector;
-        selectors[17] = IPantosRegistry
+        selectors[i++] = IPantosRegistry
+            .initiateUnbondingPeriodServiceNodeDepositUpdate
+            .selector;
+        selectors[i++] = IPantosRegistry
+            .executeUnbondingPeriodServiceNodeDepositUpdate
+            .selector;
+        selectors[i++] = IPantosRegistry
+            .initiateMinimumServiceNodeDepositUpdate
+            .selector;
+        selectors[i++] = IPantosRegistry
+            .executeMinimumServiceNodeDepositUpdate
+            .selector;
+        selectors[i++] = IPantosRegistry
+            .initiateParameterUpdateDelayUpdate
+            .selector;
+        selectors[i++] = IPantosRegistry
+            .executeParameterUpdateDelayUpdate
+            .selector;
+        selectors[i++] = IPantosRegistry.registerToken.selector;
+        selectors[i++] = IPantosRegistry.unregisterToken.selector;
+        selectors[i++] = IPantosRegistry.registerExternalToken.selector;
+        selectors[i++] = IPantosRegistry.unregisterExternalToken.selector;
+        selectors[i++] = IPantosRegistry.registerServiceNode.selector;
+        selectors[i++] = IPantosRegistry.unregisterServiceNode.selector;
+        selectors[i++] = IPantosRegistry.withdrawServiceNodeDeposit.selector;
+        selectors[i++] = IPantosRegistry
             .cancelServiceNodeUnregistration
             .selector;
-        selectors[18] = IPantosRegistry.increaseServiceNodeDeposit.selector;
-        selectors[19] = IPantosRegistry.decreaseServiceNodeDeposit.selector;
-        selectors[20] = IPantosRegistry.updateServiceNodeUrl.selector;
+        selectors[i++] = IPantosRegistry.increaseServiceNodeDeposit.selector;
+        selectors[i++] = IPantosRegistry.decreaseServiceNodeDeposit.selector;
+        selectors[i++] = IPantosRegistry.updateServiceNodeUrl.selector;
 
-        selectors[21] = IPantosRegistry.getPantosForwarder.selector;
-        selectors[22] = IPantosRegistry.getPantosToken.selector;
-        selectors[23] = IPantosRegistry.getPrimaryValidatorNode.selector;
-        selectors[24] = IPantosRegistry.getNumberBlockchains.selector;
-        selectors[25] = IPantosRegistry.getNumberActiveBlockchains.selector;
-        selectors[26] = IPantosRegistry.getCurrentBlockchainId.selector;
-        selectors[27] = IPantosRegistry.getBlockchainRecord.selector;
-        selectors[28] = IPantosRegistry
+        selectors[i++] = IPantosRegistry.getPantosForwarder.selector;
+        selectors[i++] = IPantosRegistry.getPantosToken.selector;
+        selectors[i++] = IPantosRegistry.getPrimaryValidatorNode.selector;
+        selectors[i++] = IPantosRegistry.getNumberBlockchains.selector;
+        selectors[i++] = IPantosRegistry.getNumberActiveBlockchains.selector;
+        selectors[i++] = IPantosRegistry.getCurrentBlockchainId.selector;
+        selectors[i++] = IPantosRegistry.getBlockchainRecord.selector;
+        selectors[i++] = IPantosRegistry
             .isServiceNodeInTheUnbondingPeriod
             .selector;
-        selectors[29] = IPantosRegistry.isValidValidatorNodeNonce.selector;
-        selectors[30] = IPantosRegistry.getMinimumServiceNodeDeposit.selector;
-        selectors[31] = IPantosRegistry
+        selectors[i++] = IPantosRegistry.isValidValidatorNodeNonce.selector;
+        selectors[i++] = IPantosRegistry
+            .getCurrentMinimumServiceNodeDeposit
+            .selector;
+        selectors[i++] = IPantosRegistry.getMinimumServiceNodeDeposit.selector;
+        selectors[i++] = IPantosRegistry
+            .getCurrentUnbondingPeriodServiceNodeDeposit
+            .selector;
+        selectors[i++] = IPantosRegistry
             .getUnbondingPeriodServiceNodeDeposit
             .selector;
-        selectors[32] = IPantosRegistry.getTokens.selector;
-        selectors[33] = IPantosRegistry.getTokenRecord.selector;
-        selectors[34] = IPantosRegistry.getExternalTokenRecord.selector;
-        selectors[35] = IPantosRegistry.getServiceNodes.selector;
-        selectors[36] = IPantosRegistry.getServiceNodeRecord.selector;
-        selectors[37] = IPantosRegistry.getValidatorFeeRecord.selector;
-        selectors[38] = IPantosRegistry
-            .getMinimumValidatorFeeUpdatePeriod
+        selectors[i++] = IPantosRegistry.getTokens.selector;
+        selectors[i++] = IPantosRegistry.getTokenRecord.selector;
+        selectors[i++] = IPantosRegistry.getExternalTokenRecord.selector;
+        selectors[i++] = IPantosRegistry.getServiceNodes.selector;
+        selectors[i++] = IPantosRegistry.getServiceNodeRecord.selector;
+        selectors[i++] = IPantosRegistry.getCurrentValidatorFeeFactor.selector;
+        selectors[i++] = IPantosRegistry.getValidatorFeeFactor.selector;
+        selectors[i++] = IPantosRegistry
+            .getCurrentParameterUpdateDelay
             .selector;
+        selectors[i++] = IPantosRegistry.getParameterUpdateDelay.selector;
 
-        selectors[39] = IPantosRegistry.pause.selector;
-        selectors[40] = IPantosRegistry.unpause.selector;
-        selectors[41] = IPantosRegistry.paused.selector;
+        selectors[i++] = IPantosRegistry.pause.selector;
+        selectors[i++] = IPantosRegistry.unpause.selector;
+        selectors[i++] = IPantosRegistry.paused.selector;
+
         return selectors;
     }
 
@@ -521,17 +529,16 @@ abstract contract PantosHubDeployer is PantosBaseTest {
     function loadPantosHubMinimumServiceNodeDeposit()
         internal
         view
-        returns (uint256)
+        returns (PantosTypes.UpdatableUint256 memory)
     {
-        bytes32 slotValue = loadPantosHubSlotValue(7);
-        return uint256(slotValue);
+        return loadPantosHubUpdatableUint256(7);
     }
 
     function loadPantosHubTokens() internal view returns (address[] memory) {
-        bytes32 slotValue = loadPantosHubSlotValue(8);
+        bytes32 slotValue = loadPantosHubSlotValue(10);
         uint256 arrayLength = uint256(slotValue);
         address[] memory tokenAddresses = new address[](arrayLength);
-        uint256 startSlot = uint256(keccak256(abi.encodePacked(uint256(8))));
+        uint256 startSlot = uint256(keccak256(abi.encodePacked(uint256(10))));
         for (uint256 i = 0; i < arrayLength; i++) {
             slotValue = loadPantosHubSlotValue(startSlot + i);
             tokenAddresses[i] = toAddress(slotValue);
@@ -542,7 +549,7 @@ abstract contract PantosHubDeployer is PantosBaseTest {
     function loadPantosHubTokenIndex(
         address tokenAddress
     ) internal view returns (uint256) {
-        uint256 slot = uint256(keccak256(abi.encode(tokenAddress, 9)));
+        uint256 slot = uint256(keccak256(abi.encode(tokenAddress, 11)));
         bytes32 slotValue = loadPantosHubSlotValue(slot);
         return uint256(slotValue);
     }
@@ -550,7 +557,7 @@ abstract contract PantosHubDeployer is PantosBaseTest {
     function loadPantosHubTokenRecord(
         address tokenAddress
     ) internal view returns (PantosTypes.TokenRecord memory) {
-        uint256 startSlot = uint256(keccak256(abi.encode(tokenAddress, 10)));
+        uint256 startSlot = uint256(keccak256(abi.encode(tokenAddress, 12)));
         bytes32 slotValue = loadPantosHubSlotValue(startSlot);
         bool active = toBool(slotValue);
         return PantosTypes.TokenRecord(active);
@@ -564,7 +571,7 @@ abstract contract PantosHubDeployer is PantosBaseTest {
             keccak256(
                 abi.encode(
                     blockchainId,
-                    keccak256(abi.encode(tokenAddress, 11))
+                    keccak256(abi.encode(tokenAddress, 13))
                 )
             )
         );
@@ -582,10 +589,10 @@ abstract contract PantosHubDeployer is PantosBaseTest {
         view
         returns (address[] memory)
     {
-        bytes32 slotValue = loadPantosHubSlotValue(12);
+        bytes32 slotValue = loadPantosHubSlotValue(14);
         uint256 arrayLength = uint256(slotValue);
         address[] memory serviceNodeAddresses = new address[](arrayLength);
-        uint256 startSlot = uint256(keccak256(abi.encodePacked(uint256(12))));
+        uint256 startSlot = uint256(keccak256(abi.encodePacked(uint256(14))));
         for (uint256 i = 0; i < arrayLength; i++) {
             slotValue = loadPantosHubSlotValue(startSlot + i);
             serviceNodeAddresses[i] = toAddress(slotValue);
@@ -596,7 +603,7 @@ abstract contract PantosHubDeployer is PantosBaseTest {
     function loadPantosHubServiceNodeIndex(
         address serviceNodeAddress
     ) internal view returns (uint256) {
-        uint256 slot = uint256(keccak256(abi.encode(serviceNodeAddress, 13)));
+        uint256 slot = uint256(keccak256(abi.encode(serviceNodeAddress, 15)));
         bytes32 slotValue = loadPantosHubSlotValue(slot);
         return uint256(slotValue);
     }
@@ -605,7 +612,7 @@ abstract contract PantosHubDeployer is PantosBaseTest {
         address serviceNodeAddress
     ) internal view returns (PantosTypes.ServiceNodeRecord memory) {
         uint256 startSlot = uint256(
-            keccak256(abi.encode(serviceNodeAddress, 14))
+            keccak256(abi.encode(serviceNodeAddress, 16))
         );
         bytes32 slotValue = loadPantosHubSlotValue(startSlot);
         bool active = toBool(slotValue);
@@ -628,7 +635,7 @@ abstract contract PantosHubDeployer is PantosBaseTest {
     }
 
     function loadPantosHubNextTransferId() internal view returns (uint256) {
-        bytes32 slotValue = loadPantosHubSlotValue(15);
+        bytes32 slotValue = loadPantosHubSlotValue(17);
         return uint256(slotValue);
     }
 
@@ -640,7 +647,7 @@ abstract contract PantosHubDeployer is PantosBaseTest {
             keccak256(
                 abi.encode(
                     sourceTransferId,
-                    keccak256(abi.encode(blockchainId, 16))
+                    keccak256(abi.encode(blockchainId, 18))
                 )
             )
         );
@@ -648,41 +655,33 @@ abstract contract PantosHubDeployer is PantosBaseTest {
         return toBool(slotValue);
     }
 
-    function loadPantosHubValidatorFeeRecord(
+    function loadPantosHubValidatorFeeFactor(
         uint256 blockchainId
-    ) internal view returns (PantosTypes.ValidatorFeeRecord memory) {
-        uint256 startSlot = uint256(keccak256(abi.encode(blockchainId, 17)));
-        bytes32 slotValue = loadPantosHubSlotValue(startSlot);
-        uint256 oldFactor = uint256(slotValue);
-        slotValue = loadPantosHubSlotValue(startSlot + 1);
-        uint256 newFactor = uint256(slotValue);
-        slotValue = loadPantosHubSlotValue(startSlot + 2);
-        uint256 validFrom = uint256(slotValue);
-        return PantosTypes.ValidatorFeeRecord(oldFactor, newFactor, validFrom);
+    ) internal view returns (PantosTypes.UpdatableUint256 memory) {
+        uint256 startSlot = uint256(keccak256(abi.encode(blockchainId, 19)));
+        return loadPantosHubUpdatableUint256(startSlot);
     }
 
-    function loadPantosHubMinimumValidatorFeeUpdatePeriod()
+    function loadPantosHubParameterUpdateDelay()
         internal
         view
-        returns (uint256)
+        returns (PantosTypes.UpdatableUint256 memory)
     {
-        bytes32 slotValue = loadPantosHubSlotValue(18);
-        return uint256(slotValue);
+        return loadPantosHubUpdatableUint256(20);
     }
 
     function loadPantosHubUnbondingPeriodServiceNodeDeposit()
         internal
         view
-        returns (uint256)
+        returns (PantosTypes.UpdatableUint256 memory)
     {
-        bytes32 slotValue = loadPantosHubSlotValue(19);
-        return uint256(slotValue);
+        return loadPantosHubUpdatableUint256(23);
     }
 
     function loadPantosHubIsServiceNodeUrlUsed(
         bytes32 serviceNodeUrlHash
     ) internal view returns (bool) {
-        uint256 slot = uint256(keccak256(abi.encode(serviceNodeUrlHash, 20)));
+        uint256 slot = uint256(keccak256(abi.encode(serviceNodeUrlHash, 26)));
         bytes32 slotValue = loadPantosHubSlotValue(slot);
         return toBool(slotValue);
     }
@@ -691,5 +690,22 @@ abstract contract PantosHubDeployer is PantosBaseTest {
         uint256 slot
     ) private view returns (bytes32) {
         return vm.load(address(pantosHubProxy), bytes32(slot));
+    }
+
+    function loadPantosHubUpdatableUint256(
+        uint256 startSlot
+    ) private view returns (PantosTypes.UpdatableUint256 memory) {
+        bytes32 slotValue = loadPantosHubSlotValue(startSlot);
+        uint256 currentValue = uint256(slotValue);
+        slotValue = loadPantosHubSlotValue(startSlot + 1);
+        uint256 pendingValue = uint256(slotValue);
+        slotValue = loadPantosHubSlotValue(startSlot + 2);
+        uint256 updateTime = uint256(slotValue);
+        return
+            PantosTypes.UpdatableUint256(
+                currentValue,
+                pendingValue,
+                updateTime
+            );
     }
 }
