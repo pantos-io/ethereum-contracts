@@ -210,6 +210,7 @@ contract PantosRegistryFacet is IPantosRegistry, PantosBaseFacet {
     /**
      * @dev See {IPantosRegistry-executeValidatorFeeFactorUpdate}.
      */
+    // slither-disable-next-line timestamp
     function executeValidatorFeeFactorUpdate(
         uint256 blockchainId
     ) external override {
