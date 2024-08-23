@@ -46,7 +46,10 @@ contract RedeployHub is PantosHubRedeployer {
             .getPrimaryValidatorNode();
         uint256 nextTransferId = oldPantosHubProxy.getNextTransferId();
 
-        (IPantosHub newPantosHubProxy, ) = deployPantosHub(nextTransferId);
+        (IPantosHub newPantosHubProxy, ) = deployPantosHub(
+            nextTransferId,
+            getAccessController()
+        );
         initializePantosHub(
             newPantosHubProxy,
             getPantosForwarder(),

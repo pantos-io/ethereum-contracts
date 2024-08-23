@@ -7,17 +7,24 @@ import {console2} from "forge-std/console2.sol";
 import {IPantosHub} from "../../src/interfaces/IPantosHub.sol";
 import {PantosForwarder} from "../../src/PantosForwarder.sol";
 import {PantosToken} from "../../src/PantosToken.sol";
+import {AccessController} from "../../src/access/AccessController.sol";
 
 import {Constants} from "./Constants.s.sol";
 import {PantosBaseScript} from "./PantosBaseScript.s.sol";
 
 abstract contract PantosForwarderDeployer is PantosBaseScript {
-    function deployPantosForwarder() public returns (PantosForwarder) {
-        PantosForwarder pantosForwarder = new PantosForwarder();
+    function deployPantosForwarder(
+        AccessController accessController
+    ) public returns (PantosForwarder) {
+        PantosForwarder pantosForwarder = new PantosForwarder(
+            address(accessController)
+        );
         console2.log(
-            "PantosForwarder deployed; paused=%s; address=%s",
+            "PantosForwarder deployed; paused=%s; address=%s; "
+            "accessController=%s",
             pantosForwarder.paused(),
-            address(pantosForwarder)
+            address(pantosForwarder),
+            address(accessController)
         );
         return pantosForwarder;
     }

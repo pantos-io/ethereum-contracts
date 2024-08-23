@@ -23,8 +23,17 @@ contract PantosTokenWrapper is PantosWrapper {
         string memory symbol_,
         uint8 decimals_,
         // slither-disable-next-line missing-zero-check
-        address wrappedToken
-    ) PantosWrapper(name_, symbol_, decimals_, wrappedToken != address(0)) {
+        address wrappedToken,
+        address accessControllerAddress
+    )
+        PantosWrapper(
+            name_,
+            symbol_,
+            decimals_,
+            wrappedToken != address(0),
+            accessControllerAddress
+        )
+    {
         _wrappedToken = wrappedToken;
     }
 

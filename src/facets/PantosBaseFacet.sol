@@ -4,6 +4,8 @@ pragma solidity 0.8.26;
 import {LibDiamond} from "@diamond/libraries/LibDiamond.sol";
 
 import {PantosHubStorage} from "../PantosHubStorage.sol";
+import {PantosRoles} from "../access/PantosRoles.sol";
+import {LibAccessControl} from "../libraries/LibAccessControl.sol";
 
 /**
  * @notice Base class for all Pantos-Hub-related facets which shares 
@@ -17,23 +19,18 @@ import {PantosHubStorage} from "../PantosHubStorage.sol";
 abstract contract PantosBaseFacet {
     // Application of the App Storage pattern
     PantosHubStorage internal s;
-
     /**
      * @notice Modifier which makes sure that only a transaction from the
-     * Pantos Hub owner is allowed.
+     * Pantos Hub deployer role is allowed or the contract is not paused.
      */
-    modifier onlyOwner() {
-        LibDiamond.enforceIsContractOwner();
-        _;
-    }
-
-    /**
-     * @notice Modifier which makes sure that only a transaction from the
-     * Pantos Hub owner is allowed or the contract is not paused.
-     */
-    modifier ownerOrNotPaused() {
+    modifier deployerOrNotPaused() {
         if (s.paused) {
-            LibDiamond.enforceIsContractOwner();
+            LibAccessControl.AccessControlStorage
+                storage acs = LibAccessControl.accessControlStorage();
+            require(
+                acs.accessController.hasRole(PantosRoles.DEPLOYER, msg.sender),
+                "PantosHub: caller doesn't have role"
+            );
         }
         _;
     }
@@ -65,6 +62,16 @@ abstract contract PantosBaseFacet {
      */
     modifier whenPaused() {
         require(s.paused, "PantosHub: not paused");
+        _;
+    }
+
+    modifier onlyRole(bytes32 _role) {
+        LibAccessControl.AccessControlStorage storage acs = LibAccessControl
+            .accessControlStorage();
+        require(
+            acs.accessController.hasRole(_role, msg.sender),
+            "PantosHub: caller doesn't have role"
+        );
         _;
     }
 }

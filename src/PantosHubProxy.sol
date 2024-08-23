@@ -5,6 +5,9 @@ pragma solidity 0.8.26;
 import {LibDiamond} from "@diamond/libraries/LibDiamond.sol";
 import {IDiamondCut} from "@diamond/interfaces/IDiamondCut.sol";
 
+import {LibAccessControl} from "./libraries/LibAccessControl.sol";
+import {AccessController} from "./access/AccessController.sol";
+
 /**
  * @title Pantos Hub proxy
  *
@@ -23,20 +26,20 @@ import {IDiamondCut} from "@diamond/interfaces/IDiamondCut.sol";
  */
 contract PantosHubProxy {
     /**
-     * @notice Sets the contract owner and add intial diamond cut facet.
+     * @notice Add intial diamond cut facet and set access controller.
      *
-     * @param _contractOwner Contract owner address.
-     * @param _diamondCutFacet Diamond facet address.
+     * @param diamondCutFacet_ Diamond facet address.
+     * @param accessController_ Access controller address.
      */
-    constructor(address _contractOwner, address _diamondCutFacet) payable {
-        LibDiamond.setContractOwner(_contractOwner);
+    constructor(address diamondCutFacet_, address accessController_) payable {
+        LibAccessControl.setAccessController(accessController_);
 
         // Add the diamondCut external function from the diamondCutFacet
         IDiamondCut.FacetCut[] memory cut = new IDiamondCut.FacetCut[](1);
         bytes4[] memory functionSelectors = new bytes4[](1);
         functionSelectors[0] = IDiamondCut.diamondCut.selector;
         cut[0] = IDiamondCut.FacetCut({
-            facetAddress: _diamondCutFacet,
+            facetAddress: diamondCutFacet_,
             action: IDiamondCut.FacetCutAction.Add,
             functionSelectors: functionSelectors
         });

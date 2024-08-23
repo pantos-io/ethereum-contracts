@@ -14,7 +14,11 @@ contract BitpandaEcosystemTokenTest is PantosBaseTokenTest {
     BitpandaEcosystemTokenHarness bestToken;
 
     function setUp() public {
-        bestToken = new BitpandaEcosystemTokenHarness(INITIAL_SUPPLY_BEST);
+        accessController = deployAccessController();
+        bestToken = new BitpandaEcosystemTokenHarness(
+            INITIAL_SUPPLY_BEST,
+            address(accessController)
+        );
     }
 
     function test_SetUpState() external {
@@ -26,6 +30,7 @@ contract BitpandaEcosystemTokenTest is PantosBaseTokenTest {
     function test_pause_AfterInitialization() external {
         initializeToken();
 
+        vm.prank(PAUSER);
         bestToken.pause();
 
         assertTrue(bestToken.paused());
@@ -40,13 +45,13 @@ contract BitpandaEcosystemTokenTest is PantosBaseTokenTest {
         whenNotPausedTest(address(bestToken), calldata_);
     }
 
-    function test_pause_ByNonOwner() external {
+    function test_pause_ByNonPauser() external {
         initializeToken();
         bytes memory calldata_ = abi.encodeWithSelector(
             bestToken.pause.selector
         );
 
-        onlyOwnerTest(address(bestToken), calldata_);
+        onlyRoleTest(address(bestToken), calldata_);
     }
 
     function test_unpause_AfterDeploy() external {
@@ -64,13 +69,13 @@ contract BitpandaEcosystemTokenTest is PantosBaseTokenTest {
         whenPausedTest(address(bestToken), calldata_);
     }
 
-    function test_unpause_ByNonOwner() external {
+    function test_unpause_ByNonSuperCriticalOps() external {
         bestToken.setPantosForwarder(PANTOS_FORWARDER_ADDRESS);
         bytes memory calldata_ = abi.encodeWithSelector(
             bestToken.unpause.selector
         );
 
-        onlyOwnerTest(address(bestToken), calldata_);
+        onlyRoleTest(address(bestToken), calldata_);
     }
 
     function test_unpause_WithNoForwarderSet() external {
@@ -80,6 +85,7 @@ contract BitpandaEcosystemTokenTest is PantosBaseTokenTest {
             )
         );
 
+        vm.prank(SUPER_CRITICAL_OPS);
         bestToken.unpause();
     }
 
@@ -132,6 +138,7 @@ contract BitpandaEcosystemTokenTest is PantosBaseTokenTest {
 
     function initializeToken() public override {
         bestToken.setPantosForwarder(PANTOS_FORWARDER_ADDRESS);
+        vm.prank(SUPER_CRITICAL_OPS);
         bestToken.unpause();
     }
 
@@ -150,7 +157,10 @@ contract BitpandaEcosystemTokenTest is PantosBaseTokenTest {
 }
 
 contract BitpandaEcosystemTokenHarness is BitpandaEcosystemToken {
-    constructor(uint256 initialSupply) BitpandaEcosystemToken(initialSupply) {}
+    constructor(
+        uint256 initialSupply,
+        address accessController
+    ) BitpandaEcosystemToken(initialSupply, accessController) {}
 
     function exposed_unsetPantosForwarder() external {
         _unsetPantosForwarder();
