@@ -127,6 +127,13 @@ contract PantosToken is
     }
 
     /**
+     * @dev Disable the transfer of ownership.
+     */
+    function transferOwnership(address) public view override onlyOwner {
+        require(false, "PantosToken: ownership cannot be transferred");
+    }
+
+    /**
      * @dev See {ERC20-_update}.
      */
     function _update(
