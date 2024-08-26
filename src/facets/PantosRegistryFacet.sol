@@ -110,11 +110,28 @@ contract PantosRegistryFacet is IPantosRegistry, PantosBaseFacet {
     function registerBlockchain(
         uint256 blockchainId,
         string calldata name,
-        uint256 feeFactor,
-        uint256 feeFactorValidFrom
+        uint256 validatorFeeFactor
     ) external override onlyRole(PantosRoles.SUPER_CRITICAL_OPS) {
-        _registerBlockchain(blockchainId, name);
-        _updateFeeFactor(blockchainId, feeFactor, feeFactorValidFrom);
+        require(
+            bytes(name).length > 0,
+            "PantosHub: blockchain name must not be empty"
+        );
+        PantosTypes.BlockchainRecord storage blockchainRecord = s
+            .blockchainRecords[blockchainId];
+        require(
+            !blockchainRecord.active,
+            "PantosHub: blockchain already registered"
+        );
+        blockchainRecord.active = true;
+        blockchainRecord.name = name;
+        _initializeUpdatableUint256(
+            s.validatorFeeFactors[blockchainId],
+            validatorFeeFactor
+        );
+        if (blockchainId >= s.numberBlockchains)
+            s.numberBlockchains = blockchainId + 1;
+        s.numberActiveBlockchains++;
+        emit BlockchainRegistered(blockchainId, validatorFeeFactor);
     }
 
     /**
@@ -174,48 +191,134 @@ contract PantosRegistryFacet is IPantosRegistry, PantosBaseFacet {
     }
 
     /**
-     * @dev See {IPantosRegistry-updateFeeFactor}.
+     * @dev See {IPantosRegistry-initiateValidatorFeeFactorUpdate}.
      */
-    function updateFeeFactor(
+    // slither-disable-next-line timestamp
+    function initiateValidatorFeeFactorUpdate(
         uint256 blockchainId,
-        uint256 newFactor,
-        uint256 validFrom
+        uint256 newValidatorFeeFactor
     ) external override onlyRole(PantosRoles.MEDIUM_CRITICAL_OPS) {
-        _updateFeeFactor(blockchainId, newFactor, validFrom);
-    }
-
-    /**
-     * @dev See {IPantosRegistry-setUnbondingPeriodServiceNodeDeposit}.
-     */
-    function setUnbondingPeriodServiceNodeDeposit(
-        uint256 unbondingPeriodServiceNodeDeposit
-    ) public override onlyRole(PantosRoles.MEDIUM_CRITICAL_OPS) {
-        s
-            .unbondingPeriodServiceNodeDeposit = unbondingPeriodServiceNodeDeposit;
-        emit UnbondingPeriodServiceNodeDepositUpdated(
-            unbondingPeriodServiceNodeDeposit
+        require(
+            newValidatorFeeFactor >= 1,
+            "PantosHub: new validator fee factor must be >= 1"
+        );
+        require(
+            s.blockchainRecords[blockchainId].active,
+            "PantosHub: blockchain must be active"
+        );
+        PantosTypes.UpdatableUint256 storage validatorFeeFactor = s
+            .validatorFeeFactors[blockchainId];
+        _initiateUpdatableUint256Update(
+            validatorFeeFactor,
+            newValidatorFeeFactor
+        );
+        emit ValidatorFeeFactorUpdateInitiated(
+            blockchainId,
+            newValidatorFeeFactor,
+            validatorFeeFactor.updateTime
         );
     }
 
     /**
-     * @dev See {IPantosRegistry-setMinimumServiceNodeDeposit}.
+     * @dev See {IPantosRegistry-executeValidatorFeeFactorUpdate}.
      */
-    function setMinimumServiceNodeDeposit(
-        uint256 minimumServiceNodeDeposit
-    ) public override whenPaused onlyRole(PantosRoles.MEDIUM_CRITICAL_OPS) {
-        s.minimumServiceNodeDeposit = minimumServiceNodeDeposit;
-        emit MinimumServiceNodeDepositUpdated(minimumServiceNodeDeposit);
+    // slither-disable-next-line timestamp
+    function executeValidatorFeeFactorUpdate(
+        uint256 blockchainId
+    ) external override {
+        require(
+            s.blockchainRecords[blockchainId].active,
+            "PantosHub: blockchain must be active"
+        );
+        PantosTypes.UpdatableUint256 storage validatorFeeFactor = s
+            .validatorFeeFactors[blockchainId];
+        _executeUpdatableUint256Update(validatorFeeFactor);
+        emit ValidatorFeeFactorUpdateExecuted(
+            blockchainId,
+            validatorFeeFactor.currentValue
+        );
     }
 
     /**
-     * @dev See {IPantosRegistry-setMinimumValidatorFeeUpdatePeriod}.
+     * @dev See
+     * {IPantosRegistry-initiateUnbondingPeriodServiceNodeDepositUpdate}.
      */
-    function setMinimumValidatorFeeUpdatePeriod(
-        uint256 minimumValidatorFeeUpdatePeriod
+    function initiateUnbondingPeriodServiceNodeDepositUpdate(
+        uint256 newUnbondingPeriodServiceNodeDeposit
     ) external override onlyRole(PantosRoles.MEDIUM_CRITICAL_OPS) {
-        s.minimumValidatorFeeUpdatePeriod = minimumValidatorFeeUpdatePeriod;
-        emit MinimumValidatorFeeUpdatePeriodUpdated(
-            minimumValidatorFeeUpdatePeriod
+        _initiateUpdatableUint256Update(
+            s.unbondingPeriodServiceNodeDeposit,
+            newUnbondingPeriodServiceNodeDeposit
+        );
+        emit UnbondingPeriodServiceNodeDepositUpdateInitiated(
+            newUnbondingPeriodServiceNodeDeposit,
+            s.unbondingPeriodServiceNodeDeposit.updateTime
+        );
+    }
+
+    /**
+     * @dev See
+     * {IPantosRegistry-executeUnbondingPeriodServiceNodeDepositUpdate}.
+     */
+    function executeUnbondingPeriodServiceNodeDepositUpdate()
+        external
+        override
+    {
+        _executeUpdatableUint256Update(s.unbondingPeriodServiceNodeDeposit);
+        emit UnbondingPeriodServiceNodeDepositUpdateExecuted(
+            s.unbondingPeriodServiceNodeDeposit.currentValue
+        );
+    }
+
+    /**
+     * @dev See {IPantosRegistry-initiateMinimumServiceNodeDepositUpdate}.
+     */
+    function initiateMinimumServiceNodeDepositUpdate(
+        uint256 newMinimumServiceNodeDeposit
+    ) external override onlyRole(PantosRoles.MEDIUM_CRITICAL_OPS) {
+        _initiateUpdatableUint256Update(
+            s.minimumServiceNodeDeposit,
+            newMinimumServiceNodeDeposit
+        );
+        emit MinimumServiceNodeDepositUpdateInitiated(
+            newMinimumServiceNodeDeposit,
+            s.minimumServiceNodeDeposit.updateTime
+        );
+    }
+
+    /**
+     * @dev See {IPantosRegistry-executeMinimumServiceNodeDepositUpdate}.
+     */
+    function executeMinimumServiceNodeDepositUpdate() external override {
+        _executeUpdatableUint256Update(s.minimumServiceNodeDeposit);
+        emit MinimumServiceNodeDepositUpdateExecuted(
+            s.minimumServiceNodeDeposit.currentValue
+        );
+    }
+
+    /**
+     * @dev See {IPantosRegistry-initiateParameterUpdateDelayUpdate}.
+     */
+    function initiateParameterUpdateDelayUpdate(
+        uint256 newParameterUpdateDelay
+    ) external override onlyRole(PantosRoles.MEDIUM_CRITICAL_OPS) {
+        _initiateUpdatableUint256Update(
+            s.parameterUpdateDelay,
+            newParameterUpdateDelay
+        );
+        emit ParameterUpdateDelayUpdateInitiated(
+            newParameterUpdateDelay,
+            s.parameterUpdateDelay.updateTime
+        );
+    }
+
+    /**
+     * @dev See {IPantosRegistry-executeParameterUpdateDelayUpdate}.
+     */
+    function executeParameterUpdateDelayUpdate() external override {
+        _executeUpdatableUint256Update(s.parameterUpdateDelay);
+        emit ParameterUpdateDelayUpdateExecuted(
+            s.parameterUpdateDelay.currentValue
         );
     }
 
@@ -383,7 +486,7 @@ contract PantosRegistryFacet is IPantosRegistry, PantosBaseFacet {
             "PantosHub: service node URL must be unique"
         );
         require(
-            deposit >= s.minimumServiceNodeDeposit,
+            deposit >= s.minimumServiceNodeDeposit.currentValue,
             "PantosHub: deposit must be >= minimum service node deposit"
         );
         // Validate the stored service node data
@@ -483,7 +586,7 @@ contract PantosRegistryFacet is IPantosRegistry, PantosBaseFacet {
         require(
             block.timestamp >=
                 serviceNodeRecord.unregisterTime +
-                    s.unbondingPeriodServiceNodeDeposit,
+                    s.unbondingPeriodServiceNodeDeposit.currentValue,
             "PantosHub: the unbonding period has not elapsed"
         );
         uint256 deposit = serviceNodeRecord.deposit;
@@ -558,7 +661,7 @@ contract PantosRegistryFacet is IPantosRegistry, PantosBaseFacet {
         );
         uint256 newServiceNodeDeposit = serviceNodeRecord.deposit + deposit;
         require(
-            newServiceNodeDeposit >= s.minimumServiceNodeDeposit,
+            newServiceNodeDeposit >= s.minimumServiceNodeDeposit.currentValue,
             "PantosHub: new deposit must be at least the minimum "
             "service node deposit"
         );
@@ -599,7 +702,7 @@ contract PantosRegistryFacet is IPantosRegistry, PantosBaseFacet {
         );
         uint256 newServiceNodeDeposit = serviceNodeRecord.deposit - deposit;
         require(
-            newServiceNodeDeposit >= s.minimumServiceNodeDeposit,
+            newServiceNodeDeposit >= s.minimumServiceNodeDeposit.currentValue,
             "PantosHub: new deposit must be at least the minimum "
             "service node deposit"
         );
@@ -703,15 +806,39 @@ contract PantosRegistryFacet is IPantosRegistry, PantosBaseFacet {
     }
 
     /**
+     * @dev See {IPantosRegistry-getCurrentMinimumServiceNodeDeposit}.
+     */
+    function getCurrentMinimumServiceNodeDeposit()
+        public
+        view
+        override
+        returns (uint256)
+    {
+        return s.minimumServiceNodeDeposit.currentValue;
+    }
+
+    /**
      * @dev See {IPantosRegistry-getMinimumServiceNodeDeposit}.
      */
     function getMinimumServiceNodeDeposit()
         public
         view
         override
-        returns (uint256)
+        returns (PantosTypes.UpdatableUint256 memory)
     {
         return s.minimumServiceNodeDeposit;
+    }
+
+    /**
+     * @dev See {IPantosRegistry-getCurrentUnbondingPeriodServiceNodeDeposit}.
+     */
+    function getCurrentUnbondingPeriodServiceNodeDeposit()
+        public
+        view
+        override
+        returns (uint256)
+    {
+        return s.unbondingPeriodServiceNodeDeposit.currentValue;
     }
 
     /**
@@ -721,7 +848,7 @@ contract PantosRegistryFacet is IPantosRegistry, PantosBaseFacet {
         public
         view
         override
-        returns (uint256)
+        returns (PantosTypes.UpdatableUint256 memory)
     {
         return s.unbondingPeriodServiceNodeDeposit;
     }
@@ -774,24 +901,45 @@ contract PantosRegistryFacet is IPantosRegistry, PantosBaseFacet {
     }
 
     /**
-     * @dev See {IPantosRegistry-getValidatorFeeRecord}.
+     * @dev See {IPantosRegistry-getCurrentValidatorFeeFactor}.
      */
-    function getValidatorFeeRecord(
+    function getCurrentValidatorFeeFactor(
         uint256 blockchainId
-    ) public view override returns (PantosTypes.ValidatorFeeRecord memory) {
-        return s.validatorFeeRecords[blockchainId];
+    ) public view override returns (uint256) {
+        return s.validatorFeeFactors[blockchainId].currentValue;
     }
 
     /**
-     * @dev See {IPantosRegistry-getMinimumValidatorFeeUpdatePeriod}.
+     * @dev See {IPantosRegistry-getValidatorFeeFactor}.
      */
-    function getMinimumValidatorFeeUpdatePeriod()
+    function getValidatorFeeFactor(
+        uint256 blockchainId
+    ) public view override returns (PantosTypes.UpdatableUint256 memory) {
+        return s.validatorFeeFactors[blockchainId];
+    }
+
+    /**
+     * @dev See {IPantosRegistry-getCurrentParameterUpdateDelay}.
+     */
+    function getCurrentParameterUpdateDelay()
         public
         view
         override
         returns (uint256)
     {
-        return s.minimumValidatorFeeUpdatePeriod;
+        return s.parameterUpdateDelay.currentValue;
+    }
+
+    /**
+     * @dev See {IPantosRegistry-getParameterUpdateDelay}.
+     */
+    function getParameterUpdateDelay()
+        public
+        view
+        override
+        returns (PantosTypes.UpdatableUint256 memory)
+    {
+        return s.parameterUpdateDelay;
     }
 
     /**
@@ -825,60 +973,39 @@ contract PantosRegistryFacet is IPantosRegistry, PantosBaseFacet {
         return s.paused;
     }
 
-    function _registerBlockchain(
-        uint256 blockchainId,
-        string memory name
-    ) private onlyRole(PantosRoles.SUPER_CRITICAL_OPS) {
-        // Validate the input parameters
-        require(
-            bytes(name).length > 0,
-            "PantosHub: blockchain name must not be empty"
-        );
-        // Validate the stored blockchain data
-        PantosTypes.BlockchainRecord storage blockchainRecord = s
-            .blockchainRecords[blockchainId];
-        require(
-            !blockchainRecord.active,
-            "PantosHub: blockchain already registered"
-        );
-        // Store the blockchain record
-        blockchainRecord.active = true;
-        blockchainRecord.name = name;
-        if (blockchainId >= s.numberBlockchains)
-            s.numberBlockchains = blockchainId + 1;
-        s.numberActiveBlockchains++;
-        emit BlockchainRegistered(blockchainId);
+    function _initializeUpdatableUint256(
+        PantosTypes.UpdatableUint256 storage updatableUint256,
+        uint256 currentValue
+    ) private {
+        updatableUint256.currentValue = currentValue;
+        updatableUint256.pendingValue = 0;
+        updatableUint256.updateTime = 0;
     }
 
-    function _updateFeeFactor(
-        uint256 blockchainId,
-        uint256 newFactor,
-        uint256 validFrom
+    function _initiateUpdatableUint256Update(
+        PantosTypes.UpdatableUint256 storage updatableUint256,
+        uint256 newValue
+    ) private {
+        updatableUint256.pendingValue = newValue;
+        // slither-disable-next-line timestamp
+        updatableUint256.updateTime =
+            block.timestamp +
+            s.parameterUpdateDelay.currentValue;
+    }
+
+    function _executeUpdatableUint256Update(
+        PantosTypes.UpdatableUint256 storage updatableUint256
     ) private {
         require(
-            blockchainId < s.numberBlockchains,
-            "PantosHub: blockchain ID not supported"
+            updatableUint256.updateTime > 0 &&
+                updatableUint256.pendingValue != updatableUint256.currentValue,
+            "PantosHub: no pending update"
         );
-        require(newFactor >= 1, "PantosHub: newFactor must be >= 1");
         // slither-disable-next-line timestamp
         require(
-            validFrom >= block.timestamp + s.minimumValidatorFeeUpdatePeriod,
-            "PantosHub: validFrom must be larger than "
-            "(block timestamp + minimum update period)"
+            block.timestamp >= updatableUint256.updateTime,
+            "PantosHub: update time not reached"
         );
-        PantosTypes.ValidatorFeeRecord storage feeRecord = s
-            .validatorFeeRecords[blockchainId];
-        // slither-disable-next-line timestamp
-        if (block.timestamp >= feeRecord.validFrom) {
-            feeRecord.oldFactor = feeRecord.newFactor;
-        }
-        feeRecord.newFactor = newFactor;
-        feeRecord.validFrom = validFrom;
-        emit ValidatorFeeUpdated(
-            blockchainId,
-            feeRecord.oldFactor,
-            newFactor,
-            validFrom
-        );
+        updatableUint256.currentValue = updatableUint256.pendingValue;
     }
 }

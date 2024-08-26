@@ -78,34 +78,18 @@ contract PantosTransferFacet is IPantosTransfer, PantosBaseFacet {
             request.serviceNode
         );
         // Forward the transfer request
-        {
-            // Scope for verifying and forwarding the TransferFromRequest,
-            // avoids stack too deep exception
-            uint256 sourceBlockchainFactor;
-            uint256 destinationBlockchainFactor;
-            PantosTypes.ValidatorFeeRecord memory sourceFeeRecord = s
-                .validatorFeeRecords[s.currentBlockchainId];
-            PantosTypes.ValidatorFeeRecord memory destinationFeeRecord = s
-                .validatorFeeRecords[request.destinationBlockchainId];
-            // slither-disable-next-line timestamp
-            if (block.timestamp >= sourceFeeRecord.validFrom) {
-                sourceBlockchainFactor = sourceFeeRecord.newFactor;
-            } else {
-                sourceBlockchainFactor = sourceFeeRecord.oldFactor;
-            }
-            // slither-disable-next-line timestamp
-            if (block.timestamp >= destinationFeeRecord.validFrom) {
-                destinationBlockchainFactor = destinationFeeRecord.newFactor;
-            } else {
-                destinationBlockchainFactor = destinationFeeRecord.oldFactor;
-            }
-            IPantosForwarder(s.pantosForwarder).verifyAndForwardTransferFrom(
-                sourceBlockchainFactor,
-                destinationBlockchainFactor,
-                request,
-                signature
-            );
-        }
+        uint256 sourceBlockchainFactor = s
+            .validatorFeeFactors[s.currentBlockchainId]
+            .currentValue;
+        uint256 destinationBlockchainFactor = s
+            .validatorFeeFactors[request.destinationBlockchainId]
+            .currentValue;
+        IPantosForwarder(s.pantosForwarder).verifyAndForwardTransferFrom(
+            sourceBlockchainFactor,
+            destinationBlockchainFactor,
+            request,
+            signature
+        );
         return sourceTransferId;
     }
 
@@ -330,7 +314,8 @@ contract PantosTransferFacet is IPantosTransfer, PantosBaseFacet {
         );
         // Service node must have enough deposit
         require(
-            serviceNodeRecord.deposit >= s.minimumServiceNodeDeposit,
+            serviceNodeRecord.deposit >=
+                s.minimumServiceNodeDeposit.currentValue,
             "PantosHub: service node must have enough deposit"
         );
     }

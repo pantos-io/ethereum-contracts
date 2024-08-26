@@ -31,9 +31,8 @@ contract PantosHubInit {
         string blockchainName;
         uint256 minimumServiceNodeDeposit;
         uint256 unbondingPeriodServiceNodeDeposit;
-        uint256 feeFactor;
-        uint256 feeFactorValidFrom;
-        uint256 minimumValidatorFeeUpdatePeriod;
+        uint256 validatorFeeFactor;
+        uint256 parameterUpdateDelay;
         uint256 nextTransferId;
     }
 
@@ -71,25 +70,18 @@ contract PantosHubInit {
         ps.blockchainRecords[args.blockchainId].name = args.blockchainName;
         ps.numberBlockchains = args.blockchainId + 1;
         ps.numberActiveBlockchains++;
-        ps.minimumValidatorFeeUpdatePeriod = args
-            .minimumValidatorFeeUpdatePeriod;
+        ps.parameterUpdateDelay.currentValue = args.parameterUpdateDelay;
 
-        // update fee factor
-        require(args.feeFactor >= 1, "PantosHubInit: newFactor must be >= 1");
-        // slither-disable-next-line timestamp
         require(
-            args.feeFactorValidFrom >=
-                block.timestamp + args.minimumValidatorFeeUpdatePeriod,
-            "PantosHubInit: validFrom must be larger than "
-            "(block timestamp + minimum update period)"
+            args.validatorFeeFactor >= 1,
+            "PantosHubInit: validator fee factor must be >= 1"
         );
+        ps.validatorFeeFactors[args.blockchainId].currentValue = args
+            .validatorFeeFactor;
 
-        ps.validatorFeeRecords[args.blockchainId].newFactor = args.feeFactor;
-        ps.validatorFeeRecords[args.blockchainId].validFrom = args
-            .feeFactorValidFrom;
-
-        ps.minimumServiceNodeDeposit = args.minimumServiceNodeDeposit;
-        ps.unbondingPeriodServiceNodeDeposit = args
+        ps.minimumServiceNodeDeposit.currentValue = args
+            .minimumServiceNodeDeposit;
+        ps.unbondingPeriodServiceNodeDeposit.currentValue = args
             .unbondingPeriodServiceNodeDeposit;
         // Set the next transfer ID (is greater than 0 if there have already
         // been prior Pantos transfers initiated on the current blockchain)

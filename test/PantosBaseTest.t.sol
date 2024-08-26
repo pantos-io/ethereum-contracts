@@ -14,13 +14,10 @@ import {AccessController} from "../src/access/AccessController.sol";
 
 abstract contract PantosBaseTest is Test {
     uint256 public constant BLOCK_TIMESTAMP = 1000;
-    uint256 public constant FEE_FACTOR_VALID_FROM_OFFSET = 600; // seconds added to current block time
-    uint256 public constant FEE_FACTOR_VALID_FROM =
-        BLOCK_TIMESTAMP + FEE_FACTOR_VALID_FROM_OFFSET;
     uint256 public constant SERVICE_NODE_DEPOSIT_UNBONDING_PERIOD = 604800;
     uint256 public constant MINIMUM_SERVICE_NODE_DEPOSIT = 10 ** 5 * 10 ** 8;
     uint256 public constant INITIAL_SUPPLY_PAN = 1_000_000_000;
-    uint256 public constant MINIMUM_VALIDATOR_FEE_UPDATE_PERIOD = 0;
+    uint256 public constant PARAMETER_UPDATE_DELAY = 3 days;
     // bitpandaEcosystemToken
     uint256 public constant INITIAL_SUPPLY_BEST = 1_000_000_000;
 

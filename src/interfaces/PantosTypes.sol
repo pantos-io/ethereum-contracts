@@ -64,9 +64,9 @@ library PantosTypes {
         uint256 nonce;
     }
 
-    struct ValidatorFeeRecord {
-        uint256 oldFactor;
-        uint256 newFactor;
-        uint256 validFrom;
+    struct UpdatableUint256 {
+        uint256 currentValue;
+        uint256 pendingValue;
+        uint256 updateTime;
     }
 }

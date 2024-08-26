@@ -6,15 +6,13 @@ library Constants {
 
     uint256 public constant MINIMUM_SERVICE_NODE_DEPOSIT = 10 ** 5 * 10 ** 8;
 
-    uint256 public constant FEE_FACTOR_VALID_FROM_OFFSET = 600; // seconds added to current timestamp
-
     // PantosToken
     uint256 public constant INITIAL_SUPPLY_PAN = (10 ** 9) * (10 ** 8);
 
-    // bitpandaEcosystemToken
+    // BitpandaEcosystemToken
     uint256 public constant INITIAL_SUPPLY_BEST = (10 ** 9) * (10 ** 8);
 
     uint256 public constant MINIMUM_VALIDATOR_NODE_SIGNATURES = 1;
 
-    uint256 public constant MINIMUM_VALIDATOR_FEE_UPDATE_PERIOD = 0;
+    uint256 public constant PARAMETER_UPDATE_DELAY = 3 days;
 }

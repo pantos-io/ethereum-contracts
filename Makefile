@@ -22,7 +22,7 @@ code: format lint build test snapshot
 
 .PHONY: test
 test:
-	forge test
+	forge test -vvv
 
 .PHONY: coverage
 coverage:
