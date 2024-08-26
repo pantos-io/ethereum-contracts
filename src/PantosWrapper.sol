@@ -148,6 +148,13 @@ abstract contract PantosWrapper is
     }
 
     /**
+     * @dev Disable the transfer of ownership.
+     */
+    function transferOwnership(address) public view override onlyOwner {
+        require(false, "PantosWrapper: ownership cannot be transferred");
+    }
+
+    /**
      * @dev See {ERC20-_update}.
      */
     function _update(

@@ -126,6 +126,24 @@ contract BitpandaEcosystemTokenTest is PantosBaseTokenTest {
         assertEq("Bitpanda Ecosystem Token", bestToken.name());
     }
 
+    function test_renounceOwnership() external {
+        bestToken.renounceOwnership();
+
+        assertEq(bestToken.getOwner(), address(0));
+    }
+
+    function test_transferOwnership() external {
+        vm.expectRevert(
+            abi.encodePacked(
+                "BitpandaEcosystemToken: ownership cannot be transferred"
+            )
+        );
+
+        bestToken.transferOwnership(address(1));
+
+        assertEq(bestToken.getOwner(), deployer());
+    }
+
     function test_unsetPantosForwarder() external {
         initializeToken();
         vm.expectEmit();

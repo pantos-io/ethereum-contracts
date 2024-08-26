@@ -275,6 +275,22 @@ contract PantosTokenWrapperTest is PantosBaseTest {
         assertEq(NAME, pantosTokenWrapper.name());
     }
 
+    function test_renounceOwnership() external {
+        pantosTokenWrapper.renounceOwnership();
+
+        assertEq(pantosTokenWrapper.getOwner(), address(0));
+    }
+
+    function test_transferOwnership() external {
+        vm.expectRevert(
+            abi.encodePacked("PantosWrapper: ownership cannot be transferred")
+        );
+
+        pantosTokenWrapper.transferOwnership(address(1));
+
+        assertEq(pantosTokenWrapper.getOwner(), deployer());
+    }
+
     function test_update_WhenNotPaused() external {
         initializePantosTokenWrapper();
 
