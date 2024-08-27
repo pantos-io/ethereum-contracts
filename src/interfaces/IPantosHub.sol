@@ -15,8 +15,7 @@ import {IPantosTransfer} from "./IPantosTransfer.sol";
  * Pantos multi-blockchain system.
  *
  * @dev The interface declares all Pantos hub events and functions for token
- * owners, clients, service nodes, validator nodes, and other interested
- * external users, excluding the functions which are only allowed to be called
- * by the Pantos hub owner.
+ * owners, clients, service nodes, validator nodes, Pantos roles, and
+ * other interested external users.
  */
 interface IPantosHub is IERC173, IPantosTransfer, IPantosRegistry {}
