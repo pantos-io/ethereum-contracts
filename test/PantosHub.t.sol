@@ -1720,6 +1720,74 @@ contract PantosHubTest is PantosHubDeployer {
         pantosHubProxy.withdrawServiceNodeDeposit(SERVICE_NODE_ADDRESS);
     }
 
+    function test_withdrawServiceNodeDeposit_NoUnbondingPeriodBypass()
+        external
+    {
+        mockIerc20_transfer(
+            PANTOS_TOKEN_ADDRESS,
+            SERVICE_NODE_WITHDRAWAL_ADDRESS,
+            MINIMUM_SERVICE_NODE_DEPOSIT,
+            true
+        );
+        uint256 unregisterTime;
+        uint256 withdrawalTime;
+
+        registerServiceNode();
+        PantosTypes.ServiceNodeRecord memory storedStruct;
+        storedStruct = loadPantosHubServiceNodeRecord(SERVICE_NODE_ADDRESS);
+        assertTrue(storedStruct.active);
+        assertEq(storedStruct.unregisterTime, 0);
+
+        // Service node is unregistered for the first time
+        unregisterServiceNode();
+        unregisterTime = BLOCK_TIMESTAMP;
+        withdrawalTime =
+            unregisterTime +
+            SERVICE_NODE_DEPOSIT_UNBONDING_PERIOD;
+        storedStruct = loadPantosHubServiceNodeRecord(SERVICE_NODE_ADDRESS);
+        assertFalse(storedStruct.active);
+        assertEq(storedStruct.unregisterTime, unregisterTime);
+
+        // Unbonding period has passed
+        vm.warp(withdrawalTime);
+
+        // Service node unregistration is canceled
+        vm.prank(SERVICE_NODE_ADDRESS);
+        pantosHubProxy.cancelServiceNodeUnregistration(SERVICE_NODE_ADDRESS);
+        storedStruct = loadPantosHubServiceNodeRecord(SERVICE_NODE_ADDRESS);
+        assertTrue(storedStruct.active);
+        assertEq(storedStruct.unregisterTime, 0);
+
+        // Service node is unregistered immediately again
+        unregisterServiceNode();
+        unregisterTime = withdrawalTime;
+        withdrawalTime =
+            unregisterTime +
+            SERVICE_NODE_DEPOSIT_UNBONDING_PERIOD;
+        storedStruct = loadPantosHubServiceNodeRecord(SERVICE_NODE_ADDRESS);
+        assertFalse(storedStruct.active);
+        assertEq(storedStruct.unregisterTime, unregisterTime);
+
+        // Service node deposit cannot be withdrawn without the
+        // unbonding period having passed again
+        vm.expectRevert("PantosHub: the unbonding period has not elapsed");
+        vm.prank(SERVICE_NODE_WITHDRAWAL_ADDRESS);
+        pantosHubProxy.withdrawServiceNodeDeposit(SERVICE_NODE_ADDRESS);
+        storedStruct = loadPantosHubServiceNodeRecord(SERVICE_NODE_ADDRESS);
+        assertFalse(storedStruct.active);
+        assertEq(storedStruct.unregisterTime, unregisterTime);
+
+        // Unbonding period has passed again
+        vm.warp(withdrawalTime);
+
+        // Service node deposit can be withdrawn now
+        vm.prank(SERVICE_NODE_WITHDRAWAL_ADDRESS);
+        pantosHubProxy.withdrawServiceNodeDeposit(SERVICE_NODE_ADDRESS);
+        storedStruct = loadPantosHubServiceNodeRecord(SERVICE_NODE_ADDRESS);
+        assertFalse(storedStruct.active);
+        assertEq(storedStruct.unregisterTime, 0);
+    }
+
     function test_cancelServiceNodeUnregistration_ByWithdrawalAddress()
         external
     {
