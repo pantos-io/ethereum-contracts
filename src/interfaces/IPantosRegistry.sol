@@ -12,8 +12,8 @@ import {PantosTypes} from "./PantosTypes.sol";
  * Pantos multi-blockchain system.
  *
  * @dev The interface declares all Pantos hub events and functions for
- * service nodes, validator nodes, and the admin functions which are only
- * allowed to be called by the Pantos hub owner.
+ * service nodes, validator nodes, Pantos roles, and other interested
+ * external users.
  * This excludes all the transafer related functions, served by a separate
  * interface.
  */
@@ -192,7 +192,7 @@ interface IPantosRegistry {
     /**
      * @notice Pauses the Pantos Hub.
      *
-     * @dev The function can only be called by the owner of the contract
+     * @dev The function can only be called by the pauser role
      * and only if the contract is not paused.
      */
     function pause() external;
@@ -200,7 +200,7 @@ interface IPantosRegistry {
     /**
      * @notice Unpauses the Pantos Hub.
      *
-     * @dev The function can only be called by the owner of the contract
+     * @dev The function can only be called by the super critical ops role
      * and only if the contract is paused.
      */
     function unpause() external;
@@ -210,7 +210,7 @@ interface IPantosRegistry {
      *
      * @param pantosForwarder The address of the Pantos Forwarder contract.
      *
-     * @dev The function can only be called by the owner of the contract
+     * @dev The function can only be called by the super critical ops role
      * and only if the contract is paused.
      */
     function setPantosForwarder(address pantosForwarder) external;
@@ -220,7 +220,7 @@ interface IPantosRegistry {
      *
      * @param pantosToken The address of the Pantos Token contract.
      *
-     * @dev The function can only be called by the owner of the contract
+     * @dev The function can only be called by the deployer role
      * and only if the contract is paused.
      */
     function setPantosToken(address pantosToken) external;
@@ -231,7 +231,7 @@ interface IPantosRegistry {
      * @param primaryValidatorNodeAddress The address of the primary
      * validator node.
      *
-     * @dev The function can only be called by the owner of the contract
+     * @dev The function can only be called by the super critical ops role
      * and only if the contract is paused.
      */
     function setPrimaryValidatorNode(
@@ -239,7 +239,7 @@ interface IPantosRegistry {
     ) external;
 
     /**
-     * @notice Used by the owner of the Pantos Hub contract to register a new
+     * @notice Used by the super critical ops role to register a new
      * blockchain.
      *
      * @param blockchainId The ID of the new blockchain.
@@ -247,7 +247,7 @@ interface IPantosRegistry {
      * @param validatorFeeFactor The validator fee factor of the new
      * blockchain.
      *
-     * @dev The function can only be called by the Pantos Hub owner.
+     * @dev The function can only be called by the super critical ops role.
      */
     function registerBlockchain(
         uint256 blockchainId,
@@ -256,7 +256,7 @@ interface IPantosRegistry {
     ) external;
 
     /**
-     * @notice Used by the owner of the Pantos Hub contract to unregister a
+     * @notice Used by the super critical ops role to unregister a
      * blockchain.
      *
      * @param blockchainId The id of the blockchain to be unregistered.
@@ -264,14 +264,14 @@ interface IPantosRegistry {
     function unregisterBlockchain(uint256 blockchainId) external;
 
     /**
-     * @notice Used by the owner of the Pantos Hub contract to update the name
+     * @notice Used by the medium critical ops role to update the name
      * of a registered blockchain.
      *
      * @param blockchainId The id of the blockchain to be updated.
      * @param name The new name of the blockchain.
      *
-     * @dev The function can only be called by the Pantos Hub owner and if the
-     * contract is paused.
+     * @dev The function can only be called by the medium critical ops role
+     * and if the contract is paused.
      */
     function updateBlockchainName(
         uint256 blockchainId,
@@ -285,7 +285,7 @@ interface IPantosRegistry {
      * factor is updated for.
      * @param newValidatorFeeFactor The new validator fee factor.
      *
-     * @dev The function can only be called by the Pantos Hub owner.
+     * @dev The function can only be called by the medium critical ops role.
      */
     function initiateValidatorFeeFactorUpdate(
         uint256 blockchainId,
@@ -310,7 +310,7 @@ interface IPantosRegistry {
      * @param newUnbondingPeriodServiceNodeDeposit The new unbonding
      * period (in seconds) for service node deposits.
      *
-     * @dev The function can only be called by the Pantos Hub owner.
+     * @dev The function can only be called by the medium critical ops role.
      */
     function initiateUnbondingPeriodServiceNodeDepositUpdate(
         uint256 newUnbondingPeriodServiceNodeDeposit
@@ -331,7 +331,7 @@ interface IPantosRegistry {
      * @param newMinimumServiceNodeDeposit The new minimum service node
      * deposit.
      *
-     * @dev The function can only be called by the Pantos Hub owner.
+     * @dev The function can only be called by the medium critical ops role.
      */
     function initiateMinimumServiceNodeDepositUpdate(
         uint256 newMinimumServiceNodeDeposit
@@ -350,7 +350,7 @@ interface IPantosRegistry {
      *
      * @param newParameterUpdateDelay The new parameter update delay.
      *
-     * @dev The function can only be called by the Pantos Hub owner.
+     * @dev The function can only be called by the medium critical ops role.
      */
     function initiateParameterUpdateDelayUpdate(
         uint256 newParameterUpdateDelay
