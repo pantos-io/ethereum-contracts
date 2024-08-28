@@ -121,7 +121,7 @@ contract PantosForwarder is IPantosForwarder, Pausable, PantosRBAC {
      */
     function setPantosToken(
         address pantosToken
-    ) external whenPaused onlyRole(PantosRoles.DEPLOYER) {
+    ) external whenPaused onlyRole(PantosRoles.SUPER_CRITICAL_OPS) {
         require(
             pantosToken != address(0),
             "PantosForwarder: PantosToken must not be the zero account"

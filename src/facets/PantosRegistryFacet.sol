@@ -76,7 +76,7 @@ contract PantosRegistryFacet is IPantosRegistry, PantosBaseFacet {
     // slither-disable-next-line timestamp
     function setPantosToken(
         address pantosToken
-    ) external override whenPaused onlyRole(PantosRoles.DEPLOYER) {
+    ) external override whenPaused onlyRole(PantosRoles.SUPER_CRITICAL_OPS) {
         require(
             pantosToken != address(0),
             "PantosHub: PantosToken must not be the zero account"

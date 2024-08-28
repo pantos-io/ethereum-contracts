@@ -113,7 +113,7 @@ contract PantosHubTest is PantosHubDeployer {
         vm.prank(SUPER_CRITICAL_OPS);
         pantosHubProxy.setPantosForwarder(PANTOS_FORWARDER_ADDRESS);
         mockPandasToken_getOwner(PANTOS_TOKEN_ADDRESS, DEPLOYER);
-        vm.prank(DEPLOYER);
+        vm.prank(SUPER_CRITICAL_OPS);
         pantosHubProxy.setPantosToken(PANTOS_TOKEN_ADDRESS);
         vm.expectRevert(
             abi.encodePacked(
@@ -173,7 +173,7 @@ contract PantosHubTest is PantosHubDeployer {
         vm.expectEmit(address(pantosHubProxy));
         emit IPantosRegistry.PantosTokenSet(PANTOS_TOKEN_ADDRESS);
 
-        vm.prank(DEPLOYER);
+        vm.prank(SUPER_CRITICAL_OPS);
         pantosHubProxy.setPantosToken(PANTOS_TOKEN_ADDRESS);
 
         assertEq(pantosHubProxy.getPantosToken(), PANTOS_TOKEN_ADDRESS);
@@ -201,13 +201,13 @@ contract PantosHubTest is PantosHubDeployer {
     function test_setPantosToken_WithPantosToken0() external {
         vm.expectRevert("PantosHub: PantosToken must not be the zero account");
 
-        vm.prank(DEPLOYER);
+        vm.prank(SUPER_CRITICAL_OPS);
         pantosHubProxy.setPantosToken(ADDRESS_ZERO);
     }
 
     function test_setPantosToken_AlreadySet() external {
         mockPandasToken_getOwner(PANTOS_TOKEN_ADDRESS, DEPLOYER);
-        vm.startPrank(DEPLOYER);
+        vm.startPrank(SUPER_CRITICAL_OPS);
         pantosHubProxy.setPantosToken(PANTOS_TOKEN_ADDRESS);
         vm.expectRevert("PantosHub: PantosToken already set");
 

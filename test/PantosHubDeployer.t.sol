@@ -177,9 +177,8 @@ abstract contract PantosHubDeployer is PantosBaseTest {
         vm.startPrank(SUPER_CRITICAL_OPS);
         pantosHubProxy.setPantosForwarder(PANTOS_FORWARDER_ADDRESS);
         pantosHubProxy.setPrimaryValidatorNode(validatorAddress);
-        vm.stopPrank();
-        vm.prank(DEPLOYER);
         pantosHubProxy.setPantosToken(PANTOS_TOKEN_ADDRESS);
+        vm.stopPrank();
 
         registerOtherBlockchainAtPantosHub();
     }
