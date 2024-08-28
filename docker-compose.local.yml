@@ -7,8 +7,18 @@ services:
       pantos-ethereum:
     ports:
       - 8${STACK_PORT_ID-5}${INSTANCE-1}0:8545
+    develop:
+      watch:
+        - action: sync+restart
+          path: docker-compose.local.yml
+          target: /root/docker-compose.local.yml
   bnb:
     networks:
       pantos-ethereum:
     ports:
       - 8${STACK_PORT_ID-5}${INSTANCE-1}1:8545
+    develop:
+      watch:
+        - action: sync+restart
+          path: docker-compose.local.yml
+          target: /root/docker-compose.local.yml

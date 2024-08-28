@@ -1,5 +1,6 @@
 STACK_BASE_NAME=stack-ethereum-contracts
 INSTANCE_COUNT ?= 1
+DEV_MODE ?= false
 
 .PHONY: build
 build:
@@ -65,17 +66,40 @@ docker: check-swarm-init
         export DATA_PATH=./data/$$STACK_NAME; \
         export INSTANCE=$$i; \
         echo "Deploying stack $$STACK_NAME"; \
-        docker compose -f docker-compose.yml -f docker-compose.ci.yml $(EXTRA_COMPOSE) up -d --wait $(ARGS); \
+        if [ "$(DEV_MODE)" = "true" ]; then \
+            echo "Running in development mode"; \
+            export ARGS="$(ARGS) --watch"; \
+            docker compose -f docker-compose.yml -f docker-compose.ci.yml -p $$STACK_NAME $$EXTRA_COMPOSE up $$ARGS & \
+            COMPOSE_PID=$$!; \
+            trap 'echo "Caught SIGINT, killing background processes..."; kill $$COMPOSE_PID; exit 1' SIGINT; \
+        else \
+            export ARGS="--detach --wait $(ARGS)"; \
+            docker compose -f docker-compose.yml -f docker-compose.ci.yml -p $$STACK_NAME $$EXTRA_COMPOSE up $$ARGS; \
+        fi; \
+        trap 'exit 1' SIGINT; \
         for service in $$(yq e '.services | with_entries(select(.value.image | contains("ethereum-node"))) | keys | .[]' docker-compose.yml); do \
+            if [ "$(DEV_MODE)" = "true" ]; then \
+                echo "Waiting for $$STACK_NAME-$$service-1 to be healthy"; \
+                while [ "$$(docker inspect --format='{{.State.Health.Status}}' $$STACK_NAME-$$service-1)" != "healthy" ]; do \
+                    echo "Waiting for $$STACK_NAME-$$service-1 to be healthy..."; \
+                    sleep 5; \
+                done; \
+                echo "$$STACK_NAME-$$service-1 is healthy"; \
+            fi; \
             dir=$$DATA_PATH/$$service; \
             echo "Copying data from $$service to $$dir"; \
             mkdir -p $$dir; \
             docker cp $$STACK_NAME-$$service-1:/data $$dir; \
-            mv $$dir/data/* $$dir; \
-            rmdir $$dir/data; \
+            cp -rf $$dir/data/* $$dir; \
+            rm -rf $$dir/data; \
         done; \
+        echo "Stack $$STACK_NAME deployed"; \
+        if [ "$(DEV_MODE)" = "true" ]; then \
+            wait $$COMPOSE_PID; \
+        fi; \
         ) & \
     done; \
+    trap 'echo "Caught SIGINT, killing all background processes..."; kill 0; exit 1' SIGINT; \
     wait
     # We need to use compose because swarm goes absolutely crazy on MacOS when using cross architecture
     # And can't pull the correct images
