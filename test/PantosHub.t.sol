@@ -1111,7 +1111,7 @@ contract PantosHubTest is PantosHubDeployer {
         checkTokenIndices();
     }
 
-    function test_unregisterTokenBySupeCriticalOps() external {
+    function test_unregisterToken_BySupeCriticalOps() external {
         registerTokenAndExternalToken(SUPER_CRITICAL_OPS);
         mockPandasToken_getOwner(PANDAS_TOKEN_ADDRESS, SUPER_CRITICAL_OPS);
         vm.expectEmit();
