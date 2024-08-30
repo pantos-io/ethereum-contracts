@@ -171,15 +171,14 @@ abstract contract PantosHubDeployer is PantosBaseTest {
     }
 
     function _initializePantosHubValues() public {
-        mockPandasToken_getOwner(PANTOS_TOKEN_ADDRESS, DEPLOYER);
+        mockPandasToken_getOwner(PANTOS_TOKEN_ADDRESS, SUPER_CRITICAL_OPS);
 
         // Set the forwarder, PAN token, and primary validator addresses
         vm.startPrank(SUPER_CRITICAL_OPS);
         pantosHubProxy.setPantosForwarder(PANTOS_FORWARDER_ADDRESS);
         pantosHubProxy.setPrimaryValidatorNode(validatorAddress);
-        vm.stopPrank();
-        vm.prank(DEPLOYER);
         pantosHubProxy.setPantosToken(PANTOS_TOKEN_ADDRESS);
+        vm.stopPrank();
 
         registerOtherBlockchainAtPantosHub();
     }

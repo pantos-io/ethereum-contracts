@@ -9,6 +9,7 @@ import {ERC20Pausable} from "@openzeppelin/contracts/token/ERC20/extensions/ERC2
 
 import {PantosRBAC} from "./access/PantosRBAC.sol";
 import {PantosRoles} from "./access/PantosRoles.sol";
+import {AccessController} from "./access/AccessController.sol";
 import {PantosBaseToken} from "./PantosBaseToken.sol";
 
 /**
@@ -31,13 +32,18 @@ contract BitpandaEcosystemToken is
         (10 ** 9) * (10 ** uint256(_DECIMALS));
 
     /**
-     * @dev msg.sender receives all existing tokens
+     * @dev superCriticalOps receives all existing tokens
      */
     constructor(
         uint256 initialSupply,
         address accessControllerAddress
     )
-        PantosBaseToken(_NAME, _SYMBOL, _DECIMALS)
+        PantosBaseToken(
+            _NAME,
+            _SYMBOL,
+            _DECIMALS,
+            AccessController(accessControllerAddress).superCriticalOps()
+        )
         ERC20Capped(_MAX_SUPPLY)
         PantosRBAC(accessControllerAddress)
     {
@@ -45,7 +51,7 @@ contract BitpandaEcosystemToken is
             initialSupply <= _MAX_SUPPLY,
             "BitpandaEcosystemToken: maximum supply exceeded"
         );
-        ERC20._mint(msg.sender, initialSupply);
+        ERC20._mint(super.getOwner(), initialSupply);
         // Contract is paused until it is fully initialized
         _pause();
     }

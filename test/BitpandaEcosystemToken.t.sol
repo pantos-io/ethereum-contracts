@@ -22,9 +22,9 @@ contract BitpandaEcosystemTokenTest is PantosBaseTokenTest {
     }
 
     function test_SetUpState() external {
-        assertEq(bestToken.balanceOf(deployer()), INITIAL_SUPPLY_BEST);
+        assertEq(bestToken.balanceOf(SUPER_CRITICAL_OPS), INITIAL_SUPPLY_BEST);
         assertTrue(bestToken.paused());
-        assertEq(bestToken.getOwner(), deployer());
+        assertEq(bestToken.getOwner(), SUPER_CRITICAL_OPS);
     }
 
     function test_pause_AfterInitialization() external {
@@ -37,6 +37,7 @@ contract BitpandaEcosystemTokenTest is PantosBaseTokenTest {
     }
 
     function test_pause_WhenPaused() external {
+        vm.prank(SUPER_CRITICAL_OPS);
         bestToken.setPantosForwarder(PANTOS_FORWARDER_ADDRESS);
         bytes memory calldata_ = abi.encodeWithSelector(
             bestToken.pause.selector
@@ -70,6 +71,7 @@ contract BitpandaEcosystemTokenTest is PantosBaseTokenTest {
     }
 
     function test_unpause_ByNonSuperCriticalOps() external {
+        vm.prank(SUPER_CRITICAL_OPS);
         bestToken.setPantosForwarder(PANTOS_FORWARDER_ADDRESS);
         bytes memory calldata_ = abi.encodeWithSelector(
             bestToken.unpause.selector
@@ -126,7 +128,12 @@ contract BitpandaEcosystemTokenTest is PantosBaseTokenTest {
         assertEq("Bitpanda Ecosystem Token", bestToken.name());
     }
 
+    function test_getOwner() external {
+        assertEq(token().getOwner(), SUPER_CRITICAL_OPS);
+    }
+
     function test_renounceOwnership() external {
+        vm.prank(SUPER_CRITICAL_OPS);
         bestToken.renounceOwnership();
 
         assertEq(bestToken.getOwner(), address(0));
@@ -138,10 +145,10 @@ contract BitpandaEcosystemTokenTest is PantosBaseTokenTest {
                 "BitpandaEcosystemToken: ownership cannot be transferred"
             )
         );
-
+        vm.prank(SUPER_CRITICAL_OPS);
         bestToken.transferOwnership(address(1));
 
-        assertEq(bestToken.getOwner(), deployer());
+        assertEq(bestToken.getOwner(), SUPER_CRITICAL_OPS);
     }
 
     function test_unsetPantosForwarder() external {
@@ -149,15 +156,17 @@ contract BitpandaEcosystemTokenTest is PantosBaseTokenTest {
         vm.expectEmit();
         emit IPantosToken.PantosForwarderUnset();
 
+        vm.prank(SUPER_CRITICAL_OPS);
         bestToken.exposed_unsetPantosForwarder();
 
         assertEq(bestToken.getPantosForwarder(), ADDRESS_ZERO);
     }
 
     function initializeToken() public override {
+        vm.startPrank(SUPER_CRITICAL_OPS);
         bestToken.setPantosForwarder(PANTOS_FORWARDER_ADDRESS);
-        vm.prank(SUPER_CRITICAL_OPS);
         bestToken.unpause();
+        vm.stopPrank();
     }
 
     function token() public view override returns (PantosBaseToken) {

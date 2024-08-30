@@ -15,6 +15,8 @@ import {AccessController} from "../src/access/AccessController.sol";
 import {PantosHubDeployer} from "./PantosHubDeployer.t.sol";
 
 contract PantosHubTest is PantosHubDeployer {
+    address constant PANDAS_TOKEN_OWNER =
+        address(uint160(uint256(keccak256("PandasTokenOwner"))));
     AccessController public accessController;
 
     function setUp() public {
@@ -112,8 +114,8 @@ contract PantosHubTest is PantosHubDeployer {
     function test_unpause_WithNoPrimaryValidatorNodeSet() external {
         vm.prank(SUPER_CRITICAL_OPS);
         pantosHubProxy.setPantosForwarder(PANTOS_FORWARDER_ADDRESS);
-        mockPandasToken_getOwner(PANTOS_TOKEN_ADDRESS, DEPLOYER);
-        vm.prank(DEPLOYER);
+        mockPandasToken_getOwner(PANTOS_TOKEN_ADDRESS, SUPER_CRITICAL_OPS);
+        vm.startPrank(SUPER_CRITICAL_OPS);
         pantosHubProxy.setPantosToken(PANTOS_TOKEN_ADDRESS);
         vm.expectRevert(
             abi.encodePacked(
@@ -121,8 +123,8 @@ contract PantosHubTest is PantosHubDeployer {
             )
         );
 
-        vm.prank(SUPER_CRITICAL_OPS);
         pantosHubProxy.unpause();
+        vm.stopPrank();
     }
 
     function test_setPantosForwarder() external {
@@ -169,11 +171,11 @@ contract PantosHubTest is PantosHubDeployer {
     }
 
     function test_setPantosToken() external {
-        mockPandasToken_getOwner(PANTOS_TOKEN_ADDRESS, DEPLOYER);
+        mockPandasToken_getOwner(PANTOS_TOKEN_ADDRESS, SUPER_CRITICAL_OPS);
         vm.expectEmit(address(pantosHubProxy));
         emit IPantosRegistry.PantosTokenSet(PANTOS_TOKEN_ADDRESS);
 
-        vm.prank(DEPLOYER);
+        vm.prank(SUPER_CRITICAL_OPS);
         pantosHubProxy.setPantosToken(PANTOS_TOKEN_ADDRESS);
 
         assertEq(pantosHubProxy.getPantosToken(), PANTOS_TOKEN_ADDRESS);
@@ -189,7 +191,7 @@ contract PantosHubTest is PantosHubDeployer {
         whenPausedTest(address(pantosHubProxy), calldata_);
     }
 
-    function test_setPantosToken_ByNonDeployer() external {
+    function test_setPantosToken_ByNonSuperCriticalOps() external {
         bytes memory calldata_ = abi.encodeWithSelector(
             IPantosRegistry.setPantosToken.selector,
             PANTOS_TOKEN_ADDRESS
@@ -201,13 +203,13 @@ contract PantosHubTest is PantosHubDeployer {
     function test_setPantosToken_WithPantosToken0() external {
         vm.expectRevert("PantosHub: PantosToken must not be the zero account");
 
-        vm.prank(DEPLOYER);
+        vm.prank(SUPER_CRITICAL_OPS);
         pantosHubProxy.setPantosToken(ADDRESS_ZERO);
     }
 
     function test_setPantosToken_AlreadySet() external {
-        mockPandasToken_getOwner(PANTOS_TOKEN_ADDRESS, DEPLOYER);
-        vm.startPrank(DEPLOYER);
+        mockPandasToken_getOwner(PANTOS_TOKEN_ADDRESS, SUPER_CRITICAL_OPS);
+        vm.startPrank(SUPER_CRITICAL_OPS);
         pantosHubProxy.setPantosToken(PANTOS_TOKEN_ADDRESS);
         vm.expectRevert("PantosHub: PantosToken already set");
 
@@ -984,11 +986,12 @@ contract PantosHubTest is PantosHubDeployer {
 
     function test_registerToken() external {
         initializePantosHub();
-        mockPandasToken_getOwner(PANDAS_TOKEN_ADDRESS, deployer());
+        mockPandasToken_getOwner(PANDAS_TOKEN_ADDRESS, PANDAS_TOKEN_OWNER);
         assertFalse(inArray(PANDAS_TOKEN_ADDRESS, loadPantosHubTokens()));
         vm.expectEmit();
         emit IPantosRegistry.TokenRegistered(PANDAS_TOKEN_ADDRESS);
 
+        vm.prank(PANDAS_TOKEN_OWNER);
         pantosHubProxy.registerToken(PANDAS_TOKEN_ADDRESS);
 
         PantosTypes.TokenRecord memory tokenRecord = pantosHubProxy
@@ -998,7 +1001,45 @@ contract PantosHubTest is PantosHubDeployer {
         checkTokenIndices();
     }
 
-    function test_registerToken_ByNonDeployerAndPaused() external {
+    function test_registerToken_BySuperCriticalOps() external {
+        initializePantosHub();
+        mockPandasToken_getOwner(PANDAS_TOKEN_ADDRESS, SUPER_CRITICAL_OPS);
+        assertFalse(inArray(PANDAS_TOKEN_ADDRESS, loadPantosHubTokens()));
+        vm.expectEmit();
+        emit IPantosRegistry.TokenRegistered(PANDAS_TOKEN_ADDRESS);
+
+        vm.prank(SUPER_CRITICAL_OPS);
+        pantosHubProxy.registerToken(PANDAS_TOKEN_ADDRESS);
+
+        PantosTypes.TokenRecord memory tokenRecord = pantosHubProxy
+            .getTokenRecord(PANDAS_TOKEN_ADDRESS);
+        assertTrue(tokenRecord.active);
+        assertTrue(inArray(PANDAS_TOKEN_ADDRESS, loadPantosHubTokens()));
+        checkTokenIndices();
+    }
+
+    function test_registerToken_BySuperCriticalOpsWhenPaused() external {
+        initializePantosHub();
+        vm.prank(PAUSER);
+        pantosHubProxy.pause();
+
+        mockPandasToken_getOwner(PANDAS_TOKEN_ADDRESS, SUPER_CRITICAL_OPS);
+        assertFalse(inArray(PANDAS_TOKEN_ADDRESS, loadPantosHubTokens()));
+        vm.expectEmit();
+        emit IPantosRegistry.TokenRegistered(PANDAS_TOKEN_ADDRESS);
+
+        vm.prank(SUPER_CRITICAL_OPS);
+        pantosHubProxy.registerToken(PANDAS_TOKEN_ADDRESS);
+
+        PantosTypes.TokenRecord memory tokenRecord = pantosHubProxy
+            .getTokenRecord(PANDAS_TOKEN_ADDRESS);
+        assertTrue(tokenRecord.active);
+        assertTrue(inArray(PANDAS_TOKEN_ADDRESS, loadPantosHubTokens()));
+        checkTokenIndices();
+    }
+
+    function test_registerToken_ByNonSuperCriticalOpsWhenPaused() external {
+        mockPandasToken_getOwner(PANDAS_TOKEN_ADDRESS, PANDAS_TOKEN_OWNER);
         bytes memory calldata_ = abi.encodeWithSelector(
             IPantosRegistry.registerToken.selector,
             PANDAS_TOKEN_ADDRESS
@@ -1027,13 +1068,23 @@ contract PantosHubTest is PantosHubDeployer {
         registerToken();
         vm.expectRevert("PantosHub: token must not be active");
 
-        vm.prank(DEPLOYER);
+        vm.prank(PANDAS_TOKEN_OWNER);
+        pantosHubProxy.registerToken(PANDAS_TOKEN_ADDRESS);
+    }
+
+    function test_registerToken_WhenTokenAlreadyRegisteredBySuperCriticalOps()
+        external
+    {
+        registerTokenBySuperCriticalOps();
+        vm.expectRevert("PantosHub: token must not be active");
+
+        vm.prank(SUPER_CRITICAL_OPS);
         pantosHubProxy.registerToken(PANDAS_TOKEN_ADDRESS);
     }
 
     function test_unregisterToken() external {
-        registerTokenAndExternalToken();
-        mockPandasToken_getOwner(PANDAS_TOKEN_ADDRESS, DEPLOYER);
+        registerTokenAndExternalToken(PANDAS_TOKEN_OWNER);
+        mockPandasToken_getOwner(PANDAS_TOKEN_ADDRESS, PANDAS_TOKEN_OWNER);
         vm.expectEmit();
         emit IPantosRegistry.ExternalTokenUnregistered(
             PANDAS_TOKEN_ADDRESS,
@@ -1042,7 +1093,7 @@ contract PantosHubTest is PantosHubDeployer {
         vm.expectEmit();
         emit IPantosRegistry.TokenUnregistered(PANDAS_TOKEN_ADDRESS);
 
-        vm.prank(DEPLOYER);
+        vm.prank(PANDAS_TOKEN_OWNER);
         pantosHubProxy.unregisterToken(PANDAS_TOKEN_ADDRESS);
 
         PantosTypes.TokenRecord memory tokenRecord = pantosHubProxy
@@ -1060,7 +1111,69 @@ contract PantosHubTest is PantosHubDeployer {
         checkTokenIndices();
     }
 
-    function test_unregisterToken_ByNonDeployerAndPaused() external {
+    function test_unregisterToken_BySuperCriticalOps() external {
+        registerTokenAndExternalToken(SUPER_CRITICAL_OPS);
+        mockPandasToken_getOwner(PANDAS_TOKEN_ADDRESS, SUPER_CRITICAL_OPS);
+        vm.expectEmit();
+        emit IPantosRegistry.ExternalTokenUnregistered(
+            PANDAS_TOKEN_ADDRESS,
+            uint256(otherBlockchain.blockchainId)
+        );
+        vm.expectEmit();
+        emit IPantosRegistry.TokenUnregistered(PANDAS_TOKEN_ADDRESS);
+
+        vm.prank(SUPER_CRITICAL_OPS);
+        pantosHubProxy.unregisterToken(PANDAS_TOKEN_ADDRESS);
+
+        PantosTypes.TokenRecord memory tokenRecord = pantosHubProxy
+            .getTokenRecord(PANDAS_TOKEN_ADDRESS);
+        PantosTypes.ExternalTokenRecord
+            memory externalTokenRecord = pantosHubProxy.getExternalTokenRecord(
+                PANDAS_TOKEN_ADDRESS,
+                uint256(otherBlockchain.blockchainId)
+            );
+        address[] memory tokens = pantosHubProxy.getTokens();
+        assertEq(tokens.length, 1);
+        assertEq(tokens[0], PANTOS_TOKEN_ADDRESS);
+        assertFalse(tokenRecord.active);
+        assertFalse(externalTokenRecord.active);
+        checkTokenIndices();
+    }
+
+    function test_unregisterToken_BySuperCriticalOpsWhenPaused() external {
+        registerTokenAndExternalToken(SUPER_CRITICAL_OPS);
+
+        vm.prank(PAUSER);
+        pantosHubProxy.pause();
+
+        mockPandasToken_getOwner(PANDAS_TOKEN_ADDRESS, SUPER_CRITICAL_OPS);
+        vm.expectEmit();
+        emit IPantosRegistry.ExternalTokenUnregistered(
+            PANDAS_TOKEN_ADDRESS,
+            uint256(otherBlockchain.blockchainId)
+        );
+        vm.expectEmit();
+        emit IPantosRegistry.TokenUnregistered(PANDAS_TOKEN_ADDRESS);
+
+        vm.prank(SUPER_CRITICAL_OPS);
+        pantosHubProxy.unregisterToken(PANDAS_TOKEN_ADDRESS);
+
+        PantosTypes.TokenRecord memory tokenRecord = pantosHubProxy
+            .getTokenRecord(PANDAS_TOKEN_ADDRESS);
+        PantosTypes.ExternalTokenRecord
+            memory externalTokenRecord = pantosHubProxy.getExternalTokenRecord(
+                PANDAS_TOKEN_ADDRESS,
+                uint256(otherBlockchain.blockchainId)
+            );
+        address[] memory tokens = pantosHubProxy.getTokens();
+        assertEq(tokens.length, 1);
+        assertEq(tokens[0], PANTOS_TOKEN_ADDRESS);
+        assertFalse(tokenRecord.active);
+        assertFalse(externalTokenRecord.active);
+        checkTokenIndices();
+    }
+
+    function test_unregisterToken_ByNonSuperCriticalOpsWhenPaused() external {
         bytes memory calldata_ = abi.encodeWithSelector(
             IPantosRegistry.unregisterToken.selector,
             PANDAS_TOKEN_ADDRESS
@@ -1070,21 +1183,73 @@ contract PantosHubTest is PantosHubDeployer {
     }
 
     function test_unregisterToken_WhenTokenNotRegistered() external {
+        initializePantosHub();
         vm.expectRevert("PantosHub: token must be active");
 
-        vm.prank(DEPLOYER);
+        vm.prank(PANDAS_TOKEN_OWNER);
+        pantosHubProxy.unregisterToken(PANDAS_TOKEN_ADDRESS);
+    }
+
+    function test_unregisterToken_WhenTokenNotRegisteredBySuperCriticalOps()
+        external
+    {
+        initializePantosHub();
+        vm.expectRevert("PantosHub: token must be active");
+
+        vm.prank(SUPER_CRITICAL_OPS);
+        pantosHubProxy.unregisterToken(PANDAS_TOKEN_ADDRESS);
+    }
+
+    function test_unregisterToken_WhenTokenNotRegisteredBySuperCriticalOpsWhenPaused()
+        external
+    {
+        vm.expectRevert("PantosHub: token must be active");
+
+        vm.prank(SUPER_CRITICAL_OPS);
         pantosHubProxy.unregisterToken(PANDAS_TOKEN_ADDRESS);
     }
 
     function test_unregisterToken_WhenTokenAlreadyUnRegistered() external {
         registerToken();
-        mockPandasToken_getOwner(PANDAS_TOKEN_ADDRESS, deployer());
+        mockPandasToken_getOwner(PANDAS_TOKEN_ADDRESS, PANDAS_TOKEN_OWNER);
+
+        vm.startPrank(PANDAS_TOKEN_OWNER);
+        pantosHubProxy.unregisterToken(PANDAS_TOKEN_ADDRESS);
+        vm.expectRevert("PantosHub: token must be active");
+
+        pantosHubProxy.unregisterToken(PANDAS_TOKEN_ADDRESS);
+        vm.stopPrank();
+    }
+
+    function test_unregisterToken_WhenTokenAlreadyUnRegisteredBySuperCriticalOps()
+        external
+    {
+        registerTokenBySuperCriticalOps();
+        mockPandasToken_getOwner(PANDAS_TOKEN_ADDRESS, SUPER_CRITICAL_OPS);
+
+        vm.startPrank(SUPER_CRITICAL_OPS);
+        pantosHubProxy.unregisterToken(PANDAS_TOKEN_ADDRESS);
+        vm.expectRevert("PantosHub: token must be active");
+
+        pantosHubProxy.unregisterToken(PANDAS_TOKEN_ADDRESS);
+        vm.stopPrank();
+    }
+
+    function test_unregisterToken_WhenTokenAlreadyUnRegistered_BySuperCriticalOpsWhenPaused()
+        external
+    {
+        registerTokenBySuperCriticalOps();
+        vm.prank(PAUSER);
+        pantosHubProxy.pause();
+
+        mockPandasToken_getOwner(PANDAS_TOKEN_ADDRESS, SUPER_CRITICAL_OPS);
+
+        vm.startPrank(SUPER_CRITICAL_OPS);
         pantosHubProxy.unregisterToken(PANDAS_TOKEN_ADDRESS);
         vm.expectRevert("PantosHub: token must be active");
 
         pantosHubProxy.unregisterToken(PANDAS_TOKEN_ADDRESS);
     }
-
     function test_unregisterToken_ByNonTokenOwner() external {
         registerToken();
         mockPandasToken_getOwner(PANDAS_TOKEN_ADDRESS, address(123));
@@ -1107,38 +1272,38 @@ contract PantosHubTest is PantosHubDeployer {
         initializePantosHub();
         checkTokenRegistrations(tokenAddresses, tokenRegistered);
 
-        registerToken(PANDAS_TOKEN_ADDRESS);
+        registerToken(PANDAS_TOKEN_ADDRESS, PANDAS_TOKEN_OWNER);
         tokenRegistered[0] = true;
         checkTokenRegistrations(tokenAddresses, tokenRegistered);
 
-        registerToken(PANDAS_TOKEN_ADDRESS_1);
+        registerToken(PANDAS_TOKEN_ADDRESS_1, PANDAS_TOKEN_OWNER);
         tokenRegistered[1] = true;
         checkTokenRegistrations(tokenAddresses, tokenRegistered);
 
-        registerToken(PANDAS_TOKEN_ADDRESS_2);
+        registerToken(PANDAS_TOKEN_ADDRESS_2, PANDAS_TOKEN_OWNER);
         tokenRegistered[2] = true;
         checkTokenRegistrations(tokenAddresses, tokenRegistered);
 
-        vm.prank(DEPLOYER);
+        vm.prank(PANDAS_TOKEN_OWNER);
         pantosHubProxy.unregisterToken(PANDAS_TOKEN_ADDRESS_1);
         tokenRegistered[1] = false;
         checkTokenRegistrations(tokenAddresses, tokenRegistered);
 
-        registerToken(PANDAS_TOKEN_ADDRESS_1);
+        registerToken(PANDAS_TOKEN_ADDRESS_1, PANDAS_TOKEN_OWNER);
         tokenRegistered[1] = true;
         checkTokenRegistrations(tokenAddresses, tokenRegistered);
 
-        vm.prank(DEPLOYER);
+        vm.prank(PANDAS_TOKEN_OWNER);
         pantosHubProxy.unregisterToken(PANDAS_TOKEN_ADDRESS);
         tokenRegistered[0] = false;
         checkTokenRegistrations(tokenAddresses, tokenRegistered);
 
-        vm.prank(DEPLOYER);
+        vm.prank(PANDAS_TOKEN_OWNER);
         pantosHubProxy.unregisterToken(PANDAS_TOKEN_ADDRESS_2);
         tokenRegistered[2] = false;
         checkTokenRegistrations(tokenAddresses, tokenRegistered);
 
-        registerToken(PANDAS_TOKEN_ADDRESS);
+        registerToken(PANDAS_TOKEN_ADDRESS, PANDAS_TOKEN_OWNER);
         tokenRegistered[0] = true;
         checkTokenRegistrations(tokenAddresses, tokenRegistered);
     }
@@ -1146,7 +1311,7 @@ contract PantosHubTest is PantosHubDeployer {
     function test_registerExternalToken() external {
         registerToken();
 
-        vm.prank(DEPLOYER);
+        vm.prank(PANDAS_TOKEN_OWNER);
         pantosHubProxy.registerExternalToken(
             PANDAS_TOKEN_ADDRESS,
             uint256(otherBlockchain.blockchainId),
@@ -1165,7 +1330,55 @@ contract PantosHubTest is PantosHubDeployer {
         );
     }
 
-    function test_registerExternalToken_ByNonDeployerAndPaused() external {
+    function test_registerExternalToken_BySuperCriticalOps() external {
+        registerTokenBySuperCriticalOps();
+
+        vm.prank(SUPER_CRITICAL_OPS);
+        pantosHubProxy.registerExternalToken(
+            PANDAS_TOKEN_ADDRESS,
+            uint256(otherBlockchain.blockchainId),
+            EXTERNAL_PANDAS_TOKEN_ADDRESS
+        );
+
+        PantosTypes.ExternalTokenRecord
+            memory externalTokenRecord = pantosHubProxy.getExternalTokenRecord(
+                PANDAS_TOKEN_ADDRESS,
+                uint256(otherBlockchain.blockchainId)
+            );
+        assertTrue(externalTokenRecord.active);
+        assertEq(
+            externalTokenRecord.externalToken,
+            EXTERNAL_PANDAS_TOKEN_ADDRESS
+        );
+    }
+
+    function test_registerExternalToken_BySuperCriticalOpsWhenPaused()
+        external
+    {
+        registerTokenBySuperCriticalOps();
+        vm.prank(PAUSER);
+        pantosHubProxy.pause();
+
+        vm.prank(SUPER_CRITICAL_OPS);
+        pantosHubProxy.registerExternalToken(
+            PANDAS_TOKEN_ADDRESS,
+            uint256(otherBlockchain.blockchainId),
+            EXTERNAL_PANDAS_TOKEN_ADDRESS
+        );
+
+        PantosTypes.ExternalTokenRecord
+            memory externalTokenRecord = pantosHubProxy.getExternalTokenRecord(
+                PANDAS_TOKEN_ADDRESS,
+                uint256(otherBlockchain.blockchainId)
+            );
+        assertTrue(externalTokenRecord.active);
+        assertEq(
+            externalTokenRecord.externalToken,
+            EXTERNAL_PANDAS_TOKEN_ADDRESS
+        );
+    }
+
+    function test_registerExternalToken_ByNonDeployerWhenPaused() external {
         bytes memory calldata_ = abi.encodeWithSelector(
             IPantosRegistry.registerExternalToken.selector,
             PANDAS_TOKEN_ADDRESS,
@@ -1241,10 +1454,42 @@ contract PantosHubTest is PantosHubDeployer {
     }
 
     function test_registerExternalToken_WhenAlreadyRegistered() external {
-        registerTokenAndExternalToken();
+        registerTokenAndExternalToken(PANDAS_TOKEN_OWNER);
         vm.expectRevert("PantosHub: external token must not be active");
 
-        vm.prank(DEPLOYER);
+        vm.prank(PANDAS_TOKEN_OWNER);
+        pantosHubProxy.registerExternalToken(
+            PANDAS_TOKEN_ADDRESS,
+            uint256(otherBlockchain.blockchainId),
+            EXTERNAL_PANDAS_TOKEN_ADDRESS
+        );
+    }
+
+    function test_registerExternalToken_WhenAlreadyRegisteredBySuperCriticalOps()
+        external
+    {
+        registerTokenAndExternalToken(SUPER_CRITICAL_OPS);
+        vm.expectRevert("PantosHub: external token must not be active");
+
+        vm.prank(SUPER_CRITICAL_OPS);
+        pantosHubProxy.registerExternalToken(
+            PANDAS_TOKEN_ADDRESS,
+            uint256(otherBlockchain.blockchainId),
+            EXTERNAL_PANDAS_TOKEN_ADDRESS
+        );
+    }
+
+    function test_registerExternalToken_WhenAlreadyRegisteredBySuperCriticalOpsWhenPaused()
+        external
+    {
+        registerTokenAndExternalToken(SUPER_CRITICAL_OPS);
+
+        vm.prank(PAUSER);
+        pantosHubProxy.pause();
+
+        vm.expectRevert("PantosHub: external token must not be active");
+
+        vm.prank(SUPER_CRITICAL_OPS);
         pantosHubProxy.registerExternalToken(
             PANDAS_TOKEN_ADDRESS,
             uint256(otherBlockchain.blockchainId),
@@ -1253,14 +1498,14 @@ contract PantosHubTest is PantosHubDeployer {
     }
 
     function test_unregisterExternalToken() external {
-        registerTokenAndExternalToken();
+        registerTokenAndExternalToken(PANDAS_TOKEN_OWNER);
         vm.expectEmit();
         emit IPantosRegistry.ExternalTokenUnregistered(
             PANDAS_TOKEN_ADDRESS,
             uint256(otherBlockchain.blockchainId)
         );
 
-        vm.prank(DEPLOYER);
+        vm.prank(PANDAS_TOKEN_OWNER);
         pantosHubProxy.unregisterExternalToken(
             PANDAS_TOKEN_ADDRESS,
             uint256(otherBlockchain.blockchainId)
@@ -1274,7 +1519,57 @@ contract PantosHubTest is PantosHubDeployer {
         assertFalse(externalTokenRecord.active);
     }
 
-    function test_unregisterExternalToken_ByNonDeployerAndPaused() external {
+    function test_unregisterExternalToken_BySuperCriticalOps() external {
+        registerTokenAndExternalToken(SUPER_CRITICAL_OPS);
+        vm.expectEmit();
+        emit IPantosRegistry.ExternalTokenUnregistered(
+            PANDAS_TOKEN_ADDRESS,
+            uint256(otherBlockchain.blockchainId)
+        );
+
+        vm.prank(SUPER_CRITICAL_OPS);
+        pantosHubProxy.unregisterExternalToken(
+            PANDAS_TOKEN_ADDRESS,
+            uint256(otherBlockchain.blockchainId)
+        );
+
+        PantosTypes.ExternalTokenRecord
+            memory externalTokenRecord = pantosHubProxy.getExternalTokenRecord(
+                PANDAS_TOKEN_ADDRESS,
+                uint256(otherBlockchain.blockchainId)
+            );
+        assertFalse(externalTokenRecord.active);
+    }
+
+    function test_unregisterExternalToken_BySuperCriticalOpsWhenPaused()
+        external
+    {
+        registerTokenAndExternalToken(SUPER_CRITICAL_OPS);
+
+        vm.prank(PAUSER);
+        pantosHubProxy.pause();
+
+        vm.expectEmit();
+        emit IPantosRegistry.ExternalTokenUnregistered(
+            PANDAS_TOKEN_ADDRESS,
+            uint256(otherBlockchain.blockchainId)
+        );
+
+        vm.prank(SUPER_CRITICAL_OPS);
+        pantosHubProxy.unregisterExternalToken(
+            PANDAS_TOKEN_ADDRESS,
+            uint256(otherBlockchain.blockchainId)
+        );
+
+        PantosTypes.ExternalTokenRecord
+            memory externalTokenRecord = pantosHubProxy.getExternalTokenRecord(
+                PANDAS_TOKEN_ADDRESS,
+                uint256(otherBlockchain.blockchainId)
+            );
+        assertFalse(externalTokenRecord.active);
+    }
+
+    function test_unregisterExternalToken_ByNonDeployerWhenPaused() external {
         bytes memory calldata_ = abi.encodeWithSelector(
             IPantosRegistry.unregisterExternalToken.selector,
             PANDAS_TOKEN_ADDRESS,
@@ -1288,7 +1583,37 @@ contract PantosHubTest is PantosHubDeployer {
         initializePantosHub();
         vm.expectRevert("PantosHub: token must be active");
 
-        vm.prank(DEPLOYER);
+        vm.prank(PANDAS_TOKEN_OWNER);
+        pantosHubProxy.unregisterExternalToken(
+            PANDAS_TOKEN_ADDRESS,
+            uint256(otherBlockchain.blockchainId)
+        );
+    }
+
+    function test_unregisterExternalToken_WithInactiveTokenBySuperCriticalOps()
+        external
+    {
+        initializePantosHub();
+        vm.expectRevert("PantosHub: token must be active");
+
+        vm.prank(SUPER_CRITICAL_OPS);
+        pantosHubProxy.unregisterExternalToken(
+            PANDAS_TOKEN_ADDRESS,
+            uint256(otherBlockchain.blockchainId)
+        );
+    }
+
+    function test_unregisterExternalToken_WithInactiveTokenBySuperCriticalOpsWhenPaused()
+        external
+    {
+        initializePantosHub();
+
+        vm.prank(PAUSER);
+        pantosHubProxy.pause();
+
+        vm.expectRevert("PantosHub: token must be active");
+
+        vm.prank(SUPER_CRITICAL_OPS);
         pantosHubProxy.unregisterExternalToken(
             PANDAS_TOKEN_ADDRESS,
             uint256(otherBlockchain.blockchainId)
@@ -1296,7 +1621,7 @@ contract PantosHubTest is PantosHubDeployer {
     }
 
     function test_unregisterExternalToken_ByNonTokenOwner() external {
-        registerTokenAndExternalToken();
+        registerTokenAndExternalToken(PANDAS_TOKEN_OWNER);
         vm.mockCall(
             PANDAS_TOKEN_ADDRESS,
             abi.encodeWithSelector(PantosBaseToken.getOwner.selector),
@@ -1316,7 +1641,35 @@ contract PantosHubTest is PantosHubDeployer {
         registerToken();
         vm.expectRevert("PantosHub: external token must be active");
 
-        vm.prank(DEPLOYER);
+        vm.prank(PANDAS_TOKEN_OWNER);
+        pantosHubProxy.unregisterExternalToken(
+            PANDAS_TOKEN_ADDRESS,
+            uint256(otherBlockchain.blockchainId)
+        );
+    }
+
+    function test_unregisterExternalToken_WithInactiveExternalTokenBySuperCriticalOps()
+        external
+    {
+        registerTokenBySuperCriticalOps();
+        vm.expectRevert("PantosHub: external token must be active");
+
+        vm.prank(SUPER_CRITICAL_OPS);
+        pantosHubProxy.unregisterExternalToken(
+            PANDAS_TOKEN_ADDRESS,
+            uint256(otherBlockchain.blockchainId)
+        );
+    }
+
+    function test_unregisterExternalToken_WithInactiveExternalTokenBySuperCriticalOpsWhenPaused()
+        external
+    {
+        registerTokenBySuperCriticalOps();
+        vm.prank(PAUSER);
+        pantosHubProxy.pause();
+        vm.expectRevert("PantosHub: external token must be active");
+
+        vm.prank(SUPER_CRITICAL_OPS);
         pantosHubProxy.unregisterExternalToken(
             PANDAS_TOKEN_ADDRESS,
             uint256(otherBlockchain.blockchainId)
@@ -2167,7 +2520,7 @@ contract PantosHubTest is PantosHubDeployer {
     }
 
     function test_transferFrom() external {
-        registerTokenAndExternalToken();
+        registerTokenAndExternalToken(PANDAS_TOKEN_OWNER);
         registerServiceNode();
         mockPandasToken_getPantosForwarder(
             PANDAS_TOKEN_ADDRESS,
@@ -2220,7 +2573,7 @@ contract PantosHubTest is PantosHubDeployer {
     function test_transferTo_WhenSourceAndDestinatioBlockchainsDiffer()
         external
     {
-        registerTokenAndExternalToken();
+        registerTokenAndExternalToken(PANDAS_TOKEN_OWNER);
         registerServiceNode();
         mockPandasToken_getPantosForwarder(
             PANDAS_TOKEN_ADDRESS,
@@ -2270,7 +2623,7 @@ contract PantosHubTest is PantosHubDeployer {
     function test_transferTo_WhenSourceAndDestinationBlockchainAreEqual()
         external
     {
-        registerTokenAndExternalToken();
+        registerTokenAndExternalToken(PANDAS_TOKEN_OWNER);
         registerServiceNode();
         mockPandasToken_getPantosForwarder(
             PANDAS_TOKEN_ADDRESS,
@@ -2585,7 +2938,7 @@ contract PantosHubTest is PantosHubDeployer {
     }
 
     function test_verifyTransferFrom() external {
-        registerTokenAndExternalToken();
+        registerTokenAndExternalToken(PANDAS_TOKEN_OWNER);
         registerServiceNode();
         mockPandasToken_getPantosForwarder(
             PANDAS_TOKEN_ADDRESS,
@@ -2613,7 +2966,7 @@ contract PantosHubTest is PantosHubDeployer {
     function test_verifyTransferFrom_WithSameSourceAndDestinationBlockchain()
         external
     {
-        registerTokenAndExternalToken();
+        registerTokenAndExternalToken(PANDAS_TOKEN_OWNER);
         registerServiceNode();
         PantosTypes.TransferFromRequest
             memory transferFromRequest_ = transferFromRequest();
@@ -2630,7 +2983,7 @@ contract PantosHubTest is PantosHubDeployer {
     function test_verifyTransferFrom_WithInactiveDestinationBlockchain()
         external
     {
-        registerTokenAndExternalToken();
+        registerTokenAndExternalToken(PANDAS_TOKEN_OWNER);
         registerServiceNode();
         vm.prank(SUPER_CRITICAL_OPS);
         pantosHubProxy.unregisterBlockchain(
@@ -2656,7 +3009,7 @@ contract PantosHubTest is PantosHubDeployer {
     }
 
     function test_verifyTransferFrom_WithUnmatchingExternalToken() external {
-        registerTokenAndExternalToken();
+        registerTokenAndExternalToken(PANDAS_TOKEN_OWNER);
         registerServiceNode();
         PantosTypes.TransferFromRequest
             memory transferFromRequest_ = transferFromRequest();
@@ -2673,7 +3026,7 @@ contract PantosHubTest is PantosHubDeployer {
     function test_verifyTransferTo_WhenSourceAndDestinatioBlockchainsDiffer()
         external
     {
-        registerTokenAndExternalToken();
+        registerTokenAndExternalToken(PANDAS_TOKEN_OWNER);
         registerServiceNode();
         mockPandasToken_getPantosForwarder(
             PANDAS_TOKEN_ADDRESS,
@@ -2696,7 +3049,7 @@ contract PantosHubTest is PantosHubDeployer {
     function test_verifyTransferTo_WhenSourceAndDestinationBlockchainAreEqual()
         external
     {
-        registerTokenAndExternalToken();
+        registerTokenAndExternalToken(PANDAS_TOKEN_OWNER);
         registerServiceNode();
         PantosTypes.TransferToRequest
             memory transferToRequest_ = transferToRequest();
@@ -2722,7 +3075,7 @@ contract PantosHubTest is PantosHubDeployer {
     }
 
     function test_verifyTransferTo_WhenSourceTransferIdAlreadyUsed() external {
-        registerTokenAndExternalToken();
+        registerTokenAndExternalToken(PANDAS_TOKEN_OWNER);
         registerServiceNode();
         mockPandasToken_getPantosForwarder(
             PANDAS_TOKEN_ADDRESS,
@@ -2877,7 +3230,7 @@ contract PantosHubTest is PantosHubDeployer {
     function test_getExternalTokenRecord_WhenExternalTokenRegistered()
         external
     {
-        registerTokenAndExternalToken();
+        registerTokenAndExternalToken(PANDAS_TOKEN_OWNER);
 
         PantosTypes.ExternalTokenRecord
             memory externalTokenRecord = pantosHubProxy.getExternalTokenRecord(
@@ -3147,20 +3500,24 @@ contract PantosHubTest is PantosHubDeployer {
         );
     }
 
-    function registerToken(address tokenAddress) public {
+    function registerToken(address tokenAddress, address tokenOwner) public {
         initializePantosHub();
-        mockPandasToken_getOwner(tokenAddress, DEPLOYER);
-        vm.prank(DEPLOYER);
+        mockPandasToken_getOwner(tokenAddress, tokenOwner);
+        vm.prank(tokenOwner);
         pantosHubProxy.registerToken(tokenAddress);
     }
 
     function registerToken() public {
-        registerToken(PANDAS_TOKEN_ADDRESS);
+        registerToken(PANDAS_TOKEN_ADDRESS, PANDAS_TOKEN_OWNER);
     }
 
-    function registerTokenAndExternalToken() public {
-        registerToken();
-        vm.prank(DEPLOYER);
+    function registerTokenBySuperCriticalOps() public {
+        registerToken(PANDAS_TOKEN_ADDRESS, SUPER_CRITICAL_OPS);
+    }
+
+    function registerTokenAndExternalToken(address tokenOwner) public {
+        registerToken(PANDAS_TOKEN_ADDRESS, tokenOwner);
+        vm.prank(tokenOwner);
         pantosHubProxy.registerExternalToken(
             PANDAS_TOKEN_ADDRESS,
             uint256(otherBlockchain.blockchainId),

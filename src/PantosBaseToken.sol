@@ -23,8 +23,9 @@ abstract contract PantosBaseToken is IPantosToken, ERC20, Ownable {
     constructor(
         string memory name_,
         string memory symbol_,
-        uint8 decimals_
-    ) ERC20(name_, symbol_) Ownable(msg.sender) {
+        uint8 decimals_,
+        address owner_
+    ) ERC20(name_, symbol_) Ownable(owner_) {
         _decimals = decimals_;
     }
 

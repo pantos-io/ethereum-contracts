@@ -21,7 +21,7 @@ contract MigrationTokenBurnablePausable is
         string memory symbol_,
         uint8 decimals_,
         uint256 supply_
-    ) PantosBaseToken(name_, symbol_, decimals_) {
+    ) PantosBaseToken(name_, symbol_, decimals_, msg.sender) {
         ERC20._mint(msg.sender, supply_);
         _pause();
     }

@@ -144,7 +144,7 @@ contract PantosForwarderTest is PantosBaseTest {
     function test_unpause_WithNoValidatorSet() external {
         vm.prank(SUPER_CRITICAL_OPS);
         pantosForwarder.setPantosHub(PANTOS_HUB_ADDRESS);
-        vm.prank(DEPLOYER);
+        vm.prank(SUPER_CRITICAL_OPS);
         pantosForwarder.setPantosToken(PANTOS_TOKEN_ADDRESS);
         vm.expectRevert("PantosForwarder: not enough validator nodes added");
 
@@ -155,7 +155,7 @@ contract PantosForwarderTest is PantosBaseTest {
     function test_unpause_WithLessThanMinValidatorSet() external {
         vm.prank(SUPER_CRITICAL_OPS);
         pantosForwarder.setPantosHub(PANTOS_HUB_ADDRESS);
-        vm.prank(DEPLOYER);
+        vm.prank(SUPER_CRITICAL_OPS);
         pantosForwarder.setPantosToken(PANTOS_TOKEN_ADDRESS);
         vm.startPrank(SUPER_CRITICAL_OPS);
         pantosForwarder.setMinimumValidatorNodeSignatures(3);
@@ -223,7 +223,7 @@ contract PantosForwarderTest is PantosBaseTest {
         vm.expectEmit(address(pantosForwarder));
         emit IPantosForwarder.PantosTokenSet(PANTOS_TOKEN_ADDRESS);
 
-        vm.prank(DEPLOYER);
+        vm.prank(SUPER_CRITICAL_OPS);
         pantosForwarder.setPantosToken(PANTOS_TOKEN_ADDRESS);
 
         assertEq(pantosForwarder.getPantosToken(), PANTOS_TOKEN_ADDRESS);
@@ -256,7 +256,7 @@ contract PantosForwarderTest is PantosBaseTest {
             "PantosForwarder: PantosToken must not be the zero account"
         );
 
-        vm.prank(DEPLOYER);
+        vm.prank(SUPER_CRITICAL_OPS);
         pantosForwarder.setPantosToken(ADDRESS_ZERO);
     }
 
@@ -306,7 +306,7 @@ contract PantosForwarderTest is PantosBaseTest {
     function test_addValidatorNode_Single() external {
         vm.prank(SUPER_CRITICAL_OPS);
         pantosForwarder.setPantosHub(PANTOS_HUB_ADDRESS);
-        vm.prank(DEPLOYER);
+        vm.prank(SUPER_CRITICAL_OPS);
         pantosForwarder.setPantosToken(PANTOS_TOKEN_ADDRESS);
         vm.prank(SUPER_CRITICAL_OPS);
         pantosForwarder.setMinimumValidatorNodeSignatures(1);
@@ -348,7 +348,7 @@ contract PantosForwarderTest is PantosBaseTest {
     function test_addValidatorNode_WhenNotPaused() external {
         vm.prank(SUPER_CRITICAL_OPS);
         pantosForwarder.setPantosHub(PANTOS_HUB_ADDRESS);
-        vm.prank(DEPLOYER);
+        vm.prank(SUPER_CRITICAL_OPS);
         pantosForwarder.setPantosToken(PANTOS_TOKEN_ADDRESS);
         vm.startPrank(SUPER_CRITICAL_OPS);
         pantosForwarder.setMinimumValidatorNodeSignatures(1);
@@ -365,7 +365,7 @@ contract PantosForwarderTest is PantosBaseTest {
     function test_addValidatorNode_0Address() external {
         vm.prank(SUPER_CRITICAL_OPS);
         pantosForwarder.setPantosHub(PANTOS_HUB_ADDRESS);
-        vm.prank(DEPLOYER);
+        vm.prank(SUPER_CRITICAL_OPS);
         pantosForwarder.setPantosToken(PANTOS_TOKEN_ADDRESS);
         vm.prank(SUPER_CRITICAL_OPS);
         pantosForwarder.setMinimumValidatorNodeSignatures(1);
@@ -380,7 +380,7 @@ contract PantosForwarderTest is PantosBaseTest {
     function test_addValidatorNode_SameAddressTwice() external {
         vm.prank(SUPER_CRITICAL_OPS);
         pantosForwarder.setPantosHub(PANTOS_HUB_ADDRESS);
-        vm.prank(DEPLOYER);
+        vm.prank(SUPER_CRITICAL_OPS);
         pantosForwarder.setPantosToken(PANTOS_TOKEN_ADDRESS);
         vm.prank(SUPER_CRITICAL_OPS);
         pantosForwarder.setMinimumValidatorNodeSignatures(3);
@@ -1327,7 +1327,7 @@ contract PantosForwarderTest is PantosBaseTest {
         // Set the hub, PAN token, and validator addresses
         vm.prank(SUPER_CRITICAL_OPS);
         pantosForwarder.setPantosHub(PANTOS_HUB_ADDRESS);
-        vm.prank(DEPLOYER);
+        vm.prank(SUPER_CRITICAL_OPS);
         pantosForwarder.setPantosToken(PANTOS_TOKEN_ADDRESS);
         vm.prank(SUPER_CRITICAL_OPS);
         pantosForwarder.setMinimumValidatorNodeSignatures(
