@@ -46,6 +46,7 @@ contract PantosCoinWrapperTest is PantosBaseTest {
     }
 
     function test_wrap_WhenPaused() external {
+        vm.prank(SUPER_CRITICAL_OPS);
         pantosCoinWrapper.setPantosForwarder(PANTOS_FORWARDER_ADDRESS);
         bytes memory calldata_ = abi.encodeWithSelector(
             PantosWrapper.pause.selector
@@ -62,9 +63,11 @@ contract PantosCoinWrapperTest is PantosBaseTest {
             false,
             address(accessController)
         );
+        vm.startPrank(SUPER_CRITICAL_OPS);
         pantosCoinWrapper_.setPantosForwarder(PANTOS_FORWARDER_ADDRESS);
-        vm.prank(SUPER_CRITICAL_OPS);
         pantosCoinWrapper_.unpause();
+        vm.stopPrank();
+
         bytes memory calldata_ = abi.encodeWithSelector(
             PantosCoinWrapper.wrap.selector
         );
@@ -85,6 +88,7 @@ contract PantosCoinWrapperTest is PantosBaseTest {
     }
 
     function test_unwrap_WhenPaused() external {
+        vm.prank(SUPER_CRITICAL_OPS);
         pantosCoinWrapper.setPantosForwarder(PANTOS_FORWARDER_ADDRESS);
         bytes memory calldata_ = abi.encodeWithSelector(
             PantosWrapper.pause.selector
@@ -101,9 +105,12 @@ contract PantosCoinWrapperTest is PantosBaseTest {
             false,
             address(accessController)
         );
+
+        vm.startPrank(SUPER_CRITICAL_OPS);
         pantosCoinWrapper_.setPantosForwarder(PANTOS_FORWARDER_ADDRESS);
-        vm.prank(SUPER_CRITICAL_OPS);
         pantosCoinWrapper_.unpause();
+        vm.stopPrank();
+
         bytes memory calldata_ = abi.encodeWithSelector(
             PantosCoinWrapper.wrap.selector
         );
@@ -117,9 +124,10 @@ contract PantosCoinWrapperTest is PantosBaseTest {
     }
 
     function initializePantosCoinWrapper() public {
+        vm.startPrank(SUPER_CRITICAL_OPS);
         pantosCoinWrapper.setPantosForwarder(PANTOS_FORWARDER_ADDRESS);
-        vm.prank(SUPER_CRITICAL_OPS);
         pantosCoinWrapper.unpause();
+        vm.stopPrank();
     }
 
     // necessary to be able to receive native coins when calling unwrap

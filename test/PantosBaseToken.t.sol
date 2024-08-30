@@ -187,10 +187,4 @@ abstract contract PantosBaseTokenTest is PantosBaseTest {
 
         token().pantosTransfer(sender, receiver, amount);
     }
-
-    function test_getOwner() external {
-        initializeToken();
-
-        assertEq(token().getOwner(), deployer());
-    }
 }

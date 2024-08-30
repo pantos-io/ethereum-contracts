@@ -12,6 +12,11 @@ import {PantosRoles} from "./PantosRoles.sol";
  * @notice Access control contract to manage Pantos roles and permissions.
  */
 contract AccessController is AccessControl {
+    address public immutable pauser;
+    address public immutable deployer;
+    address public immutable mediumCriticalOps;
+    address public immutable superCriticalOps;
+
     /**
      * @notice Initialize access controller with roles.
      *
@@ -26,9 +31,14 @@ contract AccessController is AccessControl {
         address mediumCriticalOps_,
         address superCriticalOps_
     ) {
-        _grantRole(PantosRoles.PAUSER, pauser_);
-        _grantRole(PantosRoles.DEPLOYER, deployer_);
-        _grantRole(PantosRoles.MEDIUM_CRITICAL_OPS, mediumCriticalOps_);
-        _grantRole(PantosRoles.SUPER_CRITICAL_OPS, superCriticalOps_);
+        pauser = pauser_;
+        deployer = deployer_;
+        mediumCriticalOps = mediumCriticalOps_;
+        superCriticalOps = superCriticalOps_;
+
+        _grantRole(PantosRoles.PAUSER, pauser);
+        _grantRole(PantosRoles.DEPLOYER, deployer);
+        _grantRole(PantosRoles.MEDIUM_CRITICAL_OPS, mediumCriticalOps);
+        _grantRole(PantosRoles.SUPER_CRITICAL_OPS, superCriticalOps);
     }
 }

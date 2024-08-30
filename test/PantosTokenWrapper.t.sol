@@ -47,6 +47,7 @@ contract PantosTokenWrapperTest is PantosBaseTest {
     }
 
     function test_pause_WhenPaused() external {
+        vm.prank(SUPER_CRITICAL_OPS);
         pantosTokenWrapper.setPantosForwarder(PANTOS_FORWARDER_ADDRESS);
         bytes memory calldata_ = abi.encodeWithSelector(
             PantosWrapper.pause.selector
@@ -80,6 +81,7 @@ contract PantosTokenWrapperTest is PantosBaseTest {
     }
 
     function test_unpause_ByNonSuperCriticalOps() external {
+        vm.prank(SUPER_CRITICAL_OPS);
         pantosTokenWrapper.setPantosForwarder(PANTOS_FORWARDER_ADDRESS);
         bytes memory calldata_ = abi.encodeWithSelector(
             PantosWrapper.unpause.selector
@@ -165,6 +167,7 @@ contract PantosTokenWrapperTest is PantosBaseTest {
     }
 
     function test_wrap_WhenPaused() external {
+        vm.prank(SUPER_CRITICAL_OPS);
         pantosTokenWrapper.setPantosForwarder(PANTOS_FORWARDER_ADDRESS);
         bytes memory calldata_ = abi.encodeWithSelector(
             PantosWrapper.pause.selector
@@ -181,9 +184,11 @@ contract PantosTokenWrapperTest is PantosBaseTest {
             ADDRESS_ZERO,
             address(accessController)
         );
+        vm.startPrank(SUPER_CRITICAL_OPS);
         pantosTokenWrapper_.setPantosForwarder(PANTOS_FORWARDER_ADDRESS);
-        vm.prank(SUPER_CRITICAL_OPS);
         pantosTokenWrapper_.unpause();
+        vm.stopPrank();
+
         bytes memory calldata_ = abi.encodeWithSelector(
             PantosTokenWrapper.wrap.selector
         );
@@ -215,6 +220,7 @@ contract PantosTokenWrapperTest is PantosBaseTest {
     }
 
     function test_unwrap_WhenPaused() external {
+        vm.prank(SUPER_CRITICAL_OPS);
         pantosTokenWrapper.setPantosForwarder(PANTOS_FORWARDER_ADDRESS);
         bytes memory calldata_ = abi.encodeWithSelector(
             PantosWrapper.unwrap.selector,
@@ -232,9 +238,12 @@ contract PantosTokenWrapperTest is PantosBaseTest {
             ADDRESS_ZERO,
             address(accessController)
         );
+
+        vm.startPrank(SUPER_CRITICAL_OPS);
         pantosTokenWrapper_.setPantosForwarder(PANTOS_FORWARDER_ADDRESS);
-        vm.prank(SUPER_CRITICAL_OPS);
         pantosTokenWrapper_.unpause();
+        vm.stopPrank();
+
         bytes memory calldata_ = abi.encodeWithSelector(
             PantosTokenWrapper.unwrap.selector,
             WRAPPED_AMOUNT
@@ -276,6 +285,7 @@ contract PantosTokenWrapperTest is PantosBaseTest {
     }
 
     function test_renounceOwnership() external {
+        vm.prank(SUPER_CRITICAL_OPS);
         pantosTokenWrapper.renounceOwnership();
 
         assertEq(pantosTokenWrapper.getOwner(), address(0));
@@ -286,9 +296,10 @@ contract PantosTokenWrapperTest is PantosBaseTest {
             abi.encodePacked("PantosWrapper: ownership cannot be transferred")
         );
 
+        vm.prank(SUPER_CRITICAL_OPS);
         pantosTokenWrapper.transferOwnership(address(1));
 
-        assertEq(pantosTokenWrapper.getOwner(), deployer());
+        assertEq(pantosTokenWrapper.getOwner(), SUPER_CRITICAL_OPS);
     }
 
     function test_update_WhenNotPaused() external {
@@ -334,9 +345,10 @@ contract PantosTokenWrapperTest is PantosBaseTest {
     }
 
     function initializePantosTokenWrapper() public {
+        vm.startPrank(SUPER_CRITICAL_OPS);
         pantosTokenWrapper.setPantosForwarder(PANTOS_FORWARDER_ADDRESS);
-        vm.prank(SUPER_CRITICAL_OPS);
         pantosTokenWrapper.unpause();
+        vm.stopPrank();
     }
 }
 

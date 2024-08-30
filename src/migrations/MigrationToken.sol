@@ -18,7 +18,7 @@ contract MigrationToken is PantosBaseToken {
         string memory symbol,
         uint8 decimals,
         uint256 supply
-    ) PantosBaseToken(name, symbol, decimals) {
+    ) PantosBaseToken(name, symbol, decimals, msg.sender) {
         ERC20._mint(msg.sender, supply);
     }
 

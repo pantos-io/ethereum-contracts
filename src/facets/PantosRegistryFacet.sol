@@ -326,7 +326,9 @@ contract PantosRegistryFacet is IPantosRegistry, PantosBaseFacet {
      * @dev See {IPantosRegistry-registerToken}.
      */
     // slither-disable-next-line timestamp
-    function registerToken(address token) public override deployerOrNotPaused {
+    function registerToken(
+        address token
+    ) public override superCriticalOpsOrNotPaused {
         // Validate the input parameters
         require(
             token != address(0),
@@ -353,7 +355,7 @@ contract PantosRegistryFacet is IPantosRegistry, PantosBaseFacet {
     // slither-disable-next-line timestamp
     function unregisterToken(
         address token
-    ) public override deployerOrNotPaused {
+    ) public override superCriticalOpsOrNotPaused {
         // Validate the stored token data
         PantosTypes.TokenRecord storage tokenRecord = s.tokenRecords[token];
         require(tokenRecord.active, "PantosHub: token must be active");
@@ -399,7 +401,7 @@ contract PantosRegistryFacet is IPantosRegistry, PantosBaseFacet {
         address token,
         uint256 blockchainId,
         string calldata externalToken
-    ) external override deployerOrNotPaused {
+    ) external override superCriticalOpsOrNotPaused {
         // Validate the input parameters
         require(
             blockchainId != s.currentBlockchainId,
@@ -439,7 +441,7 @@ contract PantosRegistryFacet is IPantosRegistry, PantosBaseFacet {
     function unregisterExternalToken(
         address token,
         uint256 blockchainId
-    ) external override deployerOrNotPaused {
+    ) external override superCriticalOpsOrNotPaused {
         // Validate the stored token data
         PantosTypes.TokenRecord storage tokenRecord = s.tokenRecords[token];
         require(tokenRecord.active, "PantosHub: token must be active");

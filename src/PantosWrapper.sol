@@ -6,6 +6,7 @@ import {ERC20Pausable} from "@openzeppelin/contracts/token/ERC20/extensions/ERC2
 
 import {PantosRBAC} from "./access/PantosRBAC.sol";
 import {PantosRoles} from "./access/PantosRoles.sol";
+import {AccessController} from "./access/AccessController.sol";
 import {IBEP20} from "./interfaces/IBEP20.sol";
 import {IPantosWrapper} from "./interfaces/IPantosWrapper.sol";
 import {PantosBaseToken} from "./PantosBaseToken.sol";
@@ -32,7 +33,12 @@ abstract contract PantosWrapper is
         bool native,
         address accessControllerAddress
     )
-        PantosBaseToken(name_, symbol_, decimals_)
+        PantosBaseToken(
+            name_,
+            symbol_,
+            decimals_,
+            AccessController(accessControllerAddress).superCriticalOps()
+        )
         PantosRBAC(accessControllerAddress)
     {
         _native = native;

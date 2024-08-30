@@ -17,7 +17,7 @@ contract PantosSimpleToken is PantosBaseToken {
         uint8 decimals_,
         uint256 initialSupply,
         address pantosForwarder
-    ) PantosBaseToken(name_, symbol_, decimals_) {
+    ) PantosBaseToken(name_, symbol_, decimals_, msg.sender) {
         _mint(msg.sender, initialSupply);
         _setPantosForwarder(pantosForwarder);
     }

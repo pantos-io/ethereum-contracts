@@ -23,12 +23,15 @@ abstract contract PantosBaseFacet {
      * @notice Modifier which makes sure that only a transaction from the
      * Pantos Hub deployer role is allowed or the contract is not paused.
      */
-    modifier deployerOrNotPaused() {
+    modifier superCriticalOpsOrNotPaused() {
         if (s.paused) {
             LibAccessControl.AccessControlStorage
                 storage acs = LibAccessControl.accessControlStorage();
             require(
-                acs.accessController.hasRole(PantosRoles.DEPLOYER, msg.sender),
+                acs.accessController.hasRole(
+                    PantosRoles.SUPER_CRITICAL_OPS,
+                    msg.sender
+                ),
                 "PantosHub: caller doesn't have role"
             );
         }

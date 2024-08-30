@@ -22,9 +22,12 @@ contract PantosTokenTest is PantosBaseTokenTest {
     }
 
     function test_SetUpState() external {
-        assertEq(pantosToken.balanceOf(deployer()), INITIAL_SUPPLY_PAN);
+        assertEq(
+            pantosToken.balanceOf(SUPER_CRITICAL_OPS),
+            INITIAL_SUPPLY_PAN
+        );
         assertTrue(pantosToken.paused());
-        assertEq(pantosToken.getOwner(), deployer());
+        assertEq(pantosToken.getOwner(), SUPER_CRITICAL_OPS);
     }
 
     function test_pause_AfterInitialization() external {
@@ -37,6 +40,7 @@ contract PantosTokenTest is PantosBaseTokenTest {
     }
 
     function test_pause_WhenPaused() external {
+        vm.prank(SUPER_CRITICAL_OPS);
         pantosToken.setPantosForwarder(PANTOS_FORWARDER_ADDRESS);
         bytes memory calldata_ = abi.encodeWithSelector(
             PantosToken.pause.selector
@@ -70,6 +74,7 @@ contract PantosTokenTest is PantosBaseTokenTest {
     }
 
     function test_unpause_ByNonSuperCriticalOps() external {
+        vm.prank(SUPER_CRITICAL_OPS);
         pantosToken.setPantosForwarder(PANTOS_FORWARDER_ADDRESS);
         bytes memory calldata_ = abi.encodeWithSelector(
             PantosToken.unpause.selector
@@ -124,7 +129,12 @@ contract PantosTokenTest is PantosBaseTokenTest {
         assertEq("Pantos", pantosToken.name());
     }
 
+    function test_getOwner() external {
+        assertEq(token().getOwner(), SUPER_CRITICAL_OPS);
+    }
+
     function test_renounceOwnership() external {
+        vm.prank(SUPER_CRITICAL_OPS);
         pantosToken.renounceOwnership();
 
         assertEq(pantosToken.getOwner(), address(0));
@@ -135,9 +145,10 @@ contract PantosTokenTest is PantosBaseTokenTest {
             abi.encodePacked("PantosToken: ownership cannot be transferred")
         );
 
+        vm.prank(SUPER_CRITICAL_OPS);
         pantosToken.transferOwnership(address(1));
 
-        assertEq(pantosToken.getOwner(), deployer());
+        assertEq(pantosToken.getOwner(), SUPER_CRITICAL_OPS);
     }
 
     function test_unsetPantosForwarder() external {
@@ -145,15 +156,17 @@ contract PantosTokenTest is PantosBaseTokenTest {
         vm.expectEmit();
         emit IPantosToken.PantosForwarderUnset();
 
+        vm.prank(SUPER_CRITICAL_OPS);
         pantosToken.exposed_unsetPantosForwarder();
 
         assertEq(pantosToken.getPantosForwarder(), ADDRESS_ZERO);
     }
 
     function initializeToken() public override {
+        vm.startPrank(SUPER_CRITICAL_OPS);
         pantosToken.setPantosForwarder(PANTOS_FORWARDER_ADDRESS);
-        vm.prank(SUPER_CRITICAL_OPS);
         pantosToken.unpause();
+        vm.stopPrank();
     }
 
     function token() public view override returns (PantosBaseToken) {
