@@ -1001,7 +1001,7 @@ contract PantosHubTest is PantosHubDeployer {
         checkTokenIndices();
     }
 
-    function test_registerTokenBySuperCriticalOps() external {
+    function test_registerToken_BySuperCriticalOps() external {
         initializePantosHub();
         mockPandasToken_getOwner(PANDAS_TOKEN_ADDRESS, SUPER_CRITICAL_OPS);
         assertFalse(inArray(PANDAS_TOKEN_ADDRESS, loadPantosHubTokens()));
@@ -1018,7 +1018,7 @@ contract PantosHubTest is PantosHubDeployer {
         checkTokenIndices();
     }
 
-    function test_registerTokenBySuperCriticalOpsWhenPaused() external {
+    function test_registerToken_BySuperCriticalOpsWhenPaused() external {
         initializePantosHub();
         vm.prank(PAUSER);
         pantosHubProxy.pause();
@@ -1038,7 +1038,7 @@ contract PantosHubTest is PantosHubDeployer {
         checkTokenIndices();
     }
 
-    function test_registerToken_ByNonSuperCriticalOpsAndPaused() external {
+    function test_registerToken_ByNonSuperCriticalOpsWhenPaused() external {
         mockPandasToken_getOwner(PANDAS_TOKEN_ADDRESS, PANDAS_TOKEN_OWNER);
         bytes memory calldata_ = abi.encodeWithSelector(
             IPantosRegistry.registerToken.selector,
@@ -1140,7 +1140,7 @@ contract PantosHubTest is PantosHubDeployer {
         checkTokenIndices();
     }
 
-    function test_unregisterTokenBySupeCriticalOpsAndPaused() external {
+    function test_unregisterToken_BySupeCriticalOpsWhenPaused() external {
         registerTokenAndExternalToken(SUPER_CRITICAL_OPS);
 
         vm.prank(PAUSER);
@@ -1173,7 +1173,7 @@ contract PantosHubTest is PantosHubDeployer {
         checkTokenIndices();
     }
 
-    function test_unregisterToken_ByNonSuperCriticalOpsAndPaused() external {
+    function test_unregisterToken_ByNonSuperCriticalOpsWhenPaused() external {
         bytes memory calldata_ = abi.encodeWithSelector(
             IPantosRegistry.unregisterToken.selector,
             PANDAS_TOKEN_ADDRESS
@@ -1235,7 +1235,7 @@ contract PantosHubTest is PantosHubDeployer {
         vm.stopPrank();
     }
 
-    function test_unregisterToken_WhenTokenAlreadyUnRegisteredBySuperCriticalOpsAndPaused()
+    function test_unregisterToken_WhenTokenAlreadyUnRegistered_BySuperCriticalOpsWhenPaused()
         external
     {
         registerTokenBySuperCriticalOps();
@@ -1330,7 +1330,7 @@ contract PantosHubTest is PantosHubDeployer {
         );
     }
 
-    function test_registerExternalTokenBySuperCriticalOps() external {
+    function test_registerExternalToken_BySuperCriticalOps() external {
         registerTokenBySuperCriticalOps();
 
         vm.prank(SUPER_CRITICAL_OPS);
@@ -1352,7 +1352,7 @@ contract PantosHubTest is PantosHubDeployer {
         );
     }
 
-    function test_registerExternalTokenBySuperCriticalOpsAndPaused() external {
+    function test_registerExternalToken_BySuperCriticalOpsWhenPaused() external {
         registerTokenBySuperCriticalOps();
         vm.prank(PAUSER);
         pantosHubProxy.pause();
@@ -1376,7 +1376,7 @@ contract PantosHubTest is PantosHubDeployer {
         );
     }
 
-    function test_registerExternalToken_ByNonDeployerAndPaused() external {
+    function test_registerExternalToken_ByNonDeployerWhenPaused() external {
         bytes memory calldata_ = abi.encodeWithSelector(
             IPantosRegistry.registerExternalToken.selector,
             PANDAS_TOKEN_ADDRESS,
@@ -1477,7 +1477,7 @@ contract PantosHubTest is PantosHubDeployer {
         );
     }
 
-    function test_registerExternalToken_WhenAlreadyRegisteredBySuperCriticalOpsAndPaused()
+    function test_registerExternalToken_WhenAlreadyRegisteredBySuperCriticalOpsWhenPaused()
         external
     {
         registerTokenAndExternalToken(SUPER_CRITICAL_OPS);
@@ -1517,7 +1517,7 @@ contract PantosHubTest is PantosHubDeployer {
         assertFalse(externalTokenRecord.active);
     }
 
-    function test_unregisterExternalTokenBySuperCriticalOps() external {
+    function test_unregisterExternalToken_BySuperCriticalOps() external {
         registerTokenAndExternalToken(SUPER_CRITICAL_OPS);
         vm.expectEmit();
         emit IPantosRegistry.ExternalTokenUnregistered(
@@ -1539,7 +1539,7 @@ contract PantosHubTest is PantosHubDeployer {
         assertFalse(externalTokenRecord.active);
     }
 
-    function test_unregisterExternalTokenBySuperCriticalOpsAndPaused()
+    function test_unregisterExternalToken_BySuperCriticalOpsWhenPaused()
         external
     {
         registerTokenAndExternalToken(SUPER_CRITICAL_OPS);
@@ -1567,7 +1567,7 @@ contract PantosHubTest is PantosHubDeployer {
         assertFalse(externalTokenRecord.active);
     }
 
-    function test_unregisterExternalToken_ByNonDeployerAndPaused() external {
+    function test_unregisterExternalToken_ByNonDeployerWhenPaused() external {
         bytes memory calldata_ = abi.encodeWithSelector(
             IPantosRegistry.unregisterExternalToken.selector,
             PANDAS_TOKEN_ADDRESS,
@@ -1601,7 +1601,7 @@ contract PantosHubTest is PantosHubDeployer {
         );
     }
 
-    function test_unregisterExternalToken_WithInactiveTokenBySuperCriticalOpsAndPaused()
+    function test_unregisterExternalToken_WithInactiveTokenBySuperCriticalOpsWhenPaused()
         external
     {
         initializePantosHub();
@@ -1659,7 +1659,7 @@ contract PantosHubTest is PantosHubDeployer {
         );
     }
 
-    function test_unregisterExternalToken_WithInactiveExternalTokenBySuperCriticalOpsAndPaused()
+    function test_unregisterExternalToken_WithInactiveExternalTokenBySuperCriticalOpsWhenPaused()
         external
     {
         registerTokenBySuperCriticalOps();
