@@ -1111,7 +1111,7 @@ contract PantosHubTest is PantosHubDeployer {
         checkTokenIndices();
     }
 
-    function test_unregisterToken_BySupeCriticalOps() external {
+    function test_unregisterToken_BySuperCriticalOps() external {
         registerTokenAndExternalToken(SUPER_CRITICAL_OPS);
         mockPandasToken_getOwner(PANDAS_TOKEN_ADDRESS, SUPER_CRITICAL_OPS);
         vm.expectEmit();
@@ -1140,7 +1140,7 @@ contract PantosHubTest is PantosHubDeployer {
         checkTokenIndices();
     }
 
-    function test_unregisterToken_BySupeCriticalOpsWhenPaused() external {
+    function test_unregisterToken_BySuperCriticalOpsWhenPaused() external {
         registerTokenAndExternalToken(SUPER_CRITICAL_OPS);
 
         vm.prank(PAUSER);
@@ -1352,7 +1352,9 @@ contract PantosHubTest is PantosHubDeployer {
         );
     }
 
-    function test_registerExternalToken_BySuperCriticalOpsWhenPaused() external {
+    function test_registerExternalToken_BySuperCriticalOpsWhenPaused()
+        external
+    {
         registerTokenBySuperCriticalOps();
         vm.prank(PAUSER);
         pantosHubProxy.pause();
