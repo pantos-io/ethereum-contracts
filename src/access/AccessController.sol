@@ -31,6 +31,22 @@ contract AccessController is AccessControl {
         address mediumCriticalOps_,
         address superCriticalOps_
     ) {
+        require(
+            pauser_ != address(0),
+            "AccessController: pauser must not be the zero account"
+        );
+        require(
+            deployer_ != address(0),
+            "AccessController: deployer must not be the zero account"
+        );
+        require(
+            mediumCriticalOps_ != address(0),
+            "AccessController: mediumCriticalOps must not be the zero account"
+        );
+        require(
+            superCriticalOps_ != address(0),
+            "AccessController: superCriticalOps must not be the zero account"
+        );
         pauser = pauser_;
         deployer = deployer_;
         mediumCriticalOps = mediumCriticalOps_;

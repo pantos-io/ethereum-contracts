@@ -18,6 +18,7 @@ import {LibAccessControl} from "../libraries/LibAccessControl.sol";
  */
 abstract contract PantosBaseFacet {
     // Application of the App Storage pattern
+    // slither-disable-next-line uninitialized-state
     PantosHubStorage internal s;
     /**
      * @notice Modifier which makes sure that only a transaction from the
