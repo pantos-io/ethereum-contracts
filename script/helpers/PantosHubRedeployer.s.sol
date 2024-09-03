@@ -43,9 +43,7 @@ abstract contract PantosHubRedeployer is
         _pantosToken = PantosToken(_oldPantosHubProxy.getPantosToken());
         readContractAddresses(determineBlockchain());
         _accessController = AccessController(
-            vm.parseAddress(
-                getContractAddress(determineBlockchain(), "access_controller")
-            )
+            getContractAddress(determineBlockchain(), "access_controller")
         );
         readOwnedAndExternalTokens(_oldPantosHubProxy);
     }

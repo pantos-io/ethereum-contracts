@@ -28,16 +28,28 @@ contract PantosBaseAddresses is PantosBaseScript {
         _;
     }
 
-    function getContractAddress(
+    function getContractAddressAsString(
         Blockchain memory blockchain,
-        string memory tokenSymbol
+        string memory symbol
     )
         public
         view
         onlyInitializedChains(blockchain.blockchainId)
         returns (string memory)
     {
-        return _addresses[blockchain.blockchainId][tokenSymbol];
+        return _addresses[blockchain.blockchainId][symbol];
+    }
+
+    function getContractAddress(
+        Blockchain memory blockchain,
+        string memory symbol
+    )
+        public
+        view
+        onlyInitializedChains(blockchain.blockchainId)
+        returns (address)
+    {
+        return vm.parseAddress(getContractAddressAsString(blockchain, symbol));
     }
 
     function readContractAddresses(Blockchain memory blockchain) public {

@@ -29,10 +29,8 @@ contract RegisterExternalTokens is PantosBaseAddresses {
         string[] memory tokenSymbols = getTokenSymbols();
         for (uint256 i = 0; i < tokenSymbols.length; i++) {
             string memory tokenSymbol = tokenSymbols[i];
-            address token = vm.parseAddress(
-                getContractAddress(thisBlockchain, tokenSymbol)
-            );
-            string memory externalToken = getContractAddress(
+            address token = getContractAddress(thisBlockchain, tokenSymbol);
+            string memory externalToken = getContractAddressAsString(
                 otherBlockchain,
                 tokenSymbol
             );
@@ -126,7 +124,7 @@ contract RegisterExternalTokens is PantosBaseAddresses {
 
         thisBlockchain = determineBlockchain();
         pantosHubProxy = IPantosHub(
-            vm.parseAddress(getContractAddress(thisBlockchain, "hub_proxy"))
+            getContractAddress(thisBlockchain, "hub_proxy")
         );
 
         registerExternalTokens();

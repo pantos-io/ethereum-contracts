@@ -1,19 +1,25 @@
 // SPDX-License-Identifier: GPL-3.0
 pragma solidity 0.8.26;
 
+import {DiamondLoupeFacet} from "@diamond/facets/DiamondLoupeFacet.sol";
+
 import {IPantosHub} from "../src/interfaces/IPantosHub.sol";
 import {PantosForwarder} from "../src/PantosForwarder.sol";
 import {PantosToken} from "../src/PantosToken.sol";
 import {BitpandaEcosystemToken} from "../src/BitpandaEcosystemToken.sol";
 import {AccessController} from "../src/access/AccessController.sol";
+import {PantosHubProxy} from "../src/PantosHubProxy.sol";
+import {PantosHubInit} from "../src/upgradeInitializers/PantosHubInit.sol";
+import {PantosRegistryFacet} from "../src/facets/PantosRegistryFacet.sol";
+import {PantosTransferFacet} from "../src/facets/PantosTransferFacet.sol";
+import {DiamondCutFacet} from "../src/facets/DiamondCutFacet.sol";
 
-import {PantosHubDeployer, DeployedFacets} from "./helpers/PantosHubDeployer.s.sol";
+import {PantosHubDeployer, PantosFacets} from "./helpers/PantosHubDeployerNew.s.sol";
 import {PantosForwarderDeployer} from "./helpers/PantosForwarderDeployer.s.sol";
 import {PantosWrapperDeployer} from "./helpers/PantosWrapperDeployer.s.sol";
 import {PantosTokenDeployer} from "./helpers/PantosTokenDeployer.s.sol";
 import {BitpandaEcosystemTokenDeployer} from "./helpers/BitpandaEcosystemTokenDeployer.s.sol";
 import {AccessControllerDeployer} from "./helpers/AccessControllerDeployer.s.sol";
-
 /**
  * @title DeployContracts
  *
@@ -35,7 +41,9 @@ contract DeployContracts is
     BitpandaEcosystemTokenDeployer,
     AccessControllerDeployer
 {
-    IPantosHub public pantosHubProxy;
+    PantosHubProxy public pantosHubProxy;
+    PantosHubInit public pantosHubInit;
+    PantosFacets public pantosFacets;
     PantosForwarder public pantosForwarder;
     PantosToken public pantosToken;
     BitpandaEcosystemToken public bitpandaEcosystemToken;
@@ -57,6 +65,28 @@ contract DeployContracts is
         }
 
         vm.serializeAddress("addresses", "hub_proxy", address(pantosHubProxy));
+        vm.serializeAddress("addresses", "hub_init", address(pantosHubInit));
+        vm.serializeAddress(
+            "addresses",
+            "diamond_cut_facet",
+            address(pantosFacets.dCut)
+        );
+        vm.serializeAddress(
+            "addresses",
+            "diamond_loupe_facet",
+            address(pantosFacets.dLoupe)
+        );
+        vm.serializeAddress(
+            "addresses",
+            "registry_facet",
+            address(pantosFacets.registry)
+        );
+        vm.serializeAddress(
+            "addresses",
+            "transfer_facet",
+            address(pantosFacets.transfer)
+        );
+
         vm.serializeAddress(
             "addresses",
             "forwarder",
@@ -90,16 +120,13 @@ contract DeployContracts is
         vm.writeJson(roles, string.concat(blockchainName, "_ROLES.json"));
     }
 
-    function run(
-        address primaryValidator,
+    function deploy(
         address pauser_,
         address deployer_,
         address mediumCriticalOps_,
         address superCriticalOps_,
         uint256 panSupply,
-        uint256 bestSupply,
-        uint256 nextTransferId,
-        address[] memory otherValidators
+        uint256 bestSupply
     ) public {
         vm.startBroadcast();
         pauser = pauser_;
@@ -113,7 +140,10 @@ contract DeployContracts is
             mediumCriticalOps,
             superCriticalOps
         );
-        (pantosHubProxy, ) = deployPantosHub(nextTransferId, accessController);
+
+        (pantosHubProxy, pantosHubInit, pantosFacets) = deployPantosHub(
+            accessController
+        );
 
         pantosForwarder = deployPantosForwarder(accessController);
         pantosToken = deployPantosToken(panSupply, accessController);
@@ -124,8 +154,64 @@ contract DeployContracts is
 
         deployCoinWrappers(accessController);
 
-        initializePantosHub(
+        vm.stopBroadcast();
+
+        exportContractAddresses();
+        exportPantosRolesAddresses();
+        // TODO export safe info and nonces
+    }
+
+    function roleActions(
+        uint256 nextTransferId,
+        address primaryValidator,
+        address[] memory otherValidators
+    ) public {
+        Blockchain memory blockchain = determineBlockchain();
+        readContractAddresses(blockchain);
+        pantosHubProxy = PantosHubProxy(
+            payable(getContractAddress(blockchain, "hub_proxy"))
+        );
+        pantosHubInit = PantosHubInit(
+            getContractAddress(blockchain, "hub_init")
+        );
+        pantosForwarder = PantosForwarder(
+            getContractAddress(blockchain, "forwarder")
+        );
+        pantosToken = PantosToken(getContractAddress(blockchain, "pan"));
+        bitpandaEcosystemToken = BitpandaEcosystemToken(
+            getContractAddress(blockchain, "best")
+        );
+
+        pantosFacets.dCut = DiamondCutFacet(
+            getContractAddress(blockchain, "diamond_cut_facet")
+        );
+        pantosFacets.dLoupe = DiamondLoupeFacet(
+            getContractAddress(blockchain, "diamond_loupe_facet")
+        );
+        pantosFacets.registry = PantosRegistryFacet(
+            getContractAddress(blockchain, "registry_facet")
+        );
+        pantosFacets.transfer = PantosTransferFacet(
+            getContractAddress(blockchain, "transfer_facet")
+        );
+
+        accessController = AccessController(
+            getContractAddress(blockchain, "access_controller")
+        );
+
+        vm.broadcast(accessController.deployer());
+        diamondCutFacets(
             pantosHubProxy,
+            pantosHubInit,
+            pantosFacets,
+            nextTransferId
+        );
+
+        IPantosHub pantosHub = IPantosHub(address(pantosHubProxy));
+
+        vm.startBroadcast(accessController.superCriticalOps());
+        initializePantosHub(
+            pantosHub,
             pantosForwarder,
             pantosToken,
             primaryValidator
@@ -142,22 +228,17 @@ contract DeployContracts is
 
         initializePantosForwarder(
             pantosForwarder,
-            pantosHubProxy,
+            pantosHub,
             pantosToken,
             validatorNodeAddresses
         );
-
         initializePantosToken(pantosToken, pantosForwarder);
         initializeBitpandaEcosystemToken(
             bitpandaEcosystemToken,
-            pantosHubProxy,
+            pantosHub,
             pantosForwarder
         );
-        initializePantosWrappers(pantosHubProxy, pantosForwarder);
-
+        initializePantosWrappers(pantosHub, pantosForwarder);
         vm.stopBroadcast();
-
-        exportContractAddresses();
-        exportPantosRolesAddresses();
     }
 }

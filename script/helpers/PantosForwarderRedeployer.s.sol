@@ -37,9 +37,7 @@ abstract contract PantosForwarderRedeployer is
         _pantosToken = PantosToken(_pantosHubProxy.getPantosToken());
         readContractAddresses(determineBlockchain());
         _accessController = AccessController(
-            vm.parseAddress(
-                getContractAddress(determineBlockchain(), "access_controller")
-            )
+            getContractAddress(determineBlockchain(), "access_controller")
         );
         _initialized = true;
     }
@@ -101,8 +99,9 @@ abstract contract PantosForwarderRedeployer is
         string[] memory tokenSymbols = getTokenSymbols();
         for (uint256 i = 0; i < tokenSymbols.length; i++) {
             string memory tokenSymbol = tokenSymbols[i];
-            address tokenAddress = vm.parseAddress(
-                getContractAddress(thisBlockchain, tokenSymbol)
+            address tokenAddress = getContractAddress(
+                thisBlockchain,
+                tokenSymbol
             );
             PantosToken token = PantosToken(tokenAddress);
             token.pause();
