@@ -7,3 +7,6 @@
 [submodule "lib/diamond-3-hardhat"]
 	path = lib/diamond-3-hardhat
 	url = https://github.com/mudgen/diamond-3-hardhat
+[submodule "lib/safe-smart-account"]
+	path = lib/safe-smart-account
+	url = https://github.com/safe-global/safe-smart-account
