@@ -120,6 +120,42 @@ contract DeployContracts is
         vm.writeJson(roles, string.concat(blockchainName, "_ROLES.json"));
     }
 
+
+    function importContractAddresses() public {
+        Blockchain memory blockchain = determineBlockchain();
+        readContractAddresses(blockchain);
+        pantosHubProxy = PantosHubProxy(
+            payable(getContractAddress(blockchain, "hub_proxy"))
+        );
+        pantosHubInit = PantosHubInit(
+            getContractAddress(blockchain, "hub_init")
+        );
+        pantosForwarder = PantosForwarder(
+            getContractAddress(blockchain, "forwarder")
+        );
+        pantosToken = PantosToken(getContractAddress(blockchain, "pan"));
+        bitpandaEcosystemToken = BitpandaEcosystemToken(
+            getContractAddress(blockchain, "best")
+        );
+
+        pantosFacets.dCut = DiamondCutFacet(
+            getContractAddress(blockchain, "diamond_cut_facet")
+        );
+        pantosFacets.dLoupe = DiamondLoupeFacet(
+            getContractAddress(blockchain, "diamond_loupe_facet")
+        );
+        pantosFacets.registry = PantosRegistryFacet(
+            getContractAddress(blockchain, "registry_facet")
+        );
+        pantosFacets.transfer = PantosTransferFacet(
+            getContractAddress(blockchain, "transfer_facet")
+        );
+
+        accessController = AccessController(
+            getContractAddress(blockchain, "access_controller")
+        );
+    }
+
     function deploy(
         address pauser_,
         address deployer_,
@@ -166,39 +202,7 @@ contract DeployContracts is
         address primaryValidator,
         address[] memory otherValidators
     ) public {
-        Blockchain memory blockchain = determineBlockchain();
-        readContractAddresses(blockchain);
-        pantosHubProxy = PantosHubProxy(
-            payable(getContractAddress(blockchain, "hub_proxy"))
-        );
-        pantosHubInit = PantosHubInit(
-            getContractAddress(blockchain, "hub_init")
-        );
-        pantosForwarder = PantosForwarder(
-            getContractAddress(blockchain, "forwarder")
-        );
-        pantosToken = PantosToken(getContractAddress(blockchain, "pan"));
-        bitpandaEcosystemToken = BitpandaEcosystemToken(
-            getContractAddress(blockchain, "best")
-        );
-
-        pantosFacets.dCut = DiamondCutFacet(
-            getContractAddress(blockchain, "diamond_cut_facet")
-        );
-        pantosFacets.dLoupe = DiamondLoupeFacet(
-            getContractAddress(blockchain, "diamond_loupe_facet")
-        );
-        pantosFacets.registry = PantosRegistryFacet(
-            getContractAddress(blockchain, "registry_facet")
-        );
-        pantosFacets.transfer = PantosTransferFacet(
-            getContractAddress(blockchain, "transfer_facet")
-        );
-
-        accessController = AccessController(
-            getContractAddress(blockchain, "access_controller")
-        );
-
+        importContractAddresses();
         vm.broadcast(accessController.deployer());
         diamondCutFacets(
             pantosHubProxy,
