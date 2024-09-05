@@ -120,7 +120,6 @@ contract DeployContracts is
         vm.writeJson(roles, string.concat(blockchainName, "_ROLES.json"));
     }
 
-
     function importContractAddresses() public {
         Blockchain memory blockchain = determineBlockchain();
         readContractAddresses(blockchain);

@@ -41,6 +41,23 @@ abstract contract PantosHubDeployer is PantosBaseScript, PantosBaseAddresses {
     //     return deployPantosHub(nextTransferId, accessController);
     // }
 
+    function deployRegistryFacet() public returns (PantosRegistryFacet) {
+        PantosRegistryFacet registryFacet = new PantosRegistryFacet();
+        console2.log(
+            "PantosRegistryFacet deployed; address=%s",
+            address(registryFacet)
+        );
+        return registryFacet;
+    }
+
+    function deployTransferFacet() public returns (PantosTransferFacet) {
+        PantosTransferFacet transferFacet = new PantosTransferFacet();
+        console2.log(
+            "PantosTransferFacet deployed; address=%s",
+            address(transferFacet)
+        );
+    }
+
     function deployPantosHub(
         AccessController accessController
     ) public returns (PantosHubProxy, PantosHubInit, PantosFacets memory) {
@@ -66,16 +83,8 @@ abstract contract PantosHubDeployer is PantosBaseScript, PantosBaseAddresses {
             "DiamondLoupeFacet deployed; address=%s",
             address(dLoupe)
         );
-        PantosRegistryFacet registryFacet = new PantosRegistryFacet();
-        console2.log(
-            "PantosRegistryFacet deployed; address=%s",
-            address(registryFacet)
-        );
-        PantosTransferFacet transferFacet = new PantosTransferFacet();
-        console2.log(
-            "PantosTransferFacet deployed; address=%s",
-            address(transferFacet)
-        );
+        PantosRegistryFacet registryFacet = deployRegistryFacet();
+        PantosTransferFacet transferFacet = deployTransferFacet();
 
         PantosFacets memory pantosFacets = PantosFacets({
             dCut: dCutFacet,
@@ -300,20 +309,12 @@ abstract contract PantosHubDeployer is PantosBaseScript, PantosBaseAddresses {
         );
     }
 
-    function upgradePantosHub(address pantosHubProxyAddress) public {
-        IPantosHub pantosHubProxy = IPantosHub(pantosHubProxyAddress);
-
-        PantosRegistryFacet registryFacet = new PantosRegistryFacet();
-        console2.log(
-            "New PantosRegistryFacet deployed; address=%s",
-            address(registryFacet)
-        );
-        PantosTransferFacet transferFacet = new PantosTransferFacet();
-        console2.log(
-            "New PantosTransferFacet deployed; address=%s",
-            address(transferFacet)
-        );
-
+    // PantosRoles.DEPLOYER and expects PantosHub is paused already
+    function diamondCutUpgradeFacets(
+        address pantosHubProxyAddress,
+        PantosRegistryFacet registryFacet,
+        PantosTransferFacet transferFacet
+    ) public {
         // Prepare diamond cut
         IDiamondCut.FacetCut[] memory cut = preparePantosHubUpgradeFacetCuts(
             pantosHubProxyAddress,
@@ -321,28 +322,29 @@ abstract contract PantosHubDeployer is PantosBaseScript, PantosBaseAddresses {
             transferFacet
         );
 
+        IPantosHub pantosHub = IPantosHub(pantosHubProxyAddress);
         // Ensuring PantosHub is paused at the time of diamond cut
-        if (!pantosHubProxy.paused()) {
-            pantosHubProxy.pause();
-            console2.log("PantosHub: paused=%s", pantosHubProxy.paused());
-        }
+        require(
+            pantosHub.paused(),
+            "PantosHub should be paused before diamondCut"
+        );
 
         // upgrade pantosHub diamond with facets using diamondCut
         IDiamondCut(pantosHubProxyAddress).diamondCut(cut, address(0), "");
 
         console2.log(
             "diamondCut PantosHubProxy; paused=%s; cut(s) count=%s;",
-            pantosHubProxy.paused(),
+            pantosHub.paused(),
             cut.length
         );
 
         // this will do nothing if there is nothing new added to the storage slots
-        initializePantosHub(
-            pantosHubProxy,
-            PantosForwarder(pantosHubProxy.getPantosForwarder()),
-            PantosToken(pantosHubProxy.getPantosToken()),
-            pantosHubProxy.getPrimaryValidatorNode()
-        );
+        // initializePantosHub(
+        //     pantosHubProxy,
+        //     PantosForwarder(pantosHubProxy.getPantosForwarder()),
+        //     PantosToken(pantosHubProxy.getPantosToken()),
+        //     pantosHubProxy.getPrimaryValidatorNode()
+        // );
     }
 
     function getUpgradeFacetCut(
