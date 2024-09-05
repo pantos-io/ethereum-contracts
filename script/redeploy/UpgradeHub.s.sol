@@ -1,7 +1,13 @@
 // SPDX-License-Identifier: GPL-3.0
 pragma solidity 0.8.26;
 
+/* solhint-disable no-console*/
+import {console} from "forge-std/console.sol";
+
 import {IPantosHub} from "../../src/interfaces/IPantosHub.sol";
+import {AccessController} from "../../src/access/AccessController.sol";
+import {PantosForwarder} from "../../src/PantosForwarder.sol";
+import {PantosToken} from "../../src/PantosToken.sol";
 
 import {PantosHubDeployer} from "../helpers/PantosHubDeployerNew.s.sol";
 import {PantosRegistryFacet} from "../../src/facets/PantosRegistryFacet.sol";
@@ -93,25 +99,35 @@ contract UpgradeHub is PantosHubDeployer {
         exportContractAddresses();
     }
 
-    function roleActions(address pantosHubProxyAddress) public {
+    function roleActions() public {
+        address pantosHubProxyAddress; // FIXME: need this from Base Address helper
+        AccessController accessController; // FIXME: need this from Base Address helper
+
         importContractAddresses();
         IPantosHub pantosHub = IPantosHub(pantosHubProxyAddress);
 
         // Ensuring PantosHub is paused at the time of diamond cut
         if (!pantosHub.paused()) {
-            vm.broadcast(); // PAUSER
+            vm.broadcast(accessController.pauser());
             pantosHub.pause();
-            // console.log("PantosHub: paused=%s", pantosHub.paused());
+            console.log("PantosHub: paused=%s", pantosHub.paused());
         }
 
-        vm.startBroadcast(); // SUPERCRITICAL OPS
-
+        vm.broadcast(accessController.deployer());
         diamondCutUpgradeFacets(
             pantosHubProxyAddress,
             registryFacet,
             transferFacet
         );
 
-        vm.stopBroadcast();
+        vm.broadcast(accessController.deployer());
+        // this will do nothing if there is nothing new added to the storage slots
+        // FIXME: can we use the json valuse to pass in to this method ?
+        initializePantosHub(
+            pantosHub,
+            PantosForwarder(pantosHub.getPantosForwarder()),
+            PantosToken(pantosHub.getPantosToken()),
+            pantosHub.getPrimaryValidatorNode()
+        );
     }
 }

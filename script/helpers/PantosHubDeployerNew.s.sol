@@ -2,7 +2,7 @@
 pragma solidity 0.8.26;
 
 /* solhint-disable no-console*/
-import {console2} from "forge-std/console2.sol";
+import {console} from "forge-std/console.sol";
 import {IDiamondCut} from "@diamond/interfaces/IDiamondCut.sol";
 import {IDiamondLoupe} from "@diamond/interfaces/IDiamondLoupe.sol";
 import {IERC165} from "@diamond/interfaces/IERC165.sol";
@@ -33,17 +33,9 @@ struct PantosFacets {
 }
 
 abstract contract PantosHubDeployer is PantosBaseScript, PantosBaseAddresses {
-    // function deployPantosHub(
-    //     AccessController accessController
-    // ) public returns (IPantosHub, PantosFacets memory) {
-    //     // This will only change if we migrate testnets
-    //     uint256 nextTransferId = 0;
-    //     return deployPantosHub(nextTransferId, accessController);
-    // }
-
     function deployRegistryFacet() public returns (PantosRegistryFacet) {
         PantosRegistryFacet registryFacet = new PantosRegistryFacet();
-        console2.log(
+        console.log(
             "PantosRegistryFacet deployed; address=%s",
             address(registryFacet)
         );
@@ -52,17 +44,18 @@ abstract contract PantosHubDeployer is PantosBaseScript, PantosBaseAddresses {
 
     function deployTransferFacet() public returns (PantosTransferFacet) {
         PantosTransferFacet transferFacet = new PantosTransferFacet();
-        console2.log(
+        console.log(
             "PantosTransferFacet deployed; address=%s",
             address(transferFacet)
         );
+        return transferFacet;
     }
 
     function deployPantosHub(
         AccessController accessController
     ) public returns (PantosHubProxy, PantosHubInit, PantosFacets memory) {
         DiamondCutFacet dCutFacet = new DiamondCutFacet();
-        console2.log(
+        console.log(
             "DiamondCutFacet deployed; address=%s",
             address(dCutFacet)
         );
@@ -71,7 +64,7 @@ abstract contract PantosHubDeployer is PantosBaseScript, PantosBaseAddresses {
             address(dCutFacet),
             address(accessController)
         );
-        console2.log(
+        console.log(
             "PantosHubProxy deployed; address=%s; accessController=%s",
             address(pantosHubDiamond),
             address(accessController)
@@ -79,10 +72,7 @@ abstract contract PantosHubDeployer is PantosBaseScript, PantosBaseAddresses {
 
         // deploying all other facets
         DiamondLoupeFacet dLoupe = new DiamondLoupeFacet();
-        console2.log(
-            "DiamondLoupeFacet deployed; address=%s",
-            address(dLoupe)
-        );
+        console.log("DiamondLoupeFacet deployed; address=%s", address(dLoupe));
         PantosRegistryFacet registryFacet = deployRegistryFacet();
         PantosTransferFacet transferFacet = deployTransferFacet();
 
@@ -95,7 +85,7 @@ abstract contract PantosHubDeployer is PantosBaseScript, PantosBaseAddresses {
 
         // deploy initializer
         PantosHubInit pantosHubInit = new PantosHubInit();
-        console2.log(
+        console.log(
             "PantosHubInit deployed; address=%s",
             address(pantosHubInit)
         );
@@ -123,7 +113,7 @@ abstract contract PantosHubDeployer is PantosBaseScript, PantosBaseAddresses {
         // wrap in IPantosHub ABI to support easier calls
         IPantosHub pantosHub = IPantosHub(address(pantosHubProxy));
 
-        console2.log(
+        console.log(
             "diamondCut PantosHubProxy; paused=%s; cut(s) count=%s",
             pantosHub.paused(),
             cut.length
@@ -181,57 +171,56 @@ abstract contract PantosHubDeployer is PantosBaseScript, PantosBaseAddresses {
         return initializerData;
     }
 
+    // PantosRoles.SUPER_CRITICAL_OPS  and expects PantosHub is paused
     function initializePantosHub(
-        IPantosHub pantosHubProxy,
+        IPantosHub pantosHub,
         PantosForwarder pantosForwarder,
         PantosToken pantosToken,
         address primaryValidatorNodeAddress
     ) public {
-        if (!pantosHubProxy.paused()) {
-            pantosHubProxy.pause();
-            console2.log("PantosHub: paused=%s", pantosHubProxy.paused());
-        }
+        require(
+            pantosHub.paused(),
+            "PantosHub should be paused before initializePantosHub"
+        );
 
         // Set the forwarder, PAN token, and primary validator node
         // addresses
-        address currentForwarder = pantosHubProxy.getPantosForwarder();
+        address currentForwarder = pantosHub.getPantosForwarder();
         if (currentForwarder != address(pantosForwarder)) {
-            pantosHubProxy.setPantosForwarder(address(pantosForwarder));
-            console2.log(
+            pantosHub.setPantosForwarder(address(pantosForwarder));
+            console.log(
                 "PantosHub.setPantosForwarder(%s)",
                 address(pantosForwarder)
             );
         } else {
-            console2.log(
+            console.log(
                 "PantosHub: PantosForwarder already set, "
                 "skipping setPantosForwarder(%s)",
                 address(pantosForwarder)
             );
         }
 
-        address currentPantosToken = pantosHubProxy.getPantosToken();
+        address currentPantosToken = pantosHub.getPantosToken();
         if (currentPantosToken != address(pantosToken)) {
-            pantosHubProxy.setPantosToken(address(pantosToken));
-            console2.log("PantosHub.setPantosToken(%s)", address(pantosToken));
+            pantosHub.setPantosToken(address(pantosToken));
+            console.log("PantosHub.setPantosToken(%s)", address(pantosToken));
         } else {
-            console2.log(
+            console.log(
                 "PantosHub: PantosToken already set, "
                 "skipping setPantosToken(%s)",
                 address(pantosToken)
             );
         }
 
-        address currentPrimaryNode = pantosHubProxy.getPrimaryValidatorNode();
+        address currentPrimaryNode = pantosHub.getPrimaryValidatorNode();
         if (currentPrimaryNode != primaryValidatorNodeAddress) {
-            pantosHubProxy.setPrimaryValidatorNode(
-                primaryValidatorNodeAddress
-            );
-            console2.log(
+            pantosHub.setPrimaryValidatorNode(primaryValidatorNodeAddress);
+            console.log(
                 "PantosHub.setPrimaryValidatorNode(%s)",
                 primaryValidatorNodeAddress
             );
         } else {
-            console2.log(
+            console.log(
                 "PantosHub: Primary Validator already set, "
                 "skipping setPrimaryValidatorNode(%s)",
                 primaryValidatorNodeAddress
@@ -251,17 +240,16 @@ abstract contract PantosHubDeployer is PantosBaseScript, PantosBaseAddresses {
                 !otherBlockchain.skip
             ) {
                 PantosTypes.BlockchainRecord
-                    memory blockchainRecord = pantosHubProxy
-                        .getBlockchainRecord(
-                            uint256(otherBlockchain.blockchainId)
-                        );
+                    memory blockchainRecord = pantosHub.getBlockchainRecord(
+                        uint256(otherBlockchain.blockchainId)
+                    );
                 if (!blockchainRecord.active) {
-                    pantosHubProxy.registerBlockchain(
+                    pantosHub.registerBlockchain(
                         uint256(otherBlockchain.blockchainId),
                         otherBlockchain.name,
                         otherBlockchain.feeFactor
                     );
-                    console2.log(
+                    console.log(
                         "PantosHub.registerBlockchain(%s) on %s",
                         otherBlockchain.name,
                         blockchain.name
@@ -270,29 +258,29 @@ abstract contract PantosHubDeployer is PantosBaseScript, PantosBaseAddresses {
                     keccak256(abi.encodePacked(blockchainRecord.name)) !=
                     keccak256(abi.encodePacked(otherBlockchain.name))
                 ) {
-                    console2.log(
+                    console.log(
                         "PantosHub: blockchain names do not match. "
                         "Unregister and register again "
                         "Old name: %s New name: %s",
                         blockchainRecord.name,
                         otherBlockchain.name
                     );
-                    pantosHubProxy.unregisterBlockchain(
+                    pantosHub.unregisterBlockchain(
                         uint256(otherBlockchain.blockchainId)
                     );
-                    pantosHubProxy.registerBlockchain(
+                    pantosHub.registerBlockchain(
                         uint256(otherBlockchain.blockchainId),
                         otherBlockchain.name,
                         otherBlockchain.feeFactor
                     );
-                    console2.log(
+                    console.log(
                         "PantosHub.unregisterBlockchain(%s), "
                         "PantosHub.registerBlockchain(%s), ",
                         uint256(otherBlockchain.blockchainId),
                         uint256(otherBlockchain.blockchainId)
                     );
                 } else {
-                    console2.log(
+                    console.log(
                         "PantosHub: Blockchain %s already registered "
                         "Skipping registerBlockchain(%s)",
                         otherBlockchain.name,
@@ -302,11 +290,8 @@ abstract contract PantosHubDeployer is PantosBaseScript, PantosBaseAddresses {
             }
         }
         // Unpause the hub contract after initialization
-        pantosHubProxy.unpause();
-        console2.log(
-            "PantosHub initialized; paused=%s",
-            pantosHubProxy.paused()
-        );
+        pantosHub.unpause();
+        console.log("PantosHub initialized; paused=%s", pantosHub.paused());
     }
 
     // PantosRoles.DEPLOYER and expects PantosHub is paused already
@@ -332,31 +317,23 @@ abstract contract PantosHubDeployer is PantosBaseScript, PantosBaseAddresses {
         // upgrade pantosHub diamond with facets using diamondCut
         IDiamondCut(pantosHubProxyAddress).diamondCut(cut, address(0), "");
 
-        console2.log(
+        console.log(
             "diamondCut PantosHubProxy; paused=%s; cut(s) count=%s;",
             pantosHub.paused(),
             cut.length
         );
-
-        // this will do nothing if there is nothing new added to the storage slots
-        // initializePantosHub(
-        //     pantosHubProxy,
-        //     PantosForwarder(pantosHubProxy.getPantosForwarder()),
-        //     PantosToken(pantosHubProxy.getPantosToken()),
-        //     pantosHubProxy.getPrimaryValidatorNode()
-        // );
     }
 
     function getUpgradeFacetCut(
         address newFacetAddress,
         bytes4[] memory newSelectors,
         bytes4[] memory oldSelectors
-    ) public pure returns (IDiamondCut.FacetCut[] memory) {
+    ) public view returns (IDiamondCut.FacetCut[] memory) {
         bytes4 oldInterfaceId = _calculateInterfaceId(oldSelectors);
         bytes4 newInterfaceId = _calculateInterfaceId(newSelectors);
 
         if (oldInterfaceId == newInterfaceId) {
-            console2.log(
+            console.log(
                 "No interface change in new facet address=%s; Using Replace"
                 " cut",
                 newFacetAddress
@@ -369,7 +346,7 @@ abstract contract PantosHubDeployer is PantosBaseScript, PantosBaseAddresses {
             });
             return cut;
         } else {
-            console2.log(
+            console.log(
                 "Interface change detected in new facet address=%s;"
                 " Using Remove/Add cut",
                 newFacetAddress
@@ -407,7 +384,7 @@ abstract contract PantosHubDeployer is PantosBaseScript, PantosBaseAddresses {
             "Failed to find registry facet of provided selector."
             " Provide a selector which is present in the current facet."
         );
-        console2.log(
+        console.log(
             "Found current registry facet address=%s;",
             registryAddressOld
         );
@@ -430,7 +407,7 @@ abstract contract PantosHubDeployer is PantosBaseScript, PantosBaseAddresses {
             "Failed to find transfer facet of provided selector"
         );
 
-        console2.log(
+        console.log(
             "Found current transfer facet address=%s;",
             transferAddressOld
         );

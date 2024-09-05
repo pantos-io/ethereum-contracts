@@ -101,6 +101,12 @@ $ forge script ./script/redeploy/RedeployHub.s.sol --account local_deployer --pa
 $ forge script ./script/redeploy/UpgradeHub.s.sol --account local_deployer --password '' --sender 0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266 --rpc-url local-8545 -vvvv --sig "run(address)" 0x9fE46736679d2D9a65F0992F2272dE9f3c7fa6e0
 ```
 
+Deploy all facet contracts from any gas paying account
+
+```bash
+$ forge script ./script/redeploy/UpgradeHub.s.sol --account local_deployer --password '' --sender 0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266 --rpc-url local-8545 -vvvv --sig "deploy()"
+```
+
 ### RedeployForwarder
 
 ```bash
