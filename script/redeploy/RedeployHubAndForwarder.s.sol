@@ -39,60 +39,54 @@ contract RedeployHubAndForwarder is
     PantosHubRedeployer,
     PantosForwarderRedeployer
 {
-    function deployAndInitializeHubAndForwarder()
-        public
-        onlyPantosHubRedeployerInitialized
-        returns (IPantosHub, PantosForwarder)
-    {
-        IPantosHub oldPantosHubProxy = getOldPantosHubProxy();
-
-        if (!oldPantosHubProxy.paused()) {
-            oldPantosHubProxy.pause();
-        }
-        address primaryValidatorNodeAddress = oldPantosHubProxy
-            .getPrimaryValidatorNode();
-        address[] memory validatorNodeAddresses = PantosForwarder(
-            oldPantosHubProxy.getPantosForwarder()
-        ).getValidatorNodes();
-        uint256 nextTransferId = oldPantosHubProxy.getNextTransferId();
-
-        (IPantosHub newPantosHubProxy, ) = deployPantosHub(
-            nextTransferId,
-            getAccessController()
-        );
-        PantosForwarder newPantosForwarder = deployPantosForwarder(
-            getAccessController()
-        );
-        initializePantosHub(
-            newPantosHubProxy,
-            newPantosForwarder,
-            getPantosToken(),
-            primaryValidatorNodeAddress
-        );
-        initializePantosForwarder(
-            newPantosForwarder,
-            newPantosHubProxy,
-            getPantosToken(),
-            validatorNodeAddresses
-        );
-        return (newPantosHubProxy, newPantosForwarder);
-    }
-
-    function run(address oldPantosHubProxyAddress) public {
-        vm.startBroadcast();
-
-        initializePantosHubRedeployer(oldPantosHubProxyAddress);
-        initializePantosForwarderRedeployer(oldPantosHubProxyAddress);
-
-        IPantosHub newPantosHubProxy;
-        PantosForwarder newPantosForwarder;
-        (
-            newPantosHubProxy,
-            newPantosForwarder
-        ) = deployAndInitializeHubAndForwarder();
-        migrateTokensFromOldHubToNewHub(newPantosHubProxy);
-        migrateForwarderAtTokens(newPantosForwarder);
-
-        vm.stopBroadcast();
-    }
+    // function deployAndInitializeHubAndForwarder()
+    //     public
+    //     onlyPantosHubRedeployerInitialized
+    //     returns (IPantosHub, PantosForwarder)
+    // {
+    //     IPantosHub oldPantosHubProxy = getOldPantosHubProxy();
+    //     if (!oldPantosHubProxy.paused()) {
+    //         oldPantosHubProxy.pause();
+    //     }
+    //     address primaryValidatorNodeAddress = oldPantosHubProxy
+    //         .getPrimaryValidatorNode();
+    //     address[] memory validatorNodeAddresses = PantosForwarder(
+    //         oldPantosHubProxy.getPantosForwarder()
+    //     ).getValidatorNodes();
+    //     uint256 nextTransferId = oldPantosHubProxy.getNextTransferId();
+    //     (IPantosHub newPantosHubProxy, ) = deployPantosHub(
+    //         nextTransferId,
+    //         getAccessController()
+    //     );
+    //     PantosForwarder newPantosForwarder = deployPantosForwarder(
+    //         getAccessController()
+    //     );
+    //     initializePantosHub(
+    //         newPantosHubProxy,
+    //         newPantosForwarder,
+    //         getPantosToken(),
+    //         primaryValidatorNodeAddress
+    //     );
+    //     initializePantosForwarder(
+    //         newPantosForwarder,
+    //         newPantosHubProxy,
+    //         getPantosToken(),
+    //         validatorNodeAddresses
+    //     );
+    //     return (newPantosHubProxy, newPantosForwarder);
+    // }
+    // function run(address oldPantosHubProxyAddress) public {
+    //     vm.startBroadcast();
+    //     initializePantosHubRedeployer(oldPantosHubProxyAddress);
+    //     initializePantosForwarderRedeployer(oldPantosHubProxyAddress);
+    //     IPantosHub newPantosHubProxy;
+    //     PantosForwarder newPantosForwarder;
+    //     (
+    //         newPantosHubProxy,
+    //         newPantosForwarder
+    //     ) = deployAndInitializeHubAndForwarder();
+    //     migrateTokensFromOldHubToNewHub(newPantosHubProxy);
+    //     migrateForwarderAtTokens(newPantosForwarder);
+    //     vm.stopBroadcast();
+    // }
 }

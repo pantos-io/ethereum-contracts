@@ -6,9 +6,13 @@ import {console2} from "forge-std/console2.sol";
 
 import {PantosTypes} from "../../src/interfaces/PantosTypes.sol";
 import {IPantosHub} from "../../src/interfaces/IPantosHub.sol";
+import {PantosHubProxy} from "../../src/PantosHubProxy.sol";
+import {PantosHubInit} from "../../src/upgradeInitializers/PantosHubInit.sol";
 import {PantosForwarder} from "../../src/PantosForwarder.sol";
+import {AccessController} from "../../src/access/AccessController.sol";
 
 import {PantosHubRedeployer} from "../helpers/PantosHubRedeployer.s.sol";
+import {PantosFacets} from "../helpers/PantosHubDeployerNew.s.sol";
 
 /**
  * @title RedeployHub
@@ -33,37 +37,36 @@ import {PantosHubRedeployer} from "../helpers/PantosHubRedeployer.s.sol";
  *     --sig "run(address,uint256)" <oldPantosHubProxyAddress>
  */
 contract RedeployHub is PantosHubRedeployer {
-    function deployAndInitializeNewPantosHub()
-        public
-        onlyPantosHubRedeployerInitialized
-        returns (IPantosHub)
-    {
-        IPantosHub oldPantosHubProxy = getOldPantosHubProxy();
-        if (!oldPantosHubProxy.paused()) {
-            oldPantosHubProxy.pause();
-        }
-        address primaryValidatorNodeAddress = oldPantosHubProxy
-            .getPrimaryValidatorNode();
-        uint256 nextTransferId = oldPantosHubProxy.getNextTransferId();
+    // function deployAndInitializeNewPantosHub()
+    //     public
+    //     onlyPantosHubRedeployerInitialized
+    //     returns (IPantosHub)
+    // {
+    //     IPantosHub oldPantosHubProxy = getOldPantosHubProxy();
+    //     if (!oldPantosHubProxy.paused()) {
+    //         oldPantosHubProxy.pause();
+    //     }
+    //     address primaryValidatorNodeAddress = oldPantosHubProxy
+    //         .getPrimaryValidatorNode();
+    //     uint256 nextTransferId = oldPantosHubProxy.getNextTransferId();
 
-        (IPantosHub newPantosHubProxy, ) = deployPantosHub(
-            nextTransferId,
-            getAccessController()
-        );
-        initializePantosHub(
-            newPantosHubProxy,
-            getPantosForwarder(),
-            getPantosToken(),
-            primaryValidatorNodeAddress
-        );
-        return newPantosHubProxy;
-    }
+    //     (IPantosHub newPantosHubProxy, ) = deployPantosHub(
+    //         nextTransferId,
+    //         getAccessController()
+    //     );
+    //     initializePantosHub(
+    //         newPantosHubProxy,
+    //         getPantosForwarder(),
+    //         getPantosToken(),
+    //         primaryValidatorNodeAddress
+    //     );
+    //     return newPantosHubProxy;
+    // }
 
     function migrateHubAtForwarder(
-        IPantosHub newPantosHubProxy
+        IPantosHub newPantosHubProxy,
+        PantosForwarder pantosForwarder
     ) public onlyPantosHubRedeployerInitialized {
-        PantosForwarder pantosForwarder = getPantosForwarder();
-        pantosForwarder.pause();
         pantosForwarder.setPantosHub(address(newPantosHubProxy));
         pantosForwarder.unpause();
         console2.log(
@@ -73,15 +76,76 @@ contract RedeployHub is PantosHubRedeployer {
         );
     }
 
-    function run(address oldPantosHubProxyAddress) public {
+    // this will write all deployed pantosHubProxy,pantosHubInit & pantosFacets to <blockchainName>-DEPLOY.json
+    function deploy(address accessControllerAddress) public {
         vm.startBroadcast();
+
+        AccessController accessController = AccessController(
+            accessControllerAddress
+        );
+        PantosHubProxy pantosHubProxy;
+        PantosHubInit pantosHubInit;
+        PantosFacets memory pantosFacets;
+
+        (pantosHubProxy, pantosHubInit, pantosFacets) = deployPantosHub(
+            accessController
+        );
+        // exportContractAddresses(); FIXME
+    }
+
+    // this will read new contracts deployed from <blockchainName>-DEPLOY.json
+    // this will also read current addresses from <blockchainName>.json -- update it at end of the script
+    function roleActions() public {
+        address oldPantosHubProxyAddress; // FIXME from <blockchainName>.json
+        AccessController accessController; // FIXME from <blockchainName>.json
+
+        uint256 nextTransferId = oldPantosHub.getNextTransferId();
+        // FIXME read json for new pantosHubProxy, pantosHubInit and pantosFacets from <blockchainName>-DEPLOY.json
+        PantosHubProxy newPantosHubProxy; // FIXME
+        PantosHubInit newPantosHubInit; // FIXME
+        PantosFacets memory newPantosFacets; // FIXME
 
         initializePantosHubRedeployer(oldPantosHubProxyAddress);
 
-        IPantosHub newPantosHubProxy = deployAndInitializeNewPantosHub();
-        migrateHubAtForwarder(newPantosHubProxy);
-        migrateTokensFromOldHubToNewHub(newPantosHubProxy);
+        IPantosHub oldPantosHub = getOldPantosHubProxy();
+        if (!oldPantosHub.paused()) {
+            vm.broadcast(accessController.pauser());
+            oldPantosHub.pause();
+            console.log("Old PantosHub: paused=%s", oldPantosHub.paused());
+        }
 
+        address primaryValidatorNodeAddress = oldPantosHub
+            .getPrimaryValidatorNode();
+
+        vm.broadcast(accessController.deployer());
+        diamondCutFacets(
+            newPantosHubProxy,
+            newPantosHubInit,
+            newPantosFacets,
+            nextTransferId
+        );
+
+        IPantosHub newPantosHub = IPantosHub(address(newPantosHubProxy));
+
+        vm.broadcast(accessController.superCriticalOps());
+        initializePantosHub(
+            IPantosHub(newPantosHub),
+            getPantosForwarder(),
+            getPantosToken(),
+            primaryValidatorNodeAddress
+        );
+
+        PantosForwarder pantosForwarder = getPantosForwarder();
+
+        if (!pantosForwarder.paused()) {
+            vm.broadcast(accessController.pauser());
+            pantosForwarder.pause();
+        }
+        vm.startBroadcast(accessController.superCriticalOps());
+        migrateHubAtForwarder(newPantosHub, pantosForwarder);
+        migrateTokensFromOldHubToNewHub(
+            IPantosHub(address(newPantosHubProxy))
+        );
         vm.stopBroadcast();
     }
 }

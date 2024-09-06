@@ -77,7 +77,7 @@ contract UpgradeHub is PantosHubDeployer {
         //     "best",
         //     address(bitpandaEcosystemToken)
         // );
-        vm.writeJson(addresses, string.concat(blockchainName, ".json"));
+        vm.writeJson(addresses, string.concat(blockchainName, "-DEPLOY.json"));
     }
 
     function importContractAddresses() public {
@@ -91,6 +91,7 @@ contract UpgradeHub is PantosHubDeployer {
         );
     }
 
+    // this will write new facets deployed to <blockchainName>-DEPLOY.json
     function deploy() public {
         vm.startBroadcast();
         registryFacet = deployRegistryFacet();
@@ -99,11 +100,13 @@ contract UpgradeHub is PantosHubDeployer {
         exportContractAddresses();
     }
 
+    // this will read new facet deployed to <blockchainName>-DEPLOY.json
+    // this will also read current addresses from <blockchainName>.json -- update it at end of the script
     function roleActions() public {
-        address pantosHubProxyAddress; // FIXME: need this from Base Address helper
-        AccessController accessController; // FIXME: need this from Base Address helper
+        address pantosHubProxyAddress; // FIXME: need this from <blockchainName>.json
+        AccessController accessController; // FIXME: need this from <blockchainName>.json
 
-        importContractAddresses();
+        importContractAddresses(); // FIXME read new facet deployed to <blockchainName>-DEPLOY.json
         IPantosHub pantosHub = IPantosHub(pantosHubProxyAddress);
 
         // Ensuring PantosHub is paused at the time of diamond cut

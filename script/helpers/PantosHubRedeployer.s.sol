@@ -11,12 +11,9 @@ import {PantosForwarder} from "../../src/PantosForwarder.sol";
 import {AccessController} from "../../src/access/AccessController.sol";
 
 import {PantosBaseAddresses} from "../helpers/PantosBaseAddresses.s.sol";
-import {PantosHubDeployer} from "../helpers/PantosHubDeployer.s.sol";
+import {PantosHubDeployer} from "../helpers/PantosHubDeployerNew.s.sol";
 
-abstract contract PantosHubRedeployer is
-    PantosHubDeployer,
-    PantosBaseAddresses
-{
+abstract contract PantosHubRedeployer is PantosHubDeployer {
     bool private _initialized;
     /// @dev Mapping of BlockchainId enum to map of tokens to external tokens addresses
     mapping(address => mapping(BlockchainId => PantosTypes.ExternalTokenRecord))
