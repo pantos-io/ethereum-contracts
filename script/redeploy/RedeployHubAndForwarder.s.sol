@@ -2,13 +2,17 @@
 pragma solidity 0.8.26;
 
 /* solhint-disable no-console*/
-import {console2} from "forge-std/console2.sol";
+import {console} from "forge-std/console.sol";
 
 import {IPantosHub} from "../../src/interfaces/IPantosHub.sol";
 import {PantosForwarder} from "../../src/PantosForwarder.sol";
+import {AccessController} from "../../src/access/AccessController.sol";
+import {PantosHubProxy} from "../../src/PantosHubProxy.sol";
+import {PantosHubInit} from "../../src/upgradeInitializers/PantosHubInit.sol";
 
 import {PantosForwarderRedeployer} from "../helpers/PantosForwarderRedeployer.s.sol";
 import {PantosHubRedeployer} from "../helpers/PantosHubRedeployer.s.sol";
+import {PantosFacets} from "../helpers/PantosHubDeployer.s.sol";
 
 /**
  * @title RedeployHubAndForwarder
@@ -39,54 +43,93 @@ contract RedeployHubAndForwarder is
     PantosHubRedeployer,
     PantosForwarderRedeployer
 {
-    // function deployAndInitializeHubAndForwarder()
-    //     public
-    //     onlyPantosHubRedeployerInitialized
-    //     returns (IPantosHub, PantosForwarder)
-    // {
-    //     IPantosHub oldPantosHubProxy = getOldPantosHubProxy();
-    //     if (!oldPantosHubProxy.paused()) {
-    //         oldPantosHubProxy.pause();
-    //     }
-    //     address primaryValidatorNodeAddress = oldPantosHubProxy
-    //         .getPrimaryValidatorNode();
-    //     address[] memory validatorNodeAddresses = PantosForwarder(
-    //         oldPantosHubProxy.getPantosForwarder()
-    //     ).getValidatorNodes();
-    //     uint256 nextTransferId = oldPantosHubProxy.getNextTransferId();
-    //     (IPantosHub newPantosHubProxy, ) = deployPantosHub(
-    //         nextTransferId,
-    //         getAccessController()
-    //     );
-    //     PantosForwarder newPantosForwarder = deployPantosForwarder(
-    //         getAccessController()
-    //     );
-    //     initializePantosHub(
-    //         newPantosHubProxy,
-    //         newPantosForwarder,
-    //         getPantosToken(),
-    //         primaryValidatorNodeAddress
-    //     );
-    //     initializePantosForwarder(
-    //         newPantosForwarder,
-    //         newPantosHubProxy,
-    //         getPantosToken(),
-    //         validatorNodeAddresses
-    //     );
-    //     return (newPantosHubProxy, newPantosForwarder);
-    // }
-    // function run(address oldPantosHubProxyAddress) public {
-    //     vm.startBroadcast();
-    //     initializePantosHubRedeployer(oldPantosHubProxyAddress);
-    //     initializePantosForwarderRedeployer(oldPantosHubProxyAddress);
-    //     IPantosHub newPantosHubProxy;
-    //     PantosForwarder newPantosForwarder;
-    //     (
-    //         newPantosHubProxy,
-    //         newPantosForwarder
-    //     ) = deployAndInitializeHubAndForwarder();
-    //     migrateTokensFromOldHubToNewHub(newPantosHubProxy);
-    //     migrateForwarderAtTokens(newPantosForwarder);
-    //     vm.stopBroadcast();
-    // }
+    // this will write all deployed pantosHubProxy,pantosHubInit, pantosFacets forwarder
+    // to <blockchainName>-DEPLOY.json
+    function deploy(address accessControllerAddress) public {
+        AccessController accessController = AccessController(
+            accessControllerAddress
+        );
+        PantosHubProxy pantosHubProxy;
+        PantosHubInit pantosHubInit;
+        PantosFacets memory pantosFacets;
+
+        (pantosHubProxy, pantosHubInit, pantosFacets) = deployPantosHub(
+            accessController
+        );
+
+        PantosForwarder newPantosForwarder = deployPantosForwarder(
+            accessController
+        );
+        // exportContractAddresses(); FIXME
+    }
+
+    // this will read new contracts deployed from <blockchainName>-DEPLOY.json
+    // this will also read current addresses from <blockchainName>.json -- update it at end of the script
+    function roleActions() public {
+        address oldPantosHubProxyAddress; // FIXME from <blockchainName>.json
+        AccessController accessController; // FIXME from <blockchainName>.json
+
+        initializePantosHubRedeployer(oldPantosHubProxyAddress);
+        IPantosHub oldPantosHub = getOldPantosHubProxy();
+
+        uint256 nextTransferId = oldPantosHub.getNextTransferId();
+        // FIXME read json for new pantosHubProxy, pantosHubInit and pantosFacets from <blockchainName>-DEPLOY.json
+        PantosHubProxy newPantosHubProxy; // FIXME
+        PantosHubInit newPantosHubInit; // FIXME
+        PantosFacets memory newPantosFacets; // FIXME
+        PantosForwarder newPantosForwarder; // FIXME
+
+        vm.broadcast(accessController.pauser());
+        pausePantosHub(oldPantosHub);
+
+        address primaryValidatorNodeAddress = oldPantosHub
+            .getPrimaryValidatorNode();
+
+        PantosForwarder oldForwarder = PantosForwarder(
+            oldPantosHub.getPantosForwarder()
+        );
+        address[] memory validatorNodeAddresses = oldForwarder
+            .getValidatorNodes();
+
+        vm.broadcast(accessController.deployer());
+        diamondCutFacets(
+            newPantosHubProxy,
+            newPantosHubInit,
+            newPantosFacets,
+            nextTransferId
+        );
+
+        IPantosHub newPantosHub = IPantosHub(address(newPantosHubProxy));
+
+        vm.broadcast(accessController.superCriticalOps());
+        initializePantosHub(
+            newPantosHub,
+            newPantosForwarder,
+            getPantosToken(),
+            primaryValidatorNodeAddress
+        );
+
+        vm.broadcast(accessController.superCriticalOps());
+        initializePantosForwarder(
+            newPantosForwarder,
+            newPantosHub,
+            getPantosToken(),
+            validatorNodeAddresses
+        );
+
+        // Pause old forwarder
+        vm.broadcast(accessController.pauser());
+        pauseForwarder(oldForwarder);
+
+        // Migrate
+        vm.broadcast(accessController.superCriticalOps());
+        migrateTokensFromOldHubToNewHub(newPantosHub);
+
+        // vm.broadcast is done in the function
+        migrateForwarderAtTokens(
+            newPantosForwarder,
+            accessController.pauser(),
+            accessController.superCriticalOps()
+        );
+    }
 }

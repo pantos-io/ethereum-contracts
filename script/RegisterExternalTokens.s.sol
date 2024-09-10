@@ -4,6 +4,7 @@ pragma solidity 0.8.26;
 /* solhint-disable no-console*/
 import {console2} from "forge-std/console2.sol";
 
+import {AccessController} from "../src/access/AccessController.sol";
 import {PantosTypes} from "../src/interfaces/PantosTypes.sol";
 import {IPantosHub} from "../src/interfaces/IPantosHub.sol";
 import {PantosBaseAddresses} from "./helpers/PantosBaseAddresses.s.sol";
@@ -16,7 +17,7 @@ import {PantosBaseAddresses} from "./helpers/PantosBaseAddresses.s.sol";
  *
  * @dev Usage
  * forge script ./script/RegisterExternalTokens.s.sol --account <account> \
- *     --sender <sender> --rpc-url <rpc alias> --slow --force
+ *     --sender <sender> --rpc-url <rpc alias> --sig "roleActions()"
  *
  * This scripts expect all the address json files to be available at project
  * root dir.
@@ -117,16 +118,19 @@ contract RegisterExternalTokens is PantosBaseAddresses {
         }
     }
 
-    function run() public {
+    function roleActions() public {
         readContractAddressesAllChains();
 
-        vm.startBroadcast();
-
         thisBlockchain = determineBlockchain();
+
         pantosHubProxy = IPantosHub(
             getContractAddress(thisBlockchain, "hub_proxy")
         );
+        AccessController accessController = AccessController(
+            getContractAddress(thisBlockchain, "access_controller")
+        );
 
+        vm.broadcast(accessController.superCriticalOps());
         registerExternalTokens();
 
         vm.stopBroadcast();

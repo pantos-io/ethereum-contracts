@@ -3,6 +3,8 @@ pragma solidity 0.8.26;
 
 /* solhint-disable no-console*/
 
+import {AccessController} from "../../src/access/AccessController.sol";
+import {IPantosHub} from "../../src/interfaces/IPantosHub.sol";
 import {PantosForwarder} from "../../src/PantosForwarder.sol";
 
 import {PantosForwarderRedeployer} from "../helpers/PantosForwarderRedeployer.s.sol";
@@ -28,15 +30,48 @@ import {PantosForwarderRedeployer} from "../helpers/PantosForwarderRedeployer.s.
  *     --sig "run(address)" <pantosHubProxyAddress>
  */
 contract RedeployForwarder is PantosForwarderRedeployer {
-    function run(address pantosHubProxyAddress) public {
-        vm.startBroadcast();
+    // this will write adeployed forwarder to <blockchainName>-DEPLOY.json
+    function deploy(address accessControllerAddress) public {
+        AccessController accessController = AccessController(
+            accessControllerAddress
+        );
+        PantosForwarder newPantosForwarder = deployPantosForwarder(
+            accessController
+        );
+        // exportContractAddresses(); FIXME
+    }
+
+    // this will read new contracts deployed from <blockchainName>-DEPLOY.json
+    // this will also read current addresses from <blockchainName>.json -- update it at end of the script
+    function roleActions() public {
+        AccessController accessController; // FIXME from <blockchainName>.json
+        address pantosHubProxyAddress; // FIXME from <blockchainName>.json
+        PantosForwarder newPantosForwarder; // FIXME from <blockchainName>-DEPLOY.json
+
+        IPantosHub pantosHub = IPantosHub(pantosHubProxyAddress);
+        PantosForwarder oldForwarder = PantosForwarder(
+            pantosHub.getPantosForwarder()
+        );
 
         initializePantosForwarderRedeployer(pantosHubProxyAddress);
 
-        PantosForwarder pantosForwarder = deployAndInitializePantosForwarder();
-        migrateForwarderAtHub(pantosForwarder);
-        migrateForwarderAtTokens(pantosForwarder);
+        vm.broadcast(accessController.superCriticalOps());
+        initializePantosForwarder(newPantosForwarder);
 
+        // Pause pantos Hub and old forwarder
+        vm.startBroadcast(accessController.pauser());
+        pauseForwarder(oldForwarder);
+        pantosHub.pause();
         vm.stopBroadcast();
+
+        vm.broadcast(accessController.superCriticalOps());
+        migrateForwarderAtHub(newPantosForwarder);
+
+        // vm.broadcast is done in the function
+        migrateForwarderAtTokens(
+            newPantosForwarder,
+            accessController.pauser(),
+            accessController.superCriticalOps()
+        );
     }
 }

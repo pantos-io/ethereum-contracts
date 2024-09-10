@@ -9,7 +9,7 @@ import {AccessController} from "../../src/access/AccessController.sol";
 import {PantosForwarder} from "../../src/PantosForwarder.sol";
 import {PantosToken} from "../../src/PantosToken.sol";
 
-import {PantosHubDeployer} from "../helpers/PantosHubDeployerNew.s.sol";
+import {PantosHubDeployer} from "../helpers/PantosHubDeployer.s.sol";
 import {PantosRegistryFacet} from "../../src/facets/PantosRegistryFacet.sol";
 import {PantosTransferFacet} from "../../src/facets/PantosTransferFacet.sol";
 
@@ -105,16 +105,15 @@ contract UpgradeHub is PantosHubDeployer {
     function roleActions() public {
         address pantosHubProxyAddress; // FIXME: need this from <blockchainName>.json
         AccessController accessController; // FIXME: need this from <blockchainName>.json
+        PantosRegistryFacet registryFacet; // FIXME read new facet deployed to <blockchainName>-DEPLOY.json
+        PantosTransferFacet transferFacet; // FIXME read new facet deployed to <blockchainName>-DEPLOY.json
 
         importContractAddresses(); // FIXME read new facet deployed to <blockchainName>-DEPLOY.json
         IPantosHub pantosHub = IPantosHub(pantosHubProxyAddress);
 
         // Ensuring PantosHub is paused at the time of diamond cut
-        if (!pantosHub.paused()) {
-            vm.broadcast(accessController.pauser());
-            pantosHub.pause();
-            console.log("PantosHub: paused=%s", pantosHub.paused());
-        }
+        vm.broadcast(accessController.pauser());
+        pausePantosHub(pantosHub);
 
         vm.broadcast(accessController.deployer());
         diamondCutUpgradeFacets(
@@ -122,10 +121,10 @@ contract UpgradeHub is PantosHubDeployer {
             registryFacet,
             transferFacet
         );
-
-        vm.broadcast(accessController.deployer());
         // this will do nothing if there is nothing new added to the storage slots
         // FIXME: can we use the json valuse to pass in to this method ?
+
+        vm.broadcast(accessController.superCriticalOps());
         initializePantosHub(
             pantosHub,
             PantosForwarder(pantosHub.getPantosForwarder()),

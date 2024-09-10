@@ -2,6 +2,11 @@
 pragma solidity 0.8.26;
 
 import {PantosForwarder} from "../../src/PantosForwarder.sol";
+import {PantosRegistryFacet} from "../../src/facets/PantosRegistryFacet.sol";
+import {PantosTransferFacet} from "../../src/facets/PantosTransferFacet.sol";
+import {AccessController} from "../../src/access/AccessController.sol";
+import {IPantosHub} from "../../src/interfaces/IPantosHub.sol";
+import {PantosToken} from "../../src/PantosToken.sol";
 
 import {PantosHubDeployer} from "../helpers/PantosHubDeployer.s.sol";
 import {PantosForwarderRedeployer} from "../helpers/PantosForwarderRedeployer.s.sol";
@@ -29,17 +34,67 @@ contract UpgradeHubAndRedeployForwarder is
     PantosHubDeployer,
     PantosForwarderRedeployer
 {
-    function run(address pantosHubProxyAddress) public {
+    PantosRegistryFacet registryFacet;
+    PantosTransferFacet transferFacet;
+
+    // this will write new facets deployed to <blockchainName>-DEPLOY.json
+    function deploy(address accessControllerAddress) public {
+        AccessController accessController = AccessController(
+            accessControllerAddress
+        );
+
         vm.startBroadcast();
 
-        initializePantosForwarderRedeployer(pantosHubProxyAddress);
-
-        upgradePantosHub(pantosHubProxyAddress);
-
-        PantosForwarder pantosForwarder = deployAndInitializePantosForwarder();
-        migrateForwarderAtHub(pantosForwarder);
-        migrateForwarderAtTokens(pantosForwarder);
+        registryFacet = deployRegistryFacet();
+        transferFacet = deployTransferFacet();
+        PantosForwarder pantosForwarder = deployPantosForwarder(
+            accessController
+        );
 
         vm.stopBroadcast();
+        // exportContractAddresses();
+    }
+
+    function roleActions() public {
+        address pantosHubProxyAddress; // FIXME: need this from <blockchainName>.json
+        AccessController accessController; // FIXME from <blockchainName>.json
+
+        // importContractAddresses(); // FIXME read new facet, forwarder deployed to <blockchainName>-DEPLOY.json
+        IPantosHub pantosHub = IPantosHub(pantosHubProxyAddress);
+        PantosForwarder newPantosForwarder; // FIXME read from <blockchainName>-DEPLOY.json
+
+        // vm.startBroadcast();
+        initializePantosForwarderRedeployer(pantosHubProxyAddress);
+
+        // Ensuring PantosHub is paused at the time of diamond cut
+        vm.broadcast(accessController.pauser());
+        pausePantosHub(pantosHub);
+
+        vm.broadcast(accessController.deployer());
+        diamondCutUpgradeFacets(
+            pantosHubProxyAddress,
+            registryFacet,
+            transferFacet
+        );
+
+        // this will do nothing if there is nothing new added to the storage slots
+        // FIXME: can we use the json valuse to pass in to this method ?
+        vm.broadcast(accessController.superCriticalOps());
+        initializePantosHub(
+            pantosHub,
+            PantosForwarder(pantosHub.getPantosForwarder()),
+            PantosToken(pantosHub.getPantosToken()),
+            pantosHub.getPrimaryValidatorNode()
+        );
+
+        vm.broadcast(accessController.superCriticalOps());
+        migrateForwarderAtHub(newPantosForwarder);
+
+        // vm.broadcast is done in the function
+        migrateForwarderAtTokens(
+            newPantosForwarder,
+            accessController.pauser(),
+            accessController.superCriticalOps()
+        );
     }
 }

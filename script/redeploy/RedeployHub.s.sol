@@ -2,17 +2,17 @@
 pragma solidity 0.8.26;
 
 /* solhint-disable no-console*/
-import {console2} from "forge-std/console2.sol";
+import {console} from "forge-std/console.sol";
 
-import {PantosTypes} from "../../src/interfaces/PantosTypes.sol";
+import {AccessController} from "../../src/access/AccessController.sol";
 import {IPantosHub} from "../../src/interfaces/IPantosHub.sol";
-import {PantosHubProxy} from "../../src/PantosHubProxy.sol";
 import {PantosHubInit} from "../../src/upgradeInitializers/PantosHubInit.sol";
 import {PantosForwarder} from "../../src/PantosForwarder.sol";
-import {AccessController} from "../../src/access/AccessController.sol";
+import {PantosTypes} from "../../src/interfaces/PantosTypes.sol";
+import {PantosHubProxy} from "../../src/PantosHubProxy.sol";
 
 import {PantosHubRedeployer} from "../helpers/PantosHubRedeployer.s.sol";
-import {PantosFacets} from "../helpers/PantosHubDeployerNew.s.sol";
+import {PantosFacets} from "../helpers/PantosHubDeployer.s.sol";
 
 /**
  * @title RedeployHub
@@ -37,39 +37,13 @@ import {PantosFacets} from "../helpers/PantosHubDeployerNew.s.sol";
  *     --sig "run(address,uint256)" <oldPantosHubProxyAddress>
  */
 contract RedeployHub is PantosHubRedeployer {
-    // function deployAndInitializeNewPantosHub()
-    //     public
-    //     onlyPantosHubRedeployerInitialized
-    //     returns (IPantosHub)
-    // {
-    //     IPantosHub oldPantosHubProxy = getOldPantosHubProxy();
-    //     if (!oldPantosHubProxy.paused()) {
-    //         oldPantosHubProxy.pause();
-    //     }
-    //     address primaryValidatorNodeAddress = oldPantosHubProxy
-    //         .getPrimaryValidatorNode();
-    //     uint256 nextTransferId = oldPantosHubProxy.getNextTransferId();
-
-    //     (IPantosHub newPantosHubProxy, ) = deployPantosHub(
-    //         nextTransferId,
-    //         getAccessController()
-    //     );
-    //     initializePantosHub(
-    //         newPantosHubProxy,
-    //         getPantosForwarder(),
-    //         getPantosToken(),
-    //         primaryValidatorNodeAddress
-    //     );
-    //     return newPantosHubProxy;
-    // }
-
     function migrateHubAtForwarder(
         IPantosHub newPantosHubProxy,
         PantosForwarder pantosForwarder
     ) public onlyPantosHubRedeployerInitialized {
         pantosForwarder.setPantosHub(address(newPantosHubProxy));
         pantosForwarder.unpause();
-        console2.log(
+        console.log(
             "PantosForwarder.setPantosHub(%s); paused=%s",
             address(newPantosHubProxy),
             pantosForwarder.paused()
@@ -99,20 +73,17 @@ contract RedeployHub is PantosHubRedeployer {
         address oldPantosHubProxyAddress; // FIXME from <blockchainName>.json
         AccessController accessController; // FIXME from <blockchainName>.json
 
+        initializePantosHubRedeployer(oldPantosHubProxyAddress);
+        IPantosHub oldPantosHub = getOldPantosHubProxy();
+
         uint256 nextTransferId = oldPantosHub.getNextTransferId();
         // FIXME read json for new pantosHubProxy, pantosHubInit and pantosFacets from <blockchainName>-DEPLOY.json
         PantosHubProxy newPantosHubProxy; // FIXME
         PantosHubInit newPantosHubInit; // FIXME
         PantosFacets memory newPantosFacets; // FIXME
 
-        initializePantosHubRedeployer(oldPantosHubProxyAddress);
-
-        IPantosHub oldPantosHub = getOldPantosHubProxy();
-        if (!oldPantosHub.paused()) {
-            vm.broadcast(accessController.pauser());
-            oldPantosHub.pause();
-            console.log("Old PantosHub: paused=%s", oldPantosHub.paused());
-        }
+        vm.broadcast(accessController.pauser());
+        pausePantosHub(oldPantosHub);
 
         address primaryValidatorNodeAddress = oldPantosHub
             .getPrimaryValidatorNode();
