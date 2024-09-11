@@ -32,7 +32,7 @@ struct PantosFacets {
     PantosTransferFacet transfer;
 }
 
-abstract contract PantosHubDeployer is PantosBaseScript, PantosBaseAddresses {
+abstract contract PantosHubDeployer is PantosBaseScript {
     function deployRegistryFacet() public returns (PantosRegistryFacet) {
         PantosRegistryFacet registryFacet = new PantosRegistryFacet();
         console.log(

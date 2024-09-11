@@ -5,11 +5,13 @@ pragma solidity 0.8.26;
 import {console} from "forge-std/console.sol";
 
 import {IPantosHub} from "../../src/interfaces/IPantosHub.sol";
+import {PantosHubProxy} from "../../src/PantosHubProxy.sol";
 import {AccessController} from "../../src/access/AccessController.sol";
 import {PantosForwarder} from "../../src/PantosForwarder.sol";
 import {PantosToken} from "../../src/PantosToken.sol";
 
 import {PantosHubDeployer} from "../helpers/PantosHubDeployerNew.s.sol";
+import {PantosBaseAddresses} from "../helpers/PantosBaseAddresses.s.sol";
 import {PantosRegistryFacet} from "../../src/facets/PantosRegistryFacet.sol";
 import {PantosTransferFacet} from "../../src/facets/PantosTransferFacet.sol";
 
@@ -23,91 +25,28 @@ import {PantosTransferFacet} from "../../src/facets/PantosTransferFacet.sol";
  *     --sender <sender> --rpc-url <rpc alias> --slow --force \
  *     --sig "run(address)" <pantosHubProxyAddress>
  */
-contract UpgradeHub is PantosHubDeployer {
-    PantosRegistryFacet registryFacet;
-    PantosTransferFacet transferFacet;
+contract UpgradeHub is PantosHubDeployer, PantosBaseAddresses {
+    PantosHubProxy pantosHubProxy;
+    PantosForwarder pantosForwarder;
+    PantosToken pantosToken;
+    AccessController accessController;
 
-    function exportContractAddresses() public {
-        string memory blockchainName = determineBlockchain().name;
-        string memory addresses;
-        // for (uint256 i; i < pantosWrappers.length; i++) {
-        //     vm.serializeAddress(
-        //         "addresses",
-        //         pantosWrappers[i].symbol(),
-        //         address(pantosWrappers[i])
-        //     );
-        // }
+    PantosRegistryFacet newRegistryFacet;
+    PantosTransferFacet newTransferFacet;
 
-        // vm.serializeAddress("addresses", "hub_proxy", address(pantosHubProxy));
-        // vm.serializeAddress("addresses", "hub_init", address(pantosHubInit));
-        // vm.serializeAddress(
-        //     "addresses",
-        //     "diamond_cut_facet",
-        //     address(pantosFacets.dCut)
-        // );
-        // vm.serializeAddress(
-        //     "addresses",
-        //     "diamond_loupe_facet",
-        //     address(pantosFacets.dLoupe)
-        // );
-        vm.serializeAddress(
-            "addresses",
-            "registry_facet",
-            address(registryFacet)
-        );
-        addresses = vm.serializeAddress(
-            "addresses",
-            "transfer_facet",
-            address(transferFacet)
-        );
-
-        // vm.serializeAddress(
-        //     "addresses",
-        //     "forwarder",
-        //     address(pantosForwarder)
-        // );
-        // vm.serializeAddress("addresses", "pan", address(pantosToken));
-        // vm.serializeAddress(
-        //     "addresses",
-        //     "access_controller",
-        //     address(accessController)
-        // );
-        // addresses = vm.serializeAddress(
-        //     "addresses",
-        //     "best",
-        //     address(bitpandaEcosystemToken)
-        // );
-        vm.writeJson(addresses, string.concat(blockchainName, "-DEPLOY.json"));
-    }
-
-    function importContractAddresses() public {
-        Blockchain memory blockchain = determineBlockchain();
-        readContractAddresses(blockchain);
-        registryFacet = PantosRegistryFacet(
-            getContractAddress(blockchain, "registry_facet")
-        );
-        transferFacet = PantosTransferFacet(
-            getContractAddress(blockchain, "transfer_facet")
-        );
-    }
-
-    // this will write new facets deployed to <blockchainName>-DEPLOY.json
     function deploy() public {
         vm.startBroadcast();
-        registryFacet = deployRegistryFacet();
-        transferFacet = deployTransferFacet();
+        newRegistryFacet = deployRegistryFacet();
+        newTransferFacet = deployTransferFacet();
         vm.stopBroadcast();
-        exportContractAddresses();
+        exportUpgradedContractAddresses();
     }
 
-    // this will read new facet deployed to <blockchainName>-DEPLOY.json
     // this will also read current addresses from <blockchainName>.json -- update it at end of the script
     function roleActions() public {
-        address pantosHubProxyAddress; // FIXME: need this from <blockchainName>.json
-        AccessController accessController; // FIXME: need this from <blockchainName>.json
-
-        importContractAddresses(); // FIXME read new facet deployed to <blockchainName>-DEPLOY.json
-        IPantosHub pantosHub = IPantosHub(pantosHubProxyAddress);
+        importContractAddresses();
+        IPantosHub pantosHub = IPantosHub(address(pantosHubProxy));
+        console.log("PantosHub", address(pantosHub));
 
         // Ensuring PantosHub is paused at the time of diamond cut
         if (!pantosHub.paused()) {
@@ -116,21 +55,57 @@ contract UpgradeHub is PantosHubDeployer {
             console.log("PantosHub: paused=%s", pantosHub.paused());
         }
 
-        vm.broadcast(accessController.deployer());
+        vm.startBroadcast(accessController.deployer());
         diamondCutUpgradeFacets(
-            pantosHubProxyAddress,
-            registryFacet,
-            transferFacet
+            address(pantosHubProxy),
+            newRegistryFacet,
+            newTransferFacet
         );
+        vm.stopBroadcast();
 
-        vm.broadcast(accessController.deployer());
+        vm.startBroadcast(accessController.deployer());
         // this will do nothing if there is nothing new added to the storage slots
-        // FIXME: can we use the json valuse to pass in to this method ?
         initializePantosHub(
             pantosHub,
-            PantosForwarder(pantosHub.getPantosForwarder()),
-            PantosToken(pantosHub.getPantosToken()),
+            pantosForwarder,
+            pantosToken,
             pantosHub.getPrimaryValidatorNode()
         );
+        vm.stopBroadcast();
+        overrideWithRedeployedAddresses();
+    }
+
+    function exportUpgradedContractAddresses() public {
+        ContractAddress[] memory contractAddresses = new ContractAddress[](2);
+        contractAddresses[0] = ContractAddress(
+            Contract.REGISTRY_FACET,
+            address(newRegistryFacet)
+        );
+        contractAddresses[1] = ContractAddress(
+            Contract.TRANSFER_FACET,
+            address(newTransferFacet)
+        );
+        exportContractAddresses(contractAddresses, true);
+    }
+
+    function importContractAddresses() public {
+        readContractAddresses(thisBlockchain);
+        readRedeployedContractAddresses();
+        newRegistryFacet = PantosRegistryFacet(
+            getContractAddress(Contract.REGISTRY_FACET, true)
+        );
+        newTransferFacet = PantosTransferFacet(
+            getContractAddress(Contract.TRANSFER_FACET, true)
+        );
+        pantosHubProxy = PantosHubProxy(
+            payable(getContractAddress(Contract.HUB_PROXY, false))
+        );
+        accessController = AccessController(
+            getContractAddress(Contract.ACCESS_CONTROLLER, false)
+        );
+        pantosForwarder = PantosForwarder(
+            getContractAddress(Contract.FORWARDER, false)
+        );
+        pantosToken = PantosToken(getContractAddress(Contract.PAN, false));
     }
 }

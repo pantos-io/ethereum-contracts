@@ -7,6 +7,7 @@ import {IPantosHub} from "../src/interfaces/IPantosHub.sol";
 import {PantosForwarder} from "../src/PantosForwarder.sol";
 import {PantosToken} from "../src/PantosToken.sol";
 import {BitpandaEcosystemToken} from "../src/BitpandaEcosystemToken.sol";
+import {PantosWrapper} from "../src/PantosWrapper.sol";
 import {AccessController} from "../src/access/AccessController.sol";
 import {PantosHubProxy} from "../src/PantosHubProxy.sol";
 import {PantosHubInit} from "../src/upgradeInitializers/PantosHubInit.sol";
@@ -20,6 +21,7 @@ import {PantosWrapperDeployer} from "./helpers/PantosWrapperDeployer.s.sol";
 import {PantosTokenDeployer} from "./helpers/PantosTokenDeployer.s.sol";
 import {BitpandaEcosystemTokenDeployer} from "./helpers/BitpandaEcosystemTokenDeployer.s.sol";
 import {AccessControllerDeployer} from "./helpers/AccessControllerDeployer.s.sol";
+import {PantosBaseAddresses} from "./helpers/PantosBaseAddresses.s.sol";
 /**
  * @title DeployContracts
  *
@@ -34,6 +36,7 @@ import {AccessControllerDeployer} from "./helpers/AccessControllerDeployer.s.sol
  *     <panSupply> <bestSupply> <nextTransferId> <otherValidators>
  */
 contract DeployContracts is
+    PantosBaseAddresses,
     PantosHubDeployer,
     PantosForwarderDeployer,
     PantosWrapperDeployer,
@@ -41,158 +44,49 @@ contract DeployContracts is
     BitpandaEcosystemTokenDeployer,
     AccessControllerDeployer
 {
-    PantosHubProxy public pantosHubProxy;
-    PantosHubInit public pantosHubInit;
-    PantosFacets public pantosFacets;
-    PantosForwarder public pantosForwarder;
-    PantosToken public pantosToken;
-    BitpandaEcosystemToken public bitpandaEcosystemToken;
-    AccessController public accessController;
-    address public pauser;
-    address public deployer;
-    address public mediumCriticalOps;
-    address public superCriticalOps;
-
-    function exportContractAddresses() public {
-        string memory blockchainName = determineBlockchain().name;
-        string memory addresses;
-        for (uint256 i; i < pantosWrappers.length; i++) {
-            vm.serializeAddress(
-                "addresses",
-                pantosWrappers[i].symbol(),
-                address(pantosWrappers[i])
-            );
-        }
-
-        vm.serializeAddress("addresses", "hub_proxy", address(pantosHubProxy));
-        vm.serializeAddress("addresses", "hub_init", address(pantosHubInit));
-        vm.serializeAddress(
-            "addresses",
-            "diamond_cut_facet",
-            address(pantosFacets.dCut)
-        );
-        vm.serializeAddress(
-            "addresses",
-            "diamond_loupe_facet",
-            address(pantosFacets.dLoupe)
-        );
-        vm.serializeAddress(
-            "addresses",
-            "registry_facet",
-            address(pantosFacets.registry)
-        );
-        vm.serializeAddress(
-            "addresses",
-            "transfer_facet",
-            address(pantosFacets.transfer)
-        );
-
-        vm.serializeAddress(
-            "addresses",
-            "forwarder",
-            address(pantosForwarder)
-        );
-        vm.serializeAddress("addresses", "pan", address(pantosToken));
-        vm.serializeAddress(
-            "addresses",
-            "access_controller",
-            address(accessController)
-        );
-        addresses = vm.serializeAddress(
-            "addresses",
-            "best",
-            address(bitpandaEcosystemToken)
-        );
-        vm.writeJson(addresses, string.concat(blockchainName, ".json"));
-    }
-
-    function exportPantosRolesAddresses() public {
-        string memory blockchainName = determineBlockchain().name;
-        string memory roles;
-        vm.serializeAddress("roles", "deployer", deployer);
-        vm.serializeAddress("roles", "pauser", pauser);
-        vm.serializeAddress("roles", "medium_critical_ops", mediumCriticalOps);
-        roles = vm.serializeAddress(
-            "roles",
-            "super_critical_ops",
-            superCriticalOps
-        );
-        vm.writeJson(roles, string.concat(blockchainName, "_ROLES.json"));
-    }
-
-    function importContractAddresses() public {
-        Blockchain memory blockchain = determineBlockchain();
-        readContractAddresses(blockchain);
-        pantosHubProxy = PantosHubProxy(
-            payable(getContractAddress(blockchain, "hub_proxy"))
-        );
-        pantosHubInit = PantosHubInit(
-            getContractAddress(blockchain, "hub_init")
-        );
-        pantosForwarder = PantosForwarder(
-            getContractAddress(blockchain, "forwarder")
-        );
-        pantosToken = PantosToken(getContractAddress(blockchain, "pan"));
-        bitpandaEcosystemToken = BitpandaEcosystemToken(
-            getContractAddress(blockchain, "best")
-        );
-
-        pantosFacets.dCut = DiamondCutFacet(
-            getContractAddress(blockchain, "diamond_cut_facet")
-        );
-        pantosFacets.dLoupe = DiamondLoupeFacet(
-            getContractAddress(blockchain, "diamond_loupe_facet")
-        );
-        pantosFacets.registry = PantosRegistryFacet(
-            getContractAddress(blockchain, "registry_facet")
-        );
-        pantosFacets.transfer = PantosTransferFacet(
-            getContractAddress(blockchain, "transfer_facet")
-        );
-
-        accessController = AccessController(
-            getContractAddress(blockchain, "access_controller")
-        );
-    }
+    AccessController accessController;
+    PantosHubProxy pantosHubProxy;
+    PantosHubInit pantosHubInit;
+    PantosFacets pantosFacets;
+    PantosForwarder pantosForwarder;
+    PantosToken pantosToken;
+    BitpandaEcosystemToken bitpandaEcosystemToken;
+    PantosWrapper[] pantosWrappers;
 
     function deploy(
-        address pauser_,
-        address deployer_,
-        address mediumCriticalOps_,
-        address superCriticalOps_,
+        address pauser,
+        address deployer,
+        address mediumCriticalOps,
+        address superCriticalOps,
         uint256 panSupply,
         uint256 bestSupply
     ) public {
         vm.startBroadcast();
-        pauser = pauser_;
-        deployer = deployer_;
-        mediumCriticalOps = mediumCriticalOps_;
-        superCriticalOps = superCriticalOps_;
-
         accessController = deployAccessController(
             pauser,
             deployer,
             mediumCriticalOps,
             superCriticalOps
         );
-
         (pantosHubProxy, pantosHubInit, pantosFacets) = deployPantosHub(
             accessController
         );
-
         pantosForwarder = deployPantosForwarder(accessController);
         pantosToken = deployPantosToken(panSupply, accessController);
         bitpandaEcosystemToken = deployBitpandaEcosystemToken(
             bestSupply,
             accessController
         );
-
-        deployCoinWrappers(accessController);
-
+        pantosWrappers = deployCoinWrappers(accessController);
         vm.stopBroadcast();
 
-        exportContractAddresses();
-        exportPantosRolesAddresses();
+        exportAllContractAddresses();
+        exportPantosRolesAddresses(
+            pauser,
+            deployer,
+            mediumCriticalOps,
+            superCriticalOps
+        );
         // TODO export safe info and nonces
     }
 
@@ -201,7 +95,7 @@ contract DeployContracts is
         address primaryValidator,
         address[] memory otherValidators
     ) public {
-        importContractAddresses();
+        importAllContractAddresses();
         vm.broadcast(accessController.deployer());
         diamondCutFacets(
             pantosHubProxy,
@@ -241,7 +135,117 @@ contract DeployContracts is
             pantosHub,
             pantosForwarder
         );
-        initializePantosWrappers(pantosHub, pantosForwarder);
+        initializePantosWrappers(pantosHub, pantosForwarder, pantosWrappers);
         vm.stopBroadcast();
+    }
+
+    function exportAllContractAddresses() internal {
+        ContractAddress[] memory contractAddresses = new ContractAddress[](
+            10 + pantosWrappers.length
+        );
+        contractAddresses[0] = ContractAddress(
+            Contract.ACCESS_CONTROLLER,
+            address(accessController)
+        );
+        contractAddresses[1] = ContractAddress(
+            Contract.HUB_PROXY,
+            address(pantosHubProxy)
+        );
+        contractAddresses[2] = ContractAddress(
+            Contract.HUB_INIT,
+            address(pantosHubInit)
+        );
+        contractAddresses[3] = ContractAddress(
+            Contract.DIAMOND_CUT_FACET,
+            address(pantosFacets.dCut)
+        );
+        contractAddresses[4] = ContractAddress(
+            Contract.DIAMOND_LOUPE_FACET,
+            address(pantosFacets.dLoupe)
+        );
+        contractAddresses[5] = ContractAddress(
+            Contract.REGISTRY_FACET,
+            address(pantosFacets.registry)
+        );
+        contractAddresses[6] = ContractAddress(
+            Contract.TRANSFER_FACET,
+            address(pantosFacets.transfer)
+        );
+        contractAddresses[7] = ContractAddress(
+            Contract.FORWARDER,
+            address(pantosForwarder)
+        );
+        contractAddresses[8] = ContractAddress(
+            Contract.PAN,
+            address(pantosToken)
+        );
+        contractAddresses[9] = ContractAddress(
+            Contract.BEST,
+            address(bitpandaEcosystemToken)
+        );
+        for (uint i; i < pantosWrappers.length; i++) {
+            contractAddresses[i + 10] = ContractAddress(
+                _keysToContracts[pantosWrappers[i].symbol()],
+                address(pantosWrappers[i])
+            );
+        }
+        exportContractAddresses(contractAddresses, false);
+    }
+
+    function importAllContractAddresses() internal {
+        readContractAddresses(thisBlockchain);
+
+        accessController = AccessController(
+            getContractAddress(Contract.ACCESS_CONTROLLER, false)
+        );
+        pantosHubProxy = PantosHubProxy(
+            payable(getContractAddress(Contract.HUB_PROXY, false))
+        );
+        pantosHubInit = PantosHubInit(
+            getContractAddress(Contract.HUB_INIT, false)
+        );
+        pantosFacets = PantosFacets(
+            DiamondCutFacet(
+                getContractAddress(Contract.DIAMOND_CUT_FACET, false)
+            ),
+            DiamondLoupeFacet(
+                getContractAddress(Contract.DIAMOND_LOUPE_FACET, false)
+            ),
+            PantosRegistryFacet(
+                getContractAddress(Contract.REGISTRY_FACET, false)
+            ),
+            PantosTransferFacet(
+                getContractAddress(Contract.TRANSFER_FACET, false)
+            )
+        );
+        pantosForwarder = PantosForwarder(
+            getContractAddress(Contract.FORWARDER, false)
+        );
+        pantosToken = PantosToken(getContractAddress(Contract.PAN, false));
+        bitpandaEcosystemToken = BitpandaEcosystemToken(
+            getContractAddress(Contract.BEST, false)
+        );
+        pantosWrappers = new PantosWrapper[](7);
+        pantosWrappers[0] = PantosWrapper(
+            getContractAddress(Contract.PAN_AVAX, false)
+        );
+        pantosWrappers[1] = PantosWrapper(
+            getContractAddress(Contract.PAN_BNB, false)
+        );
+        pantosWrappers[2] = PantosWrapper(
+            getContractAddress(Contract.PAN_CELO, false)
+        );
+        pantosWrappers[3] = PantosWrapper(
+            getContractAddress(Contract.PAN_CRO, false)
+        );
+        pantosWrappers[4] = PantosWrapper(
+            getContractAddress(Contract.PAN_ETH, false)
+        );
+        pantosWrappers[5] = PantosWrapper(
+            getContractAddress(Contract.PAN_FTM, false)
+        );
+        pantosWrappers[6] = PantosWrapper(
+            getContractAddress(Contract.PAN_MATIC, false)
+        );
     }
 }
