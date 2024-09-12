@@ -13,39 +13,88 @@ import {PantosTypes} from "./PantosTypes.sol";
  * to token transfers.
  */
 interface IPantosTransfer {
-    event Transfer(
+    /**
+     * @notice Event that is emitted when a Pantos single-chain token
+     * transfer succeeded.
+     *
+     * @param transferId The unique Pantos transfer ID on the
+     * blockchain.
+     * @param request The transfer request.
+     * @param signature The sender's signature.
+     */
+    event TransferSucceeded(
         uint256 transferId,
-        address sender,
-        address recipient,
-        address token,
-        uint256 amount,
-        uint256 fee,
-        address serviceNode
+        PantosTypes.TransferRequest request,
+        bytes signature
     );
 
-    event TransferFrom(
-        uint256 sourceTransferId,
-        uint256 destinationBlockchainId,
-        address sender,
-        string recipient,
-        address sourceToken,
-        string destinationToken,
-        uint256 amount,
-        uint256 fee,
-        address serviceNode
+    /**
+     * @notice Event that is emitted when a Pantos single-chain token
+     * transfer failed.
+     *
+     * @param transferId The unique Pantos transfer ID on the
+     * blockchain.
+     * @param request The transfer request.
+     * @param signature The sender's signature.
+     * @param tokenData Optional PANDAS token data (may contain an error
+     * message).
+     */
+    event TransferFailed(
+        uint256 transferId,
+        PantosTypes.TransferRequest request,
+        bytes signature,
+        bytes32 tokenData
     );
 
-    event TransferTo(
-        uint256 sourceBlockchainId,
+    /**
+     * @notice Event that is emitted when a Pantos cross-chain token
+     * transfer succeeded on the source blockchain.
+     *
+     * @param sourceTransferId The unique Pantos transfer ID on the
+     * source blockchain.
+     * @param request The transfer request.
+     * @param signature The sender's signature.
+     */
+    event TransferFromSucceeded(
         uint256 sourceTransferId,
-        string sourceTransactionId,
+        PantosTypes.TransferFromRequest request,
+        bytes signature
+    );
+
+    /**
+     * @notice Event that is emitted when a Pantos cross-chain token
+     * transfer failed on the source blockchain.
+     *
+     * @param sourceTransferId The unique Pantos transfer ID on the
+     * source blockchain.
+     * @param request The transfer request.
+     * @param signature The sender's signature.
+     * @param sourceTokenData Optional PANDAS token data (may contain an
+     * error message).
+     */
+    event TransferFromFailed(
+        uint256 sourceTransferId,
+        PantosTypes.TransferFromRequest request,
+        bytes signature,
+        bytes32 sourceTokenData
+    );
+
+    /**
+     * @notice Event that is emitted when a Pantos cross-chain token
+     * transfer succeeded on the destination blockchain.
+     *
+     * @param destinationTransferId The unique Pantos transfer ID on the
+     * destination blockchain.
+     * @param request The transfer request.
+     * @param signerAddresses The addresses of the validator nodes that
+     * signed the transfer.
+     * @param signatures The signatures of the validator nodes (each
+     * signature is in the same array position as the corresponding
+     * signer address).
+     */
+    event TransferToSucceeded(
         uint256 destinationTransferId,
-        string sender,
-        address recipient,
-        string sourceToken,
-        address destinationToken,
-        uint256 amount,
-        uint256 nonce,
+        PantosTypes.TransferToRequest request,
         address[] signerAddresses,
         bytes[] signatures
     );
@@ -117,7 +166,7 @@ interface IPantosTransfer {
      * {PantosTypes-TransferToRequest}.
      */
     function transferTo(
-        PantosTypes.TransferToRequest memory request,
+        PantosTypes.TransferToRequest calldata request,
         address[] memory signerAddresses,
         bytes[] memory signatures
     ) external returns (uint256);
@@ -179,7 +228,7 @@ interface IPantosTransfer {
      * valid.
      */
     function verifyTransferTo(
-        PantosTypes.TransferToRequest memory request,
+        PantosTypes.TransferToRequest calldata request,
         address[] memory signerAddresses,
         bytes[] memory signatures
     ) external view;

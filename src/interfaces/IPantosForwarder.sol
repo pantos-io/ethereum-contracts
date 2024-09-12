@@ -59,13 +59,17 @@ interface IPantosForwarder {
      * @param request The TransferRequest data structure
      * @param signature The signature of the request
      *
+     * @return A pair of a flag that indicates if the PANDAS token
+     * transfer succeeded and optional PANDAS token data (the latter may
+     * contain an error message if the PANDAS token transfer failed).
+     *
      * @dev The function reverts if the TransferRequest data structure is not
      * valid
      */
     function verifyAndForwardTransfer(
         PantosTypes.TransferRequest calldata request,
         bytes memory signature
-    ) external;
+    ) external returns (bool, bytes32);
 
     /**
      * @notice Takes a transfer requests, which initializes a cross-blockchain
@@ -76,6 +80,10 @@ interface IPantosForwarder {
      * @param request The TransferFromRequest data structure
      * @param signature The signature of the request
      *
+     * @return A pair of a flag that indicates if the PANDAS token
+     * transfer succeeded and optional PANDAS token data (the latter may
+     * contain an error message if the PANDAS token transfer failed).
+     *
      * @dev The function reverts if the TransferFromRequest data structure is
      * not valid
      */
@@ -84,7 +92,7 @@ interface IPantosForwarder {
         uint256 destinationBlockchainFactor,
         PantosTypes.TransferFromRequest calldata request,
         bytes memory signature
-    ) external;
+    ) external returns (bool, bytes32);
 
     /**
      * @notice Takes a transfer requests, which is the last step of a
@@ -105,10 +113,15 @@ interface IPantosForwarder {
      * is not valid.
      */
     function verifyAndForwardTransferTo(
-        PantosTypes.TransferToRequest memory request,
+        PantosTypes.TransferToRequest calldata request,
         address[] memory signerAddresses,
         bytes[] memory signatures
     ) external;
+
+    /**
+     * @return The supported major Pantos protocol version.
+     */
+    function getMajorProtocolVersion() external view returns (uint8);
 
     /**
      * @notice Returns the address of the Pantos Hub
@@ -209,7 +222,7 @@ interface IPantosForwarder {
      * is not valid.
      */
     function verifyTransferTo(
-        PantosTypes.TransferToRequest memory request,
+        PantosTypes.TransferToRequest calldata request,
         address[] memory signerAddresses,
         bytes[] memory signatures
     ) external view;

@@ -2,6 +2,8 @@
 pragma solidity 0.8.26;
 
 library Constants {
+    uint8 public constant MAJOR_PROTOCOL_VERSION = 0;
+
     uint256 public constant SERVICE_NODE_DEPOSIT_UNBONDING_PERIOD = 604800;
 
     uint256 public constant MINIMUM_SERVICE_NODE_DEPOSIT = 10 ** 5 * 10 ** 8;

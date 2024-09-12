@@ -13,6 +13,7 @@ import {PantosToken} from "../src/PantosToken.sol";
 import {AccessController} from "../src/access/AccessController.sol";
 
 abstract contract PantosBaseTest is Test {
+    uint8 public constant MAJOR_PROTOCOL_VERSION = 0;
     uint256 public constant BLOCK_TIMESTAMP = 1000;
     uint256 public constant SERVICE_NODE_DEPOSIT_UNBONDING_PERIOD = 604800;
     uint256 public constant MINIMUM_SERVICE_NODE_DEPOSIT = 10 ** 5 * 10 ** 8;
@@ -72,6 +73,7 @@ abstract contract PantosBaseTest is Test {
     uint256 constant TRANSFER_FEE = 1;
     uint256 constant TRANSFER_NONCE = 0;
     uint256 constant TRANSFER_VALID_UNTIL = BLOCK_TIMESTAMP + 1;
+    bytes32 constant PANDAS_TOKEN_FAILURE_DATA = "some failure";
 
     enum BlockchainId {
         TEST_CHAIN1, // 0
