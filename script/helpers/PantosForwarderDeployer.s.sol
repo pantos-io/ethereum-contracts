@@ -17,6 +17,7 @@ abstract contract PantosForwarderDeployer is PantosBaseScript {
         AccessController accessController
     ) public returns (PantosForwarder) {
         PantosForwarder pantosForwarder = new PantosForwarder(
+            Constants.MAJOR_PROTOCOL_VERSION,
             address(accessController)
         );
         console2.log(

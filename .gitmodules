@@ -7,3 +7,6 @@
 [submodule "lib/diamond-3-hardhat"]
 	path = lib/diamond-3-hardhat
 	url = https://github.com/mudgen/diamond-3-hardhat
+[submodule "lib/ExcessivelySafeCall"]
+	path = lib/ExcessivelySafeCall
+	url = https://github.com/nomad-xyz/ExcessivelySafeCall

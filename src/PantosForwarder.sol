@@ -2,9 +2,10 @@
 // slither-disable-next-line solc-version
 pragma solidity 0.8.26;
 
+import {ExcessivelySafeCall} from "@excessivelysafecall/ExcessivelySafeCall.sol";
 import {Pausable} from "@openzeppelin/contracts/utils/Pausable.sol";
 import {ECDSA} from "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
-import {MessageHashUtils} from "@openzeppelin/contracts/utils/cryptography/MessageHashUtils.sol";
+import {EIP712} from "@openzeppelin/contracts/utils/cryptography/EIP712.sol";
 import {Strings} from "@openzeppelin/contracts/utils/Strings.sol";
 
 import {PantosRBAC} from "./access/PantosRBAC.sol";
@@ -17,6 +18,39 @@ import {IPantosToken} from "./interfaces/IPantosToken.sol";
 uint256 constant DEFAULT_MINIMUM_VALIDATOR_NODE_SIGNATURES = 3;
 uint constant INVALID_VALIDATOR_NODE_INDEX = type(uint).max;
 
+string constant EIP712_DOMAIN_NAME = "Pantos";
+
+bytes32 constant TRANSFER_REQUEST_TYPE_HASH = keccak256(
+    bytes(PantosTypes.TRANSFER_REQUEST_TYPE)
+);
+bytes32 constant TRANSFER_TYPE_HASH = keccak256(
+    abi.encodePacked(
+        PantosTypes.TRANSFER_TYPE,
+        PantosTypes.TRANSFER_REQUEST_TYPE
+    )
+);
+bytes32 constant TRANSFER_FROM_REQUEST_TYPE_HASH = keccak256(
+    bytes(PantosTypes.TRANSFER_FROM_REQUEST_TYPE)
+);
+bytes32 constant TRANSFER_FROM_TYPE_HASH = keccak256(
+    abi.encodePacked(
+        PantosTypes.TRANSFER_FROM_TYPE,
+        PantosTypes.TRANSFER_FROM_REQUEST_TYPE
+    )
+);
+bytes32 constant TRANSFER_TO_REQUEST_TYPE_HASH = keccak256(
+    bytes(PantosTypes.TRANSFER_TO_REQUEST_TYPE)
+);
+bytes32 constant TRANSFER_TO_TYPE_HASH = keccak256(
+    abi.encodePacked(
+        PantosTypes.TRANSFER_TO_TYPE,
+        PantosTypes.TRANSFER_TO_REQUEST_TYPE
+    )
+);
+
+uint256 constant PANDAS_TOKEN_TRANSFER_GAS = 70000;
+uint256 constant PANDAS_TOKEN_TRANSFER_FROM_GAS = 50000;
+
 /**
  * @title Pantos Forwarder
  *
@@ -24,7 +58,11 @@ uint constant INVALID_VALIDATOR_NODE_INDEX = type(uint).max;
  *
  * @dev See {IPantosForwarder}.
  */
-contract PantosForwarder is IPantosForwarder, Pausable, PantosRBAC {
+contract PantosForwarder is IPantosForwarder, EIP712, Pausable, PantosRBAC {
+    using ExcessivelySafeCall for address;
+
+    uint8 private immutable _majorProtocolVersion;
+
     address private _pantosHub;
 
     address private _pantosToken;
@@ -42,8 +80,13 @@ contract PantosForwarder is IPantosForwarder, Pausable, PantosRBAC {
     mapping(address => mapping(uint256 => bool)) private _usedSenderNonces;
 
     constructor(
+        uint8 majorProtocolVersion,
         address accessControllerAddress
-    ) PantosRBAC(accessControllerAddress) {
+    )
+        EIP712(EIP712_DOMAIN_NAME, Strings.toString(majorProtocolVersion))
+        PantosRBAC(accessControllerAddress)
+    {
+        _majorProtocolVersion = majorProtocolVersion;
         // Contract is paused until it is fully initialized
         _pause();
     }
@@ -224,23 +267,34 @@ contract PantosForwarder is IPantosForwarder, Pausable, PantosRBAC {
     function verifyAndForwardTransfer(
         PantosTypes.TransferRequest calldata request,
         bytes memory signature
-    ) external override whenNotPaused onlyPantosHub {
+    ) external override whenNotPaused onlyPantosHub returns (bool, bytes32) {
         // Verify the nonce and signature
         verifyTransfer(request, signature);
         // Mark the nonce as used
         _usedSenderNonces[request.sender][request.nonce] = true;
-        // Transfer the tokens from the sender to the recipient
-        IPantosToken(request.token).pantosTransfer(
-            request.sender,
-            request.recipient,
-            request.amount
-        );
         // Transfer the fee to the service node
         IPantosToken(_pantosToken).pantosTransfer(
             request.sender,
             request.serviceNode,
             request.fee
         );
+        // Transfer the tokens from the sender to the recipient
+        // The transaction is not supposed to be reverted if the token
+        // transfer fails to ensure that the service node gets paid
+        bool succeeded;
+        bytes memory tokenData;
+        (succeeded, tokenData) = request.token.excessivelySafeCall(
+            PANDAS_TOKEN_TRANSFER_GAS,
+            0,
+            32,
+            abi.encodeWithSelector(
+                IPantosToken.pantosTransfer.selector,
+                request.sender,
+                request.recipient,
+                request.amount
+            )
+        );
+        return (succeeded, bytes32(tokenData));
     }
 
     /**
@@ -251,31 +305,56 @@ contract PantosForwarder is IPantosForwarder, Pausable, PantosRBAC {
         uint256 destinationBlockchainFactor,
         PantosTypes.TransferFromRequest calldata request,
         bytes memory signature
-    ) external override whenNotPaused onlyPantosHub {
+    ) external override whenNotPaused onlyPantosHub returns (bool, bytes32) {
         // Verify the nonce and signature
         verifyTransferFrom(request, signature);
         // Mark the nonce as used
         _usedSenderNonces[request.sender][request.nonce] = true;
-        // Transfer the tokens from the sender
-        IPantosToken(request.sourceToken).pantosTransferFrom(
-            request.sender,
-            request.amount
-        );
-        // Transfer the fee to the service and validator nodes
-        _transferFee(
-            request.sender,
-            request.serviceNode,
+        // Split the transfer fee
+        uint256 serviceNodeFee;
+        uint256 validatorNodeFee;
+        (serviceNodeFee, validatorNodeFee) = _splitTransferFromFee(
             request.fee,
             sourceBlockchainFactor,
             destinationBlockchainFactor
         );
+        // Transfer the fee to the service node
+        IPantosToken(_pantosToken).pantosTransfer(
+            request.sender,
+            request.serviceNode,
+            serviceNodeFee
+        );
+        // Transfer the tokens from the sender
+        // The transaction is not supposed to be reverted if the token
+        // transfer fails to ensure that the service node gets paid
+        bool succeeded;
+        bytes memory sourceTokenData;
+        (succeeded, sourceTokenData) = request.sourceToken.excessivelySafeCall(
+            PANDAS_TOKEN_TRANSFER_FROM_GAS,
+            0,
+            32,
+            abi.encodeWithSelector(
+                IPantosToken.pantosTransferFrom.selector,
+                request.sender,
+                request.amount
+            )
+        );
+        // Transfer the fee to the primary validator node
+        if (succeeded) {
+            IPantosToken(_pantosToken).pantosTransfer(
+                request.sender,
+                IPantosHub(_pantosHub).getPrimaryValidatorNode(),
+                validatorNodeFee
+            );
+        }
+        return (succeeded, bytes32(sourceTokenData));
     }
 
     /**
      * @dev See {IPantosForwarder-verifyAndForwardTransferTo}.
      */
     function verifyAndForwardTransferTo(
-        PantosTypes.TransferToRequest memory request,
+        PantosTypes.TransferToRequest calldata request,
         address[] memory signerAddresses,
         bytes[] memory signatures
     ) external override whenNotPaused onlyPantosHub {
@@ -288,6 +367,13 @@ contract PantosForwarder is IPantosForwarder, Pausable, PantosRBAC {
             request.recipient,
             request.amount
         );
+    }
+
+    /**
+     * @dev See {IPantosForwarder-getMajorProtocolVersion}.
+     */
+    function getMajorProtocolVersion() public view override returns (uint8) {
+        return _majorProtocolVersion;
     }
 
     /**
@@ -388,7 +474,7 @@ contract PantosForwarder is IPantosForwarder, Pausable, PantosRBAC {
      * @dev See {IPantosForwarder-verifyTransferTo}.
      */
     function verifyTransferTo(
-        PantosTypes.TransferToRequest memory request,
+        PantosTypes.TransferToRequest calldata request,
         address[] memory signerAddresses,
         bytes[] memory signatures
     ) public view override onlyPantosHub {
@@ -448,29 +534,26 @@ contract PantosForwarder is IPantosForwarder, Pausable, PantosRBAC {
         PantosTypes.TransferRequest calldata request,
         bytes memory signature
     ) private view {
-        // Recreate the base message that was signed
-        bytes32 baseMessage = keccak256(_encodeTransferMessage(request));
+        bytes32 structHash = _hashTransferStruct(request);
         // Verify that the sender signed the message
-        _verifySignature(baseMessage, request.sender, signature);
+        _verifySignature(structHash, request.sender, signature);
     }
 
     function _verifyTransferFromSignature(
         PantosTypes.TransferFromRequest calldata request,
         bytes memory signature
     ) private view {
-        // Recreate the base message that was signed
-        bytes32 baseMessage = keccak256(_encodeTransferFromMessage(request));
+        bytes32 structHash = _hashTransferFromStruct(request);
         // Verify that the sender signed the message
-        _verifySignature(baseMessage, request.sender, signature);
+        _verifySignature(structHash, request.sender, signature);
     }
 
     function _verifyTransferToSignatures(
-        PantosTypes.TransferToRequest memory request,
+        PantosTypes.TransferToRequest calldata request,
         address[] memory signerAddresses,
         bytes[] memory signatures
     ) private view {
-        // Recreate the base message that was signed
-        bytes32 baseMessage = keccak256(_encodeTransferToMessage(request));
+        bytes32 structHash = _hashTransferToStruct(request);
         // Verify that enough validator nodes signed the message
         uint numberSigners = signerAddresses.length;
         require(
@@ -508,21 +591,21 @@ contract PantosForwarder is IPantosForwarder, Pausable, PantosRBAC {
                     Strings.toHexString(currentSignerAddress)
                 )
             );
-            _verifySignature(baseMessage, currentSignerAddress, signatures[i]);
+            _verifySignature(structHash, currentSignerAddress, signatures[i]);
             previousSignerAddress = currentSignerAddress;
             validatorNodeIndex++;
         }
     }
 
     function _verifySignature(
-        bytes32 baseMessage,
+        bytes32 structHash,
         address signerAddress,
         bytes memory signature
-    ) private pure {
-        // Recreate the message that was signed
-        bytes32 message = MessageHashUtils.toEthSignedMessageHash(baseMessage);
+    ) private view {
+        // Hash of the fully encoded EIP712 message
+        bytes32 messageHash = _hashTypedDataV4(structHash);
         // Recover the signer's address from the signature
-        address recoveredSignerAddress = ECDSA.recover(message, signature);
+        address recoveredSignerAddress = ECDSA.recover(messageHash, signature);
         require(
             recoveredSignerAddress == signerAddress,
             string.concat(
@@ -532,64 +615,51 @@ contract PantosForwarder is IPantosForwarder, Pausable, PantosRBAC {
         );
     }
 
-    function _transferFee(
-        address sender,
-        address serviceNode,
-        uint256 fee,
+    function _splitTransferFromFee(
+        uint256 totalFee,
         uint256 sourceBlockchainFactor,
         uint256 destinationBlockchainFactor
-    ) private {
+    ) private pure returns (uint256 serviceNodeFee, uint256 validatorNodeFee) {
         uint256 totalFactor = sourceBlockchainFactor +
             destinationBlockchainFactor;
-        uint256 serviceNodeFee = (sourceBlockchainFactor * fee) / totalFactor;
-        uint256 validatorFee = fee - serviceNodeFee;
-        IPantosToken pantosToken = IPantosToken(_pantosToken);
-        pantosToken.pantosTransfer(sender, serviceNode, serviceNodeFee);
-        pantosToken.pantosTransfer(
-            sender,
-            IPantosHub(_pantosHub).getPrimaryValidatorNode(),
-            validatorFee
-        );
+        serviceNodeFee = (sourceBlockchainFactor * totalFee) / totalFactor;
+        validatorNodeFee = totalFee - serviceNodeFee;
     }
 
-    function _encodeTransferMessage(
+    function _hashString(
+        string calldata string_
+    ) private pure returns (bytes32) {
+        return keccak256(bytes(string_));
+    }
+
+    function _hashTransferRequestStruct(
         PantosTypes.TransferRequest calldata request
-    ) private view returns (bytes memory) {
+    ) private pure returns (bytes32) {
         return
-            abi.encodePacked(
-                IPantosHub(_pantosHub).getCurrentBlockchainId(),
-                request.sender,
-                request.recipient,
-                request.token,
-                request.amount,
-                request.serviceNode,
-                request.fee,
-                request.nonce,
-                request.validUntil,
-                _pantosHub,
-                address(this),
-                _pantosToken
+            keccak256(
+                abi.encode(
+                    TRANSFER_REQUEST_TYPE_HASH,
+                    request.sender,
+                    request.recipient,
+                    request.token,
+                    request.amount,
+                    request.serviceNode,
+                    request.fee,
+                    request.nonce,
+                    request.validUntil
+                )
             );
     }
 
-    function _encodeTransferFromMessage(
-        PantosTypes.TransferFromRequest calldata request
-    ) private view returns (bytes memory) {
+    function _hashTransferStruct(
+        PantosTypes.TransferRequest calldata request
+    ) private view returns (bytes32) {
         return
-            abi.encodePacked(
-                IPantosHub(_pantosHub).getCurrentBlockchainId(),
-                request.destinationBlockchainId,
-                request.sender,
-                request.recipient,
-                request.sourceToken,
-                request.destinationToken,
-                request.amount,
-                request.serviceNode,
-                request.fee,
-                request.nonce,
-                // Required because of solc stack depth limit
-                abi.encodePacked(
-                    request.validUntil,
+            keccak256(
+                abi.encode(
+                    TRANSFER_TYPE_HASH,
+                    _hashTransferRequestStruct(request),
+                    IPantosHub(_pantosHub).getCurrentBlockchainId(),
                     _pantosHub,
                     address(this),
                     _pantosToken
@@ -597,25 +667,76 @@ contract PantosForwarder is IPantosForwarder, Pausable, PantosRBAC {
             );
     }
 
-    function _encodeTransferToMessage(
-        PantosTypes.TransferToRequest memory request
-    ) private view returns (bytes memory) {
-        uint256 destinationBlockchainId = IPantosHub(_pantosHub)
-            .getCurrentBlockchainId();
+    function _hashTransferFromRequestStruct(
+        PantosTypes.TransferFromRequest calldata request
+    ) private pure returns (bytes32) {
         return
-            abi.encodePacked(
-                request.sourceBlockchainId,
-                destinationBlockchainId,
-                request.sourceTransactionId,
-                request.sourceTransferId,
-                request.sender,
-                request.recipient,
-                request.sourceToken,
-                request.destinationToken,
-                request.amount,
-                request.nonce,
-                // Required because of solc stack depth limit
-                abi.encodePacked(_pantosHub, address(this), _pantosToken)
+            keccak256(
+                abi.encode(
+                    TRANSFER_FROM_REQUEST_TYPE_HASH,
+                    request.destinationBlockchainId,
+                    request.sender,
+                    _hashString(request.recipient),
+                    request.sourceToken,
+                    _hashString(request.destinationToken),
+                    request.amount,
+                    request.serviceNode,
+                    request.fee,
+                    request.nonce,
+                    request.validUntil
+                )
+            );
+    }
+
+    function _hashTransferFromStruct(
+        PantosTypes.TransferFromRequest calldata request
+    ) private view returns (bytes32) {
+        return
+            keccak256(
+                abi.encode(
+                    TRANSFER_FROM_TYPE_HASH,
+                    _hashTransferFromRequestStruct(request),
+                    IPantosHub(_pantosHub).getCurrentBlockchainId(),
+                    _pantosHub,
+                    address(this),
+                    _pantosToken
+                )
+            );
+    }
+
+    function _hashTransferToRequestStruct(
+        PantosTypes.TransferToRequest calldata request
+    ) private pure returns (bytes32) {
+        return
+            keccak256(
+                abi.encode(
+                    TRANSFER_TO_REQUEST_TYPE_HASH,
+                    request.sourceBlockchainId,
+                    request.sourceTransferId,
+                    _hashString(request.sourceTransactionId),
+                    _hashString(request.sender),
+                    request.recipient,
+                    _hashString(request.sourceToken),
+                    request.destinationToken,
+                    request.amount,
+                    request.nonce
+                )
+            );
+    }
+
+    function _hashTransferToStruct(
+        PantosTypes.TransferToRequest calldata request
+    ) private view returns (bytes32) {
+        return
+            keccak256(
+                abi.encode(
+                    TRANSFER_TO_TYPE_HASH,
+                    _hashTransferToRequestStruct(request),
+                    IPantosHub(_pantosHub).getCurrentBlockchainId(),
+                    _pantosHub,
+                    address(this),
+                    _pantosToken
+                )
             );
     }
 }

@@ -39,6 +39,37 @@ library PantosTypes {
         uint256 validUntil;
     }
 
+    string constant TRANSFER_REQUEST_TYPE =
+        "TransferRequest("
+        "address sender,"
+        "address recipient,"
+        "address token,"
+        "uint256 amount,"
+        "address serviceNode,"
+        "uint256 fee,"
+        "uint256 nonce,"
+        "uint256 validUntil)";
+
+    /**
+     * @notice The typed structured data to be signed by a Pantos client
+     * for a single-chain transfer.
+     */
+    struct Transfer {
+        TransferRequest request;
+        uint256 blockchainId;
+        address pantosHub;
+        address pantosForwarder;
+        address pantosToken;
+    }
+
+    string constant TRANSFER_TYPE =
+        "Transfer("
+        "TransferRequest request,"
+        "uint256 blockchainId,"
+        "address pantosHub,"
+        "address pantosForwarder,"
+        "address pantosToken)";
+
     struct TransferFromRequest {
         uint256 destinationBlockchainId;
         address sender;
@@ -52,6 +83,39 @@ library PantosTypes {
         uint256 validUntil;
     }
 
+    string constant TRANSFER_FROM_REQUEST_TYPE =
+        "TransferFromRequest("
+        "uint256 destinationBlockchainId,"
+        "address sender,"
+        "string recipient,"
+        "address sourceToken,"
+        "string destinationToken,"
+        "uint256 amount,"
+        "address serviceNode,"
+        "uint256 fee,"
+        "uint256 nonce,"
+        "uint256 validUntil)";
+
+    /**
+     * @notice The typed structured data to be signed by a Pantos client
+     * for a cross-chain transfer.
+     */
+    struct TransferFrom {
+        TransferFromRequest request;
+        uint256 sourceBlockchainId;
+        address pantosHub;
+        address pantosForwarder;
+        address pantosToken;
+    }
+
+    string constant TRANSFER_FROM_TYPE =
+        "TransferFrom("
+        "TransferFromRequest request,"
+        "uint256 sourceBlockchainId,"
+        "address pantosHub,"
+        "address pantosForwarder,"
+        "address pantosToken)";
+
     struct TransferToRequest {
         uint256 sourceBlockchainId;
         uint256 sourceTransferId; // Pantos transfer ID
@@ -63,6 +127,38 @@ library PantosTypes {
         uint256 amount;
         uint256 nonce;
     }
+
+    string constant TRANSFER_TO_REQUEST_TYPE =
+        "TransferToRequest("
+        "uint256 sourceBlockchainId,"
+        "uint256 sourceTransferId,"
+        "string sourceTransactionId,"
+        "string sender,"
+        "address recipient,"
+        "string sourceToken,"
+        "address destinationToken,"
+        "uint256 amount,"
+        "uint256 nonce)";
+
+    /**
+     * @notice The typed structured data to be signed by a Pantos
+     * validator node for a cross-chain transfer.
+     */
+    struct TransferTo {
+        TransferToRequest request;
+        uint256 destinationBlockchainId;
+        address pantosHub;
+        address pantosForwarder;
+        address pantosToken;
+    }
+
+    string constant TRANSFER_TO_TYPE =
+        "TransferTo("
+        "TransferToRequest request,"
+        "uint256 destinationBlockchainId,"
+        "address pantosHub,"
+        "address pantosForwarder,"
+        "address pantosToken)";
 
     struct UpdatableUint256 {
         uint256 currentValue;
