@@ -15,7 +15,7 @@ import {PantosRegistryFacet} from "../src/facets/PantosRegistryFacet.sol";
 import {PantosTransferFacet} from "../src/facets/PantosTransferFacet.sol";
 import {DiamondCutFacet} from "../src/facets/DiamondCutFacet.sol";
 
-import {PantosHubDeployer, PantosFacets} from "./helpers/PantosHubDeployerNew.s.sol";
+import {PantosHubDeployer, PantosFacets} from "./helpers/PantosHubDeployer.s.sol";
 import {PantosForwarderDeployer} from "./helpers/PantosForwarderDeployer.s.sol";
 import {PantosWrapperDeployer} from "./helpers/PantosWrapperDeployer.s.sol";
 import {PantosTokenDeployer} from "./helpers/PantosTokenDeployer.s.sol";
@@ -87,7 +87,6 @@ contract DeployContracts is
             mediumCriticalOps,
             superCriticalOps
         );
-        // TODO export safe info and nonces
     }
 
     function roleActions(

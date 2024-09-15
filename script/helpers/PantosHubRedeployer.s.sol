@@ -10,8 +10,7 @@ import {PantosToken} from "../../src/PantosToken.sol";
 import {PantosForwarder} from "../../src/PantosForwarder.sol";
 import {AccessController} from "../../src/access/AccessController.sol";
 
-import {PantosBaseAddresses} from "../helpers/PantosBaseAddresses.s.sol";
-import {PantosHubDeployer} from "../helpers/PantosHubDeployerNew.s.sol";
+import {PantosHubDeployer} from "../helpers/PantosHubDeployer.s.sol";
 
 abstract contract PantosHubRedeployer is PantosHubDeployer {
     bool private _initialized;
@@ -19,33 +18,24 @@ abstract contract PantosHubRedeployer is PantosHubDeployer {
     mapping(address => mapping(BlockchainId => PantosTypes.ExternalTokenRecord))
         private _ownedToExternalTokens;
     PantosToken[] private _ownedTokens;
-    IPantosHub private _oldPantosHubProxy;
-    PantosForwarder private _pantosForwarder;
+    IPantosHub private _oldPantosHub;
     PantosToken private _pantosToken;
-    AccessController private _accessController;
 
     modifier onlyPantosHubRedeployerInitialized() {
         require(_initialized, "PantosHubRedeployer: not initialized");
         _;
     }
 
-    function initializePantosHubRedeployer(
-        address oldPantosHubProxyAddress
-    ) public {
+    function initializePantosHubRedeployer(IPantosHub oldPantosHub) public {
         _initialized = true;
-        _oldPantosHubProxy = IPantosHub(oldPantosHubProxyAddress);
-        _pantosForwarder = PantosForwarder(
-            _oldPantosHubProxy.getPantosForwarder()
-        );
-        _pantosToken = PantosToken(_oldPantosHubProxy.getPantosToken());
-        readContractAddresses(determineBlockchain());
-        _accessController = AccessController(
-            getContractAddress(determineBlockchain(), "access_controller")
-        );
-        readOwnedAndExternalTokens(_oldPantosHubProxy);
+        _oldPantosHub = oldPantosHub;
+        _pantosToken = PantosToken(_oldPantosHub.getPantosToken());
+        readOwnedAndExternalTokensFromOldPantosHub(_oldPantosHub);
     }
 
-    function readOwnedAndExternalTokens(IPantosHub pantosHubProxy) public {
+    function readOwnedAndExternalTokensFromOldPantosHub(
+        IPantosHub pantosHubProxy
+    ) private {
         Blockchain memory blockchain = determineBlockchain();
         address[] memory tokens = pantosHubProxy.getTokens();
         for (uint256 i = 0; i < tokens.length; i++) {
@@ -90,7 +80,7 @@ abstract contract PantosHubRedeployer is PantosHubDeployer {
     }
 
     function migrateTokensFromOldHubToNewHub(
-        IPantosHub newPantosHubProxy
+        IPantosHub newPantosHub
     ) public onlyPantosHubRedeployerInitialized {
         console2.log(
             "Migrating %d tokens from the old PantosHub to the new one",
@@ -99,7 +89,7 @@ abstract contract PantosHubRedeployer is PantosHubDeployer {
 
         for (uint256 i = 0; i < _ownedTokens.length; i++) {
             if (address(_ownedTokens[i]) != address(_pantosToken)) {
-                registerTokenAtNewHub(newPantosHubProxy, _ownedTokens[i]);
+                registerTokenAtNewHub(newPantosHub, _ownedTokens[i]);
             }
             for (
                 uint256 blockchainId;
@@ -116,7 +106,7 @@ abstract contract PantosHubRedeployer is PantosHubDeployer {
                         ][BlockchainId(blockchainId)];
                     if (externalTokenRecord.active) {
                         registerExternalTokenAtNewHub(
-                            newPantosHubProxy,
+                            newPantosHub,
                             _ownedTokens[i],
                             blockchainId,
                             externalTokenRecord.externalToken
@@ -130,13 +120,13 @@ abstract contract PantosHubRedeployer is PantosHubDeployer {
     }
 
     function registerTokenAtNewHub(
-        IPantosHub newPantosHubProxy,
+        IPantosHub newPantosHub,
         PantosToken token
     ) public onlyPantosHubRedeployerInitialized {
-        PantosTypes.TokenRecord memory tokenRecord = newPantosHubProxy
+        PantosTypes.TokenRecord memory tokenRecord = newPantosHub
             .getTokenRecord(address(token));
         if (!tokenRecord.active) {
-            newPantosHubProxy.registerToken(address(token));
+            newPantosHub.registerToken(address(token));
             console2.log("New PantosHub.registerToken(%s)", address(token));
         } else {
             console2.log(
@@ -147,17 +137,19 @@ abstract contract PantosHubRedeployer is PantosHubDeployer {
     }
 
     function registerExternalTokenAtNewHub(
-        IPantosHub newPantosHubProxy,
+        IPantosHub newPantosHub,
         PantosToken token,
         uint256 blockchainId,
         string memory externalToken
     ) public onlyPantosHubRedeployerInitialized {
         PantosTypes.ExternalTokenRecord
-            memory externalTokenRecord = newPantosHubProxy
-                .getExternalTokenRecord(address(token), blockchainId);
+            memory externalTokenRecord = newPantosHub.getExternalTokenRecord(
+                address(token),
+                blockchainId
+            );
 
         if (!externalTokenRecord.active) {
-            newPantosHubProxy.registerExternalToken(
+            newPantosHub.registerExternalToken(
                 address(token),
                 blockchainId,
                 externalToken
@@ -188,10 +180,10 @@ abstract contract PantosHubRedeployer is PantosHubDeployer {
             _ownedTokens.length
         );
         for (uint256 i = 0; i < _ownedTokens.length; i++) {
-            PantosTypes.TokenRecord memory tokenRecord = _oldPantosHubProxy
+            PantosTypes.TokenRecord memory tokenRecord = _oldPantosHub
                 .getTokenRecord(address(_ownedTokens[i]));
             if (tokenRecord.active) {
-                _oldPantosHubProxy.unregisterToken(address(_ownedTokens[i]));
+                _oldPantosHub.unregisterToken(address(_ownedTokens[i]));
                 console2.log(
                     "Unregistered token %s from the old PantosHub",
                     address(_ownedTokens[i])
@@ -203,41 +195,5 @@ abstract contract PantosHubRedeployer is PantosHubDeployer {
                 );
             }
         }
-    }
-
-    function getOldPantosHubProxy()
-        public
-        view
-        onlyPantosHubRedeployerInitialized
-        returns (IPantosHub)
-    {
-        return _oldPantosHubProxy;
-    }
-
-    function getPantosForwarder()
-        public
-        view
-        onlyPantosHubRedeployerInitialized
-        returns (PantosForwarder)
-    {
-        return _pantosForwarder;
-    }
-
-    function getPantosToken()
-        public
-        view
-        onlyPantosHubRedeployerInitialized
-        returns (PantosToken)
-    {
-        return _pantosToken;
-    }
-
-    function getAccessController()
-        public
-        view
-        onlyPantosHubRedeployerInitialized
-        returns (AccessController)
-    {
-        return _accessController;
     }
 }

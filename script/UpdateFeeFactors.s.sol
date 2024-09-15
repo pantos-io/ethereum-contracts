@@ -20,9 +20,12 @@ import {PantosBaseScript} from "./helpers/PantosHubDeployer.s.sol";
  *     --sig "run(address)" <pantosHubProxy>
  */
 contract UpdateFeeFactors is PantosBaseScript {
-    function run(address pantosHubProxyAddress) public {
+    function roleActions(
+        address mediumCriticalOps,
+        address pantosHubProxyAddress
+    ) public {
         IPantosHub pantosHubProxy = IPantosHub(pantosHubProxyAddress);
-        vm.startBroadcast();
+        vm.startBroadcast(mediumCriticalOps);
 
         for (uint256 i; i < getBlockchainsLength(); i++) {
             Blockchain memory blockchain = getBlockchainById(BlockchainId(i));

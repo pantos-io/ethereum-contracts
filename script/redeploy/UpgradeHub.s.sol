@@ -10,7 +10,7 @@ import {AccessController} from "../../src/access/AccessController.sol";
 import {PantosForwarder} from "../../src/PantosForwarder.sol";
 import {PantosToken} from "../../src/PantosToken.sol";
 
-import {PantosHubDeployer} from "../helpers/PantosHubDeployerNew.s.sol";
+import {PantosHubDeployer} from "../helpers/PantosHubDeployer.s.sol";
 import {PantosBaseAddresses} from "../helpers/PantosBaseAddresses.s.sol";
 import {PantosRegistryFacet} from "../../src/facets/PantosRegistryFacet.sol";
 import {PantosTransferFacet} from "../../src/facets/PantosTransferFacet.sol";
@@ -25,7 +25,7 @@ import {PantosTransferFacet} from "../../src/facets/PantosTransferFacet.sol";
  *     --sender <sender> --rpc-url <rpc alias> --slow --force \
  *     --sig "run(address)" <pantosHubProxyAddress>
  */
-contract UpgradeHub is PantosHubDeployer, PantosBaseAddresses {
+contract UpgradeHub is PantosBaseAddresses, PantosHubDeployer {
     PantosHubProxy pantosHubProxy;
     PantosForwarder pantosForwarder;
     PantosToken pantosToken;
@@ -49,22 +49,18 @@ contract UpgradeHub is PantosHubDeployer, PantosBaseAddresses {
         console.log("PantosHub", address(pantosHub));
 
         // Ensuring PantosHub is paused at the time of diamond cut
-        if (!pantosHub.paused()) {
-            vm.broadcast(accessController.pauser());
-            pantosHub.pause();
-            console.log("PantosHub: paused=%s", pantosHub.paused());
-        }
+        vm.broadcast(accessController.pauser());
+        pausePantosHub(pantosHub);
 
-        vm.startBroadcast(accessController.deployer());
+        vm.broadcast(accessController.deployer());
         diamondCutUpgradeFacets(
             address(pantosHubProxy),
             newRegistryFacet,
             newTransferFacet
         );
-        vm.stopBroadcast();
 
-        vm.startBroadcast(accessController.deployer());
         // this will do nothing if there is nothing new added to the storage slots
+        vm.broadcast(accessController.superCriticalOps());
         initializePantosHub(
             pantosHub,
             pantosForwarder,

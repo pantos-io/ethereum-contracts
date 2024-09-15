@@ -2,117 +2,75 @@
 pragma solidity 0.8.26;
 
 /* solhint-disable no-console*/
-import {console2} from "forge-std/console2.sol";
+import {console} from "forge-std/console.sol";
 
+import {PantosWrapper} from "../../src/PantosWrapper.sol";
 import {IPantosHub} from "../../src/interfaces/IPantosHub.sol";
 import {PantosToken} from "../../src/PantosToken.sol";
 import {PantosForwarder} from "../../src/PantosForwarder.sol";
 import {AccessController} from "../../src/access/AccessController.sol";
 
-import {PantosBaseAddresses} from "../helpers/PantosBaseAddresses.s.sol";
 import {PantosForwarderDeployer} from "../helpers/PantosForwarderDeployer.s.sol";
 
 interface IOldPantosForwarder {
     function getPantosValidator() external returns (address);
 }
 
-abstract contract PantosForwarderRedeployer is
-    PantosForwarderDeployer,
-    PantosBaseAddresses
-{
-    bool private _initialized;
-    IPantosHub private _pantosHubProxy;
-    PantosToken private _pantosToken;
-    AccessController private _accessController;
-
-    modifier onlyPantosForwarderRedeployerInitialized() {
-        require(_initialized, "PantosHubRedeployer: not initialized");
-        _;
-    }
-
-    function initializePantosForwarderRedeployer(
-        address pantosHubProxyAddress
-    ) public {
-        _pantosHubProxy = IPantosHub(pantosHubProxyAddress);
-        _pantosToken = PantosToken(_pantosHubProxy.getPantosToken());
-        readContractAddresses(determineBlockchain());
-        _accessController = AccessController(
-            getContractAddress(determineBlockchain(), "access_controller")
-        );
-        _initialized = true;
-    }
-
-    function deployAndInitializePantosForwarder()
-        public
-        returns (PantosForwarder)
-    {
-        PantosForwarder pantosForwarder = deployPantosForwarder(
-            _accessController
-        );
+abstract contract PantosForwarderRedeployer is PantosForwarderDeployer {
+    function tryGetValidatorNodes(
+        PantosForwarder oldForwarder
+    ) public returns (address[] memory) {
         address[] memory validatorNodeAddresses;
-
         // Trying to call newly added function.
         // If it is not available, catch block will try older version
-        try
-            PantosForwarder(_pantosHubProxy.getPantosForwarder())
-                .getValidatorNodes()
-        returns (address[] memory result) {
+        try oldForwarder.getValidatorNodes() returns (
+            address[] memory result
+        ) {
             validatorNodeAddresses = result;
         } catch {
             // delete catch block if all envs updated with new contract
-            console2.log(
+            console.log(
                 "Failed to find new method getValidatorNodes(); "
                 "will try old method getPantosValidator()"
             );
             validatorNodeAddresses = new address[](1);
             validatorNodeAddresses[0] = IOldPantosForwarder(
-                _pantosHubProxy.getPantosForwarder()
+                address(oldForwarder)
             ).getPantosValidator();
         }
-        initializePantosForwarder(
-            pantosForwarder,
-            _pantosHubProxy,
-            _pantosToken,
-            validatorNodeAddresses
-        );
-        return pantosForwarder;
+        return validatorNodeAddresses;
     }
 
     function migrateForwarderAtHub(
-        PantosForwarder pantosForwarder
-    ) public onlyPantosForwarderRedeployerInitialized {
-        _pantosHubProxy.pause();
-        _pantosHubProxy.setPantosForwarder(address(pantosForwarder));
-        _pantosHubProxy.unpause();
-        console2.log(
+        PantosForwarder pantosForwarder,
+        IPantosHub pantosHub
+    ) public {
+        require(
+            pantosHub.paused(),
+            "PantosHub should be paused before migrateForwarderAtHub"
+        );
+        pantosHub.setPantosForwarder(address(pantosForwarder));
+        pantosHub.unpause();
+        console.log(
             "PantosHub setPantosForwarder(%s); paused=%s",
             address(pantosForwarder),
-            _pantosHubProxy.paused()
+            pantosHub.paused()
         );
     }
 
-    function migrateForwarderAtTokens(
-        PantosForwarder pantosForwarder
-    ) public onlyPantosForwarderRedeployerInitialized {
-        Blockchain memory thisBlockchain = determineBlockchain();
-
-        string[] memory tokenSymbols = getTokenSymbols();
-        for (uint256 i = 0; i < tokenSymbols.length; i++) {
-            string memory tokenSymbol = tokenSymbols[i];
-            address tokenAddress = getContractAddress(
-                thisBlockchain,
-                tokenSymbol
-            );
-            PantosToken token = PantosToken(tokenAddress);
-            token.pause();
-            token.setPantosForwarder(address(pantosForwarder));
-            token.unpause();
-            console2.log(
-                "%s setPantosForwarder(%s); paused=%s",
-                token.name(),
-                address(pantosForwarder),
-                token.paused()
-            );
-        }
+    function migrateNewForwarderAtToken(
+        PantosForwarder pantosForwarder,
+        PantosWrapper token
+    ) public {
+        require(token.paused(),
+                "Token should be paused before migrateNewForwarderAtToken");
+        token.setPantosForwarder(address(pantosForwarder));
+        token.unpause();
+        console.log(
+            "%s setPantosForwarder(%s); paused=%s",
+            token.name(),
+            address(pantosForwarder),
+            token.paused()
+        );
     }
 }

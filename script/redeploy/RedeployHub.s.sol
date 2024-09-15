@@ -2,17 +2,24 @@
 pragma solidity 0.8.26;
 
 /* solhint-disable no-console*/
-import {console2} from "forge-std/console2.sol";
+import {console} from "forge-std/console.sol";
+import {DiamondLoupeFacet} from "@diamond/facets/DiamondLoupeFacet.sol";
 
-import {PantosTypes} from "../../src/interfaces/PantosTypes.sol";
-import {IPantosHub} from "../../src/interfaces/IPantosHub.sol";
-import {PantosHubProxy} from "../../src/PantosHubProxy.sol";
-import {PantosHubInit} from "../../src/upgradeInitializers/PantosHubInit.sol";
-import {PantosForwarder} from "../../src/PantosForwarder.sol";
 import {AccessController} from "../../src/access/AccessController.sol";
+import {DiamondCutFacet} from "../../src/facets/DiamondCutFacet.sol";
+import {IPantosHub} from "../../src/interfaces/IPantosHub.sol";
+import {PantosHubInit} from "../../src/upgradeInitializers/PantosHubInit.sol";
+import {PantosHubProxy} from "../../src/PantosHubProxy.sol";
+import {PantosForwarder} from "../../src/PantosForwarder.sol";
+import {PantosToken} from "../../src/PantosToken.sol";
+import {PantosTypes} from "../../src/interfaces/PantosTypes.sol";
 
+import {PantosRegistryFacet} from "../../src/facets/PantosRegistryFacet.sol";
+import {PantosTransferFacet} from "../../src/facets/PantosTransferFacet.sol";
+
+import {PantosBaseAddresses} from "../helpers/PantosBaseAddresses.s.sol";
 import {PantosHubRedeployer} from "../helpers/PantosHubRedeployer.s.sol";
-import {PantosFacets} from "../helpers/PantosHubDeployerNew.s.sol";
+import {PantosFacets} from "../helpers/PantosHubDeployer.s.sol";
 
 /**
  * @title RedeployHub
@@ -36,86 +43,45 @@ import {PantosFacets} from "../helpers/PantosHubDeployerNew.s.sol";
  *     --sender <sender> --rpc-url <rpc alias> --slow --force \
  *     --sig "run(address,uint256)" <oldPantosHubProxyAddress>
  */
-contract RedeployHub is PantosHubRedeployer {
-    // function deployAndInitializeNewPantosHub()
-    //     public
-    //     onlyPantosHubRedeployerInitialized
-    //     returns (IPantosHub)
-    // {
-    //     IPantosHub oldPantosHubProxy = getOldPantosHubProxy();
-    //     if (!oldPantosHubProxy.paused()) {
-    //         oldPantosHubProxy.pause();
-    //     }
-    //     address primaryValidatorNodeAddress = oldPantosHubProxy
-    //         .getPrimaryValidatorNode();
-    //     uint256 nextTransferId = oldPantosHubProxy.getNextTransferId();
-
-    //     (IPantosHub newPantosHubProxy, ) = deployPantosHub(
-    //         nextTransferId,
-    //         getAccessController()
-    //     );
-    //     initializePantosHub(
-    //         newPantosHubProxy,
-    //         getPantosForwarder(),
-    //         getPantosToken(),
-    //         primaryValidatorNodeAddress
-    //     );
-    //     return newPantosHubProxy;
-    // }
+contract RedeployHub is PantosBaseAddresses, PantosHubRedeployer {
+    AccessController accessController;
+    PantosHubProxy newPantosHubProxy;
+    PantosHubInit newPantosHubInit;
+    PantosFacets newPantosFacets;
+    IPantosHub oldPantosHub;
 
     function migrateHubAtForwarder(
-        IPantosHub newPantosHubProxy,
         PantosForwarder pantosForwarder
     ) public onlyPantosHubRedeployerInitialized {
         pantosForwarder.setPantosHub(address(newPantosHubProxy));
         pantosForwarder.unpause();
-        console2.log(
+        console.log(
             "PantosForwarder.setPantosHub(%s); paused=%s",
             address(newPantosHubProxy),
             pantosForwarder.paused()
         );
     }
 
-    // this will write all deployed pantosHubProxy,pantosHubInit & pantosFacets to <blockchainName>-DEPLOY.json
     function deploy(address accessControllerAddress) public {
+        accessController = AccessController(accessControllerAddress);
+
         vm.startBroadcast();
-
-        AccessController accessController = AccessController(
-            accessControllerAddress
-        );
-        PantosHubProxy pantosHubProxy;
-        PantosHubInit pantosHubInit;
-        PantosFacets memory pantosFacets;
-
-        (pantosHubProxy, pantosHubInit, pantosFacets) = deployPantosHub(
-            accessController
-        );
-        // exportContractAddresses(); FIXME
+        (
+            newPantosHubProxy,
+            newPantosHubInit,
+            newPantosFacets
+        ) = deployPantosHub(accessController);
+        exportRedeployedContractAddresses();
     }
 
-    // this will read new contracts deployed from <blockchainName>-DEPLOY.json
-    // this will also read current addresses from <blockchainName>.json -- update it at end of the script
     function roleActions() public {
-        address oldPantosHubProxyAddress; // FIXME from <blockchainName>.json
-        AccessController accessController; // FIXME from <blockchainName>.json
+        importContractAddresses();
+        initializePantosHubRedeployer(oldPantosHub);
 
         uint256 nextTransferId = oldPantosHub.getNextTransferId();
-        // FIXME read json for new pantosHubProxy, pantosHubInit and pantosFacets from <blockchainName>-DEPLOY.json
-        PantosHubProxy newPantosHubProxy; // FIXME
-        PantosHubInit newPantosHubInit; // FIXME
-        PantosFacets memory newPantosFacets; // FIXME
 
-        initializePantosHubRedeployer(oldPantosHubProxyAddress);
-
-        IPantosHub oldPantosHub = getOldPantosHubProxy();
-        if (!oldPantosHub.paused()) {
-            vm.broadcast(accessController.pauser());
-            oldPantosHub.pause();
-            console.log("Old PantosHub: paused=%s", oldPantosHub.paused());
-        }
-
-        address primaryValidatorNodeAddress = oldPantosHub
-            .getPrimaryValidatorNode();
+        vm.broadcast(accessController.pauser());
+        pausePantosHub(oldPantosHub);
 
         vm.broadcast(accessController.deployer());
         diamondCutFacets(
@@ -126,26 +92,93 @@ contract RedeployHub is PantosHubRedeployer {
         );
 
         IPantosHub newPantosHub = IPantosHub(address(newPantosHubProxy));
+        PantosForwarder pantosForwarder = PantosForwarder(
+            oldPantosHub.getPantosForwarder()
+        );
 
         vm.broadcast(accessController.superCriticalOps());
         initializePantosHub(
-            IPantosHub(newPantosHub),
-            getPantosForwarder(),
-            getPantosToken(),
-            primaryValidatorNodeAddress
+            newPantosHub,
+            pantosForwarder,
+            PantosToken(oldPantosHub.getPantosToken()),
+            oldPantosHub.getPrimaryValidatorNode()
         );
-
-        PantosForwarder pantosForwarder = getPantosForwarder();
 
         if (!pantosForwarder.paused()) {
             vm.broadcast(accessController.pauser());
             pantosForwarder.pause();
         }
+
         vm.startBroadcast(accessController.superCriticalOps());
-        migrateHubAtForwarder(newPantosHub, pantosForwarder);
-        migrateTokensFromOldHubToNewHub(
-            IPantosHub(address(newPantosHubProxy))
-        );
+        migrateHubAtForwarder(pantosForwarder);
+        migrateTokensFromOldHubToNewHub(newPantosHub);
         vm.stopBroadcast();
+
+        overrideWithRedeployedAddresses();
+    }
+
+    function exportRedeployedContractAddresses() internal {
+        ContractAddress[] memory contractAddresses = new ContractAddress[](6);
+        contractAddresses[0] = ContractAddress(
+            Contract.HUB_PROXY,
+            address(newPantosHubProxy)
+        );
+        contractAddresses[1] = ContractAddress(
+            Contract.HUB_INIT,
+            address(newPantosHubInit)
+        );
+        contractAddresses[2] = ContractAddress(
+            Contract.DIAMOND_CUT_FACET,
+            address(newPantosFacets.dCut)
+        );
+        contractAddresses[3] = ContractAddress(
+            Contract.DIAMOND_LOUPE_FACET,
+            address(newPantosFacets.dLoupe)
+        );
+        contractAddresses[4] = ContractAddress(
+            Contract.REGISTRY_FACET,
+            address(newPantosFacets.registry)
+        );
+        contractAddresses[5] = ContractAddress(
+            Contract.TRANSFER_FACET,
+            address(newPantosFacets.transfer)
+        );
+        exportContractAddresses(contractAddresses, true);
+    }
+
+    function importContractAddresses() public {
+        readContractAddresses(thisBlockchain);
+        readRedeployedContractAddresses();
+
+        // New contracts
+        newPantosHubProxy = PantosHubProxy(
+            payable(getContractAddress(Contract.HUB_PROXY, true))
+        );
+
+        newPantosHubInit = PantosHubInit(
+            getContractAddress(Contract.HUB_INIT, true)
+        );
+        newPantosFacets = PantosFacets(
+            DiamondCutFacet(
+                getContractAddress(Contract.DIAMOND_CUT_FACET, true)
+            ),
+            DiamondLoupeFacet(
+                getContractAddress(Contract.DIAMOND_LOUPE_FACET, true)
+            ),
+            PantosRegistryFacet(
+                getContractAddress(Contract.REGISTRY_FACET, true)
+            ),
+            PantosTransferFacet(
+                getContractAddress(Contract.TRANSFER_FACET, true)
+            )
+        );
+        // Old contracts
+        accessController = AccessController(
+            getContractAddress(Contract.ACCESS_CONTROLLER, false)
+        );
+
+        oldPantosHub = IPantosHub(
+            payable(getContractAddress(Contract.HUB_PROXY, false))
+        );
     }
 }

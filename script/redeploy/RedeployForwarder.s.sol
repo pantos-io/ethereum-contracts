@@ -3,8 +3,15 @@ pragma solidity 0.8.26;
 
 /* solhint-disable no-console*/
 
+import {AccessController} from "../../src/access/AccessController.sol";
+import {IPantosHub} from "../../src/interfaces/IPantosHub.sol";
+import {IPantosToken} from "../../src/interfaces/IPantosToken.sol";
+import {PantosToken} from "../../src/PantosToken.sol";
+import {PantosWrapper} from "../../src/PantosWrapper.sol";
+
 import {PantosForwarder} from "../../src/PantosForwarder.sol";
 
+import {PantosBaseAddresses} from "../helpers/PantosBaseAddresses.s.sol";
 import {PantosForwarderRedeployer} from "../helpers/PantosForwarderRedeployer.s.sol";
 
 /**
@@ -27,16 +34,90 @@ import {PantosForwarderRedeployer} from "../helpers/PantosForwarderRedeployer.s.
  *     --sender <sender> --rpc-url <rpc alias> --slow --force \
  *     --sig "run(address)" <pantosHubProxyAddress>
  */
-contract RedeployForwarder is PantosForwarderRedeployer {
-    function run(address pantosHubProxyAddress) public {
-        vm.startBroadcast();
+contract RedeployForwarder is PantosBaseAddresses, PantosForwarderRedeployer {
+    AccessController accessController;
+    PantosForwarder newPantosForwarder;
+    IPantosHub pantosHub;
+    PantosWrapper[] tokens;
 
-        initializePantosForwarderRedeployer(pantosHubProxyAddress);
+    function deploy(address accessControllerAddress) public {
+        accessController = AccessController(accessControllerAddress);
+        vm.broadcast(accessController.deployer());
+        newPantosForwarder = deployPantosForwarder(accessController);
 
-        PantosForwarder pantosForwarder = deployAndInitializePantosForwarder();
-        migrateForwarderAtHub(pantosForwarder);
-        migrateForwarderAtTokens(pantosForwarder);
+        exportRedeployedContractAddresses();
+    }
 
+    function roleActions() public {
+        importContractAddresses();
+        PantosForwarder oldForwarder = PantosForwarder(
+            pantosHub.getPantosForwarder()
+        );
+
+        address[] memory validatorNodeAddresses = tryGetValidatorNodes(
+            oldForwarder
+        );
+        vm.broadcast(accessController.superCriticalOps());
+        initializePantosForwarder(
+            newPantosForwarder,
+            pantosHub,
+            PantosToken(pantosHub.getPantosToken()),
+            validatorNodeAddresses
+        );
+
+        // Pause pantos Hub and old forwarder
+        vm.startBroadcast(accessController.pauser());
+        pauseForwarder(oldForwarder);
+        pantosHub.pause();
         vm.stopBroadcast();
+
+        vm.broadcast(accessController.superCriticalOps());
+        migrateForwarderAtHub(newPantosForwarder, pantosHub);
+
+        // migrate new Forwarder at tokens
+        for (uint256 i = 0; i < tokens.length; i++) {
+            vm.startBroadcast(accessController.pauser());
+            tokens[i].pause();
+
+            vm.broadcast(accessController.superCriticalOps());
+            migrateNewForwarderAtToken(newPantosForwarder, tokens[i]);
+        }
+        // update json with new forwarder
+        overrideWithRedeployedAddresses();
+    }
+
+    function exportRedeployedContractAddresses() internal {
+        ContractAddress[] memory contractAddresses = new ContractAddress[](1);
+        contractAddresses[0] = ContractAddress(
+            Contract.FORWARDER,
+            address(newPantosForwarder)
+        );
+        exportContractAddresses(contractAddresses, true);
+    }
+
+    function importContractAddresses() public {
+        readContractAddresses(thisBlockchain);
+        readRedeployedContractAddresses();
+
+        // New items
+        newPantosForwarder = PantosForwarder(
+            payable(getContractAddress(Contract.FORWARDER, true))
+        );
+
+        // Old items
+        accessController = AccessController(
+            getContractAddress(Contract.ACCESS_CONTROLLER, false)
+        );
+
+        pantosHub = IPantosHub(
+            payable(getContractAddress(Contract.HUB_PROXY, false))
+        );
+
+        string[] memory tokenSymbols = getTokenSymbols();
+        for (uint256 i = 0; i < tokenSymbols.length; i++) {
+            Contract contract_ = _keysToContracts[tokenSymbols[i]];
+            address token = getContractAddress(contract_, false);
+            tokens.push(PantosWrapper(token));
+        }
     }
 }
