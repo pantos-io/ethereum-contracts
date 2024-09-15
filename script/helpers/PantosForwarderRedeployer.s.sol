@@ -62,8 +62,10 @@ abstract contract PantosForwarderRedeployer is PantosForwarderDeployer {
         PantosForwarder pantosForwarder,
         PantosWrapper token
     ) public {
-        require(token.paused(),
-                "Token should be paused before migrateNewForwarderAtToken");
+        require(
+            token.paused(),
+            "Token should be paused before migrateNewForwarderAtToken"
+        );
         token.setPantosForwarder(address(pantosForwarder));
         token.unpause();
         console.log(
