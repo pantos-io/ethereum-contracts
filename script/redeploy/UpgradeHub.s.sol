@@ -49,18 +49,20 @@ contract UpgradeHub is PantosBaseAddresses, PantosHubDeployer {
         console.log("PantosHub", address(pantosHub));
 
         // Ensuring PantosHub is paused at the time of diamond cut
-        vm.broadcast(accessController.pauser());
+        vm.startBroadcast(accessController.pauser());
         pausePantosHub(pantosHub);
+        vm.stopBroadcast();
 
-        vm.broadcast(accessController.deployer());
+        vm.startBroadcast(accessController.deployer());
         diamondCutUpgradeFacets(
             address(pantosHubProxy),
             newRegistryFacet,
             newTransferFacet
         );
+        vm.stopBroadcast();
 
         // this will do nothing if there is nothing new added to the storage slots
-        vm.broadcast(accessController.superCriticalOps());
+        vm.startBroadcast(accessController.superCriticalOps());
         initializePantosHub(
             pantosHub,
             pantosForwarder,
