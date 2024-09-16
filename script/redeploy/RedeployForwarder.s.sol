@@ -42,8 +42,9 @@ contract RedeployForwarder is PantosBaseAddresses, PantosForwarderRedeployer {
 
     function deploy(address accessControllerAddress) public {
         accessController = AccessController(accessControllerAddress);
-        vm.broadcast(accessController.deployer());
+        vm.startBroadcast();
         newPantosForwarder = deployPantosForwarder(accessController);
+        vm.stopBroadcast();
 
         exportRedeployedContractAddresses();
     }
@@ -57,13 +58,14 @@ contract RedeployForwarder is PantosBaseAddresses, PantosForwarderRedeployer {
         address[] memory validatorNodeAddresses = tryGetValidatorNodes(
             oldForwarder
         );
-        vm.broadcast(accessController.superCriticalOps());
+        vm.startBroadcast(accessController.superCriticalOps());
         initializePantosForwarder(
             newPantosForwarder,
             pantosHub,
             PantosToken(pantosHub.getPantosToken()),
             validatorNodeAddresses
         );
+        vm.stopBroadcast();
 
         // Pause pantos Hub and old forwarder
         vm.startBroadcast(accessController.pauser());
@@ -71,16 +73,18 @@ contract RedeployForwarder is PantosBaseAddresses, PantosForwarderRedeployer {
         pantosHub.pause();
         vm.stopBroadcast();
 
-        vm.broadcast(accessController.superCriticalOps());
+        vm.startBroadcast(accessController.superCriticalOps());
         migrateForwarderAtHub(newPantosForwarder, pantosHub);
+        vm.stopBroadcast();
 
         // migrate new Forwarder at tokens
         for (uint256 i = 0; i < tokens.length; i++) {
-            vm.startBroadcast(accessController.pauser());
+            vm.broadcast(accessController.pauser());
             tokens[i].pause();
 
-            vm.broadcast(accessController.superCriticalOps());
+            vm.startBroadcast(accessController.superCriticalOps());
             migrateNewForwarderAtToken(newPantosForwarder, tokens[i]);
+            vm.stopBroadcast();
         }
         // update json with new forwarder
         overrideWithRedeployedAddresses();
