@@ -45,7 +45,7 @@ contract UpgradeHubAndRedeployForwarder is
     PantosToken pantosToken;
     AccessController accessController;
     PantosForwarder oldForwarder;
-    PantosWrapper[] tokens; // FIXME find appropriate type
+    PantosWrapper[] tokens;
 
     PantosRegistryFacet newRegistryFacet;
     PantosTransferFacet newTransferFacet;
@@ -64,51 +64,59 @@ contract UpgradeHubAndRedeployForwarder is
     }
 
     function roleActions() public {
+        importContractAddresses();
         IPantosHub pantosHub = IPantosHub(address(pantosHubProxy));
         console.log("PantosHub", address(pantosHub));
         // Ensuring PantosHub is paused at the time of diamond cut
-        vm.broadcast(accessController.pauser());
+        vm.startBroadcast(accessController.pauser());
         pausePantosHub(pantosHub);
+        vm.stopBroadcast();
 
-        vm.broadcast(accessController.deployer());
+        vm.startBroadcast(accessController.deployer());
         diamondCutUpgradeFacets(
             address(pantosHubProxy),
             newRegistryFacet,
             newTransferFacet
         );
+        vm.stopBroadcast();
 
         // this will migrate new forwarder at pantosHub
-        vm.broadcast(accessController.superCriticalOps());
+        vm.startBroadcast(accessController.superCriticalOps());
         initializePantosHub(
             pantosHub,
             newPantosForwarder,
             pantosToken,
             pantosHub.getPrimaryValidatorNode()
         );
+        vm.stopBroadcast();
 
         address[] memory validatorNodeAddresses = tryGetValidatorNodes(
             oldForwarder
         );
 
-        vm.broadcast(accessController.superCriticalOps());
+        vm.startBroadcast(accessController.superCriticalOps());
         initializePantosForwarder(
             newPantosForwarder,
             pantosHub,
             pantosToken,
             validatorNodeAddresses
         );
+        vm.stopBroadcast();
 
         // Pause old forwarder
-        vm.broadcast(accessController.pauser());
+        vm.startBroadcast(accessController.pauser());
         pauseForwarder(oldForwarder);
+        vm.stopBroadcast();
 
         // migrate new Forwarder at tokens
         for (uint256 i = 0; i < tokens.length; i++) {
-            vm.startBroadcast(accessController.pauser());
-            tokens[i].pause();
-
-            vm.broadcast(accessController.superCriticalOps());
+            if (!tokens[i].paused()) {
+                vm.broadcast(accessController.pauser());
+                tokens[i].pause();
+            }
+            vm.startBroadcast(accessController.superCriticalOps());
             migrateNewForwarderAtToken(newPantosForwarder, tokens[i]);
+            vm.stopBroadcast();
         }
         overrideWithRedeployedAddresses();
     }
