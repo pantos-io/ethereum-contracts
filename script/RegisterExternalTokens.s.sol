@@ -110,7 +110,8 @@ contract RegisterExternalTokens is PantosBaseAddresses {
             );
 
             if (
-                otherBlockchain.blockchainId != thisBlockchain.blockchainId &&
+                otherBlockchain.blockchainId !=
+                determineBlockchain().blockchainId &&
                 !otherBlockchain.skip
             ) {
                 registerExternalToken(otherBlockchain);
@@ -123,7 +124,6 @@ contract RegisterExternalTokens is PantosBaseAddresses {
 
         vm.startBroadcast();
 
-        thisBlockchain = determineBlockchain();
         pantosHubProxy = IPantosHub(
             getContractAddress(Contract.HUB_PROXY, false)
         );

@@ -22,6 +22,7 @@ import {PantosTokenDeployer} from "./helpers/PantosTokenDeployer.s.sol";
 import {BitpandaEcosystemTokenDeployer} from "./helpers/BitpandaEcosystemTokenDeployer.s.sol";
 import {AccessControllerDeployer} from "./helpers/AccessControllerDeployer.s.sol";
 import {PantosBaseAddresses} from "./helpers/PantosBaseAddresses.s.sol";
+import {SafeAddresses} from "./helpers/SafeAddresses.s.sol";
 /**
  * @title DeployContracts
  *
@@ -37,6 +38,7 @@ import {PantosBaseAddresses} from "./helpers/PantosBaseAddresses.s.sol";
  */
 contract DeployContracts is
     PantosBaseAddresses,
+    SafeAddresses,
     PantosHubDeployer,
     PantosForwarderDeployer,
     PantosWrapperDeployer,
@@ -53,15 +55,13 @@ contract DeployContracts is
     BitpandaEcosystemToken bitpandaEcosystemToken;
     PantosWrapper[] pantosWrappers;
 
-    function deploy(
-        address pauser,
-        address deployer,
-        address mediumCriticalOps,
-        address superCriticalOps,
-        uint256 panSupply,
-        uint256 bestSupply
-    ) public {
+    function deploy(uint256 panSupply, uint256 bestSupply) public {
         vm.startBroadcast();
+        readRoleAddresses();
+        address pauser = getRoleAddress(Role.PAUSER);
+        address deployer = getRoleAddress(Role.DEPLOYER);
+        address mediumCriticalOps = getRoleAddress(Role.MEDIUM_CRITICAL_OPS);
+        address superCriticalOps = getRoleAddress(Role.SUPER_CRITICAL_OPS);
         accessController = deployAccessController(
             pauser,
             deployer,
@@ -81,12 +81,6 @@ contract DeployContracts is
         vm.stopBroadcast();
 
         exportAllContractAddresses();
-        exportPantosRolesAddresses(
-            pauser,
-            deployer,
-            mediumCriticalOps,
-            superCriticalOps
-        );
     }
 
     function roleActions(
@@ -192,7 +186,7 @@ contract DeployContracts is
     }
 
     function importAllContractAddresses() internal {
-        readContractAddresses(thisBlockchain);
+        readContractAddresses(determineBlockchain());
 
         accessController = AccessController(
             getContractAddress(Contract.ACCESS_CONTROLLER, false)

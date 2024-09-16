@@ -327,7 +327,7 @@ abstract contract PantosHubDeployer is PantosBaseScript {
         address newFacetAddress,
         bytes4[] memory newSelectors,
         bytes4[] memory oldSelectors
-    ) public view returns (IDiamondCut.FacetCut[] memory) {
+    ) public pure returns (IDiamondCut.FacetCut[] memory) {
         bytes4 oldInterfaceId = _calculateInterfaceId(oldSelectors);
         bytes4 newInterfaceId = _calculateInterfaceId(newSelectors);
 

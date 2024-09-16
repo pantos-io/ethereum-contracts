@@ -147,7 +147,7 @@ contract RedeployHub is PantosBaseAddresses, PantosHubRedeployer {
     }
 
     function importContractAddresses() public {
-        readContractAddresses(thisBlockchain);
+        readContractAddresses(determineBlockchain());
         readRedeployedContractAddresses();
 
         // New contracts
