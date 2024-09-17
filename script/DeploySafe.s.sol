@@ -2,6 +2,7 @@
 pragma solidity 0.8.26;
 pragma abicoder v2;
 
+/* solhint-disable no-console*/
 import {console} from "forge-std/console.sol";
 import {Script} from "forge-std/Script.sol";
 import {Safe} from "@safe/Safe.sol";
