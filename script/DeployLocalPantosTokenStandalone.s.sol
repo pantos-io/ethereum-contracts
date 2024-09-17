@@ -10,10 +10,12 @@ import {Constants} from "./helpers/Constants.s.sol";
 
 contract DeployLocalPantosTokenStandalone is PantosTokenDeployer {
     function deploy(address accessControllerAddress) public {
+        vm.startBroadcast();
         deployPantosToken(
             Constants.INITIAL_SUPPLY_PAN,
             AccessController(accessControllerAddress)
         );
+        vm.stopBroadcast();
     }
 
     function roleActions(
@@ -29,7 +31,8 @@ contract DeployLocalPantosTokenStandalone is PantosTokenDeployer {
         );
         PantosToken pantosToken = PantosToken(pantosTokenAddress);
 
-        vm.broadcast(accessController.superCriticalOps());
+        vm.startBroadcast(accessController.superCriticalOps());
         initializePantosToken(pantosToken, pantosForwarder);
+        vm.stopBroadcast();
     }
 }

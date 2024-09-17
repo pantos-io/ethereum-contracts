@@ -2,8 +2,9 @@
 pragma solidity 0.8.26;
 pragma abicoder v2;
 
-import {Script} from "forge-std/Script.sol";
+/* solhint-disable no-console*/
 import {console} from "forge-std/console.sol";
+import {Script} from "forge-std/Script.sol";
 import {stdJson} from "forge-std/StdJson.sol";
 import {Safe} from "@safe/Safe.sol";
 import {Enum} from "@safe/common/Enum.sol";
@@ -35,7 +36,9 @@ contract SubmitSafeTxs is Script {
         return safeTxDetails;
     }
 
-    // forge script script/SubmitSafeTxs.s.sol --rpc-url local-8545 --account local_deployer --password '' --sender 0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266 --sig "run()" -vvvv --broadcast
+    // forge script script/SubmitSafeTxs.s.sol --rpc-url local-8545
+    // --account local_deployer --password '' --sender 0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266
+    // --sig "run()" -vvvv --broadcast
     function run() external {
         // read transactions
         string memory path = string.concat(

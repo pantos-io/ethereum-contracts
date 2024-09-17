@@ -80,29 +80,32 @@ contract RedeployHub is PantosBaseAddresses, PantosHubRedeployer {
 
         uint256 nextTransferId = oldPantosHub.getNextTransferId();
 
-        vm.broadcast(accessController.pauser());
+        vm.startBroadcast(accessController.pauser());
         pausePantosHub(oldPantosHub);
+        vm.stopBroadcast();
 
-        vm.broadcast(accessController.deployer());
+        vm.startBroadcast(accessController.deployer());
         diamondCutFacets(
             newPantosHubProxy,
             newPantosHubInit,
             newPantosFacets,
             nextTransferId
         );
+        vm.stopBroadcast();
 
         IPantosHub newPantosHub = IPantosHub(address(newPantosHubProxy));
         PantosForwarder pantosForwarder = PantosForwarder(
             oldPantosHub.getPantosForwarder()
         );
 
-        vm.broadcast(accessController.superCriticalOps());
+        vm.startBroadcast(accessController.superCriticalOps());
         initializePantosHub(
             newPantosHub,
             pantosForwarder,
             PantosToken(oldPantosHub.getPantosToken()),
             oldPantosHub.getPrimaryValidatorNode()
         );
+        vm.stopBroadcast();
 
         if (!pantosForwarder.paused()) {
             vm.broadcast(accessController.pauser());
