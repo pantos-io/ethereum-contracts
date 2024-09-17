@@ -7,8 +7,12 @@ import {AccessController} from "../src/access/AccessController.sol";
 
 import {PantosTokenDeployer} from "./helpers/PantosTokenDeployer.s.sol";
 import {Constants} from "./helpers/Constants.s.sol";
+import {SafeAddresses} from "./helpers/SafeAddresses.s.sol";
 
-contract DeployLocalPantosTokenStandalone is PantosTokenDeployer {
+contract DeployLocalPantosTokenStandalone is
+    PantosTokenDeployer,
+    SafeAddresses
+{
     function deploy(address accessControllerAddress) public {
         vm.startBroadcast();
         deployPantosToken(
@@ -34,5 +38,6 @@ contract DeployLocalPantosTokenStandalone is PantosTokenDeployer {
         vm.startBroadcast(accessController.superCriticalOps());
         initializePantosToken(pantosToken, pantosForwarder);
         vm.stopBroadcast();
+        writeAllSafeInfo(accessController);
     }
 }

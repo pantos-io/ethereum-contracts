@@ -6,8 +6,10 @@ import {console} from "forge-std/console.sol";
 
 import {IPantosHub} from "../src/interfaces/IPantosHub.sol";
 import {PantosTypes} from "../src/interfaces/PantosTypes.sol";
+import {AccessController} from "../src/access/AccessController.sol";
 
 import {PantosBaseScript} from "./helpers/PantosHubDeployer.s.sol";
+import {SafeAddresses} from "./helpers/SafeAddresses.s.sol";
 
 /**
  * @title UpdateFeeFactors
@@ -19,13 +21,16 @@ import {PantosBaseScript} from "./helpers/PantosHubDeployer.s.sol";
  *     --sender <sender> --rpc-url <rpc alias> --slow --force \
  *     --sig "run(address)" <pantosHubProxy>
  */
-contract UpdateFeeFactors is PantosBaseScript {
+contract UpdateFeeFactors is PantosBaseScript, SafeAddresses {
     function roleActions(
-        address mediumCriticalOps,
+        address accessControllerAddress,
         address pantosHubProxyAddress
     ) public {
         IPantosHub pantosHubProxy = IPantosHub(pantosHubProxyAddress);
-        vm.startBroadcast(mediumCriticalOps);
+        AccessController accessController = AccessController(
+            accessControllerAddress
+        );
+        vm.startBroadcast(accessController.mediumCriticalOps());
 
         for (uint256 i; i < getBlockchainsLength(); i++) {
             Blockchain memory blockchain = getBlockchainById(BlockchainId(i));
@@ -75,5 +80,6 @@ contract UpdateFeeFactors is PantosBaseScript {
         }
 
         vm.stopBroadcast();
+        writeAllSafeInfo(accessController);
     }
 }

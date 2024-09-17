@@ -8,6 +8,7 @@ import {AccessController} from "../src/access/AccessController.sol";
 import {PantosTypes} from "../src/interfaces/PantosTypes.sol";
 import {IPantosHub} from "../src/interfaces/IPantosHub.sol";
 import {PantosBaseAddresses} from "./helpers/PantosBaseAddresses.s.sol";
+import {SafeAddresses} from "./helpers/SafeAddresses.s.sol";
 
 /**
  * @title RegisterExternalTokens
@@ -22,7 +23,7 @@ import {PantosBaseAddresses} from "./helpers/PantosBaseAddresses.s.sol";
  * This scripts expect all the address json files to be available at project
  * root dir.
  */
-contract RegisterExternalTokens is PantosBaseAddresses {
+contract RegisterExternalTokens is PantosBaseAddresses, SafeAddresses {
     AccessController accessController;
     IPantosHub public pantosHubProxy;
 
@@ -133,5 +134,6 @@ contract RegisterExternalTokens is PantosBaseAddresses {
         registerExternalTokens();
 
         vm.stopBroadcast();
+        writeAllSafeInfo(accessController);
     }
 }

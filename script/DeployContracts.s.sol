@@ -130,6 +130,7 @@ contract DeployContracts is
         );
         initializePantosWrappers(pantosHub, pantosForwarder, pantosWrappers);
         vm.stopBroadcast();
+        writeAllSafeInfo(accessController);
     }
 
     function exportAllContractAddresses() internal {

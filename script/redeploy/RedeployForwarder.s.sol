@@ -13,6 +13,7 @@ import {PantosForwarder} from "../../src/PantosForwarder.sol";
 
 import {PantosBaseAddresses} from "../helpers/PantosBaseAddresses.s.sol";
 import {PantosForwarderRedeployer} from "../helpers/PantosForwarderRedeployer.s.sol";
+import {SafeAddresses} from "../helpers/SafeAddresses.s.sol";
 
 /**
  * @title RedeployForwarder
@@ -34,7 +35,11 @@ import {PantosForwarderRedeployer} from "../helpers/PantosForwarderRedeployer.s.
  *     --sender <sender> --rpc-url <rpc alias> --slow --force \
  *     --sig "run(address)" <pantosHubProxyAddress>
  */
-contract RedeployForwarder is PantosBaseAddresses, PantosForwarderRedeployer {
+contract RedeployForwarder is
+    PantosBaseAddresses,
+    SafeAddresses,
+    PantosForwarderRedeployer
+{
     AccessController accessController;
     PantosForwarder newPantosForwarder;
     IPantosHub pantosHub;
@@ -88,6 +93,7 @@ contract RedeployForwarder is PantosBaseAddresses, PantosForwarderRedeployer {
         }
         // update json with new forwarder
         overrideWithRedeployedAddresses();
+        writeAllSafeInfo(accessController);
     }
 
     function exportRedeployedContractAddresses() internal {

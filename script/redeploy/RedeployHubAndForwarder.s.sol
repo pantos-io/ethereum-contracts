@@ -20,6 +20,7 @@ import {PantosBaseAddresses} from "../helpers/PantosBaseAddresses.s.sol";
 import {PantosForwarderRedeployer} from "../helpers/PantosForwarderRedeployer.s.sol";
 import {PantosHubRedeployer} from "../helpers/PantosHubRedeployer.s.sol";
 import {PantosFacets} from "../helpers/PantosHubDeployer.s.sol";
+import {SafeAddresses} from "../helpers/SafeAddresses.s.sol";
 
 /**
  * @title RedeployHubAndForwarder
@@ -48,6 +49,7 @@ import {PantosFacets} from "../helpers/PantosHubDeployer.s.sol";
  */
 contract RedeployHubAndForwarder is
     PantosBaseAddresses,
+    SafeAddresses,
     PantosHubRedeployer,
     PantosForwarderRedeployer
 {
@@ -135,6 +137,7 @@ contract RedeployHubAndForwarder is
         }
 
         overrideWithRedeployedAddresses();
+        writeAllSafeInfo(accessController);
     }
 
     function exportRedeployedContractAddresses() internal {

@@ -3,6 +3,7 @@ pragma solidity 0.8.26;
 pragma abicoder v2;
 
 import {PantosRoles} from "../../src/access/PantosRoles.sol";
+import {AccessController} from "../../src/access/AccessController.sol";
 
 import {Script} from "forge-std/Script.sol";
 import {Safe} from "@safe/Safe.sol";
@@ -117,6 +118,15 @@ contract SafeAddresses is PantosBaseScript {
             finalJson,
             string.concat(thisBlockchain.name, _safeJsonExtention)
         );
+    }
+
+    function writeAllSafeInfo(AccessController accessController) public {
+        address[] memory safeAddresses = new address[](4);
+        safeAddresses[0] = accessController.pauser();
+        safeAddresses[1] = accessController.deployer();
+        safeAddresses[2] = accessController.mediumCriticalOps();
+        safeAddresses[3] = accessController.superCriticalOps();
+        writeSafeInfo(safeAddresses);
     }
 
     function getRolesLength() public pure returns (uint256) {

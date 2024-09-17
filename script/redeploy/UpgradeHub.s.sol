@@ -14,6 +14,7 @@ import {PantosHubDeployer} from "../helpers/PantosHubDeployer.s.sol";
 import {PantosBaseAddresses} from "../helpers/PantosBaseAddresses.s.sol";
 import {PantosRegistryFacet} from "../../src/facets/PantosRegistryFacet.sol";
 import {PantosTransferFacet} from "../../src/facets/PantosTransferFacet.sol";
+import {SafeAddresses} from "../helpers/SafeAddresses.s.sol";
 
 /**
  * @title UpgradeHub
@@ -25,7 +26,7 @@ import {PantosTransferFacet} from "../../src/facets/PantosTransferFacet.sol";
  *     --sender <sender> --rpc-url <rpc alias> --slow --force \
  *     --sig "run(address)" <pantosHubProxyAddress>
  */
-contract UpgradeHub is PantosBaseAddresses, PantosHubDeployer {
+contract UpgradeHub is PantosBaseAddresses, SafeAddresses, PantosHubDeployer {
     PantosHubProxy pantosHubProxy;
     PantosForwarder pantosForwarder;
     PantosToken pantosToken;
@@ -71,6 +72,7 @@ contract UpgradeHub is PantosBaseAddresses, PantosHubDeployer {
         );
         vm.stopBroadcast();
         overrideWithRedeployedAddresses();
+        writeAllSafeInfo(accessController);
     }
 
     function exportUpgradedContractAddresses() public {

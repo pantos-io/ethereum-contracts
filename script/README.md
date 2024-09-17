@@ -40,7 +40,7 @@ The examples run the scripts on a fork of a local blockchain.
 * To broadcast the transactions, use the flag ```--broadcast```.
 * To force compilation of all contracts, use the flag ```--force```.
 
-For local testing, one can set up two developement blockchains with anvil:
+For local testing, one can set up two development blockchains with anvil:
 
 ```bash
 anvil --port 8545 --chain-id 31337
@@ -60,7 +60,7 @@ Enter password: # (Hit enter for an empty password)
 ### DeploySafe
 
 ```bash
-$ forge script ./script/DeploySafe.s.sol --account local_deployer --password '' --sender 0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266 --rpc-url local-8545 -vvvv --sig "run(address[],uint256,address[],uint256,address[],uint256,address[],uint256)" [0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266] 1 [0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266] 1 [0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266] 1 [0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266] 1
+$ forge script ./script/DeploySafe.s.sol --account local_deployer --password '' --sender 0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266 --rpc-url local-8545 -vvvv --sig "deploySafes(address[],uint256,address[],uint256,address[],uint256,address[],uint256)" [0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266] 1 [0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266] 1 [0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266] 1 [0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266] 1
 ```
 
 ### DeployContracts

@@ -16,6 +16,7 @@ import {PantosWrapper} from "../../src/PantosWrapper.sol";
 import {PantosBaseAddresses} from "../helpers/PantosBaseAddresses.s.sol";
 import {PantosHubDeployer} from "../helpers/PantosHubDeployer.s.sol";
 import {PantosForwarderRedeployer} from "../helpers/PantosForwarderRedeployer.s.sol";
+import {SafeAddresses} from "../helpers/SafeAddresses.s.sol";
 
 /**
  * @title UpgradeHubAndRedeployForwarder
@@ -38,6 +39,7 @@ import {PantosForwarderRedeployer} from "../helpers/PantosForwarderRedeployer.s.
  */
 contract UpgradeHubAndRedeployForwarder is
     PantosBaseAddresses,
+    SafeAddresses,
     PantosHubDeployer,
     PantosForwarderRedeployer
 {
@@ -119,6 +121,7 @@ contract UpgradeHubAndRedeployForwarder is
             vm.stopBroadcast();
         }
         overrideWithRedeployedAddresses();
+        writeAllSafeInfo(accessController);
     }
 
     function exportUpgradedContractAddresses() public {

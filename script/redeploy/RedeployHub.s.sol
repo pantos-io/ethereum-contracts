@@ -20,6 +20,7 @@ import {PantosTransferFacet} from "../../src/facets/PantosTransferFacet.sol";
 import {PantosBaseAddresses} from "../helpers/PantosBaseAddresses.s.sol";
 import {PantosHubRedeployer} from "../helpers/PantosHubRedeployer.s.sol";
 import {PantosFacets} from "../helpers/PantosHubDeployer.s.sol";
+import {SafeAddresses} from "../helpers/SafeAddresses.s.sol";
 
 /**
  * @title RedeployHub
@@ -43,7 +44,11 @@ import {PantosFacets} from "../helpers/PantosHubDeployer.s.sol";
  *     --sender <sender> --rpc-url <rpc alias> --slow --force \
  *     --sig "run(address,uint256)" <oldPantosHubProxyAddress>
  */
-contract RedeployHub is PantosBaseAddresses, PantosHubRedeployer {
+contract RedeployHub is
+    PantosBaseAddresses,
+    SafeAddresses,
+    PantosHubRedeployer
+{
     AccessController accessController;
     PantosHubProxy newPantosHubProxy;
     PantosHubInit newPantosHubInit;
@@ -118,6 +123,7 @@ contract RedeployHub is PantosBaseAddresses, PantosHubRedeployer {
         vm.stopBroadcast();
 
         overrideWithRedeployedAddresses();
+        writeAllSafeInfo(accessController);
     }
 
     function exportRedeployedContractAddresses() internal {
