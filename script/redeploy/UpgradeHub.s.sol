@@ -87,7 +87,7 @@ contract UpgradeHub is PantosBaseAddresses, PantosHubDeployer {
     }
 
     function importContractAddresses() public {
-        readContractAddresses(thisBlockchain);
+        readContractAddresses(determineBlockchain());
         readRedeployedContractAddresses();
         newRegistryFacet = PantosRegistryFacet(
             getContractAddress(Contract.REGISTRY_FACET, true)

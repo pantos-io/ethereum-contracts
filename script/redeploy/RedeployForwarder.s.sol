@@ -100,7 +100,7 @@ contract RedeployForwarder is PantosBaseAddresses, PantosForwarderRedeployer {
     }
 
     function importContractAddresses() public {
-        readContractAddresses(thisBlockchain);
+        readContractAddresses(determineBlockchain());
         readRedeployedContractAddresses();
 
         // New items

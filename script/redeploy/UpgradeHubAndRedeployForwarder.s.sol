@@ -139,7 +139,7 @@ contract UpgradeHubAndRedeployForwarder is
     }
 
     function importContractAddresses() public {
-        readContractAddresses(thisBlockchain);
+        readContractAddresses(determineBlockchain());
         readRedeployedContractAddresses();
 
         // New items

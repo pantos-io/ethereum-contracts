@@ -17,7 +17,6 @@ import {PantosHubInit} from "../../src/upgradeInitializers/PantosHubInit.sol";
 import {PantosRegistryFacet} from "../../src/facets/PantosRegistryFacet.sol";
 import {PantosTransferFacet} from "../../src/facets/PantosTransferFacet.sol";
 import {DiamondCutFacet} from "../../src/facets/DiamondCutFacet.sol";
-import {PantosRoles} from "../../src/access/PantosRoles.sol";
 
 import {PantosFacets} from "../helpers/PantosHubDeployer.s.sol";
 
@@ -44,13 +43,6 @@ abstract contract PantosBaseAddresses is PantosBaseScript {
         PAN_MATIC
     }
 
-    enum Role {
-        PAUSER,
-        DEPLOYER,
-        MEDIUM_CRITICAL_OPS,
-        SUPER_CRITICAL_OPS
-    }
-
     struct ContractInfo {
         string key;
         address address_;
@@ -70,10 +62,8 @@ abstract contract PantosBaseAddresses is PantosBaseScript {
     string private constant _addressesJsonExtention = ".json";
     string private constant _redeployedAddressesJsonExtention =
         "-REDEPLOY.json";
-    string private constant _rolesJsonExtention = "-ROLES.json";
 
     string private constant _contractSerializer = "address";
-    string private constant _roleSerializer = "role";
 
     mapping(BlockchainId => mapping(Contract => ContractInfo))
         private _otherChaincontractInfo;
@@ -81,10 +71,7 @@ abstract contract PantosBaseAddresses is PantosBaseScript {
         private _currentChainContractInfo;
     mapping(string => Contract) internal _keysToContracts;
 
-    mapping(Role => ContractInfo) private _roleContractInfo;
-    mapping(string => Role) internal _keysToRoles;
-
-    Blockchain public thisBlockchain;
+    Blockchain private thisBlockchain;
 
     function getContractAddress(
         Contract contract_,
@@ -122,12 +109,6 @@ abstract contract PantosBaseAddresses is PantosBaseScript {
         BlockchainId otherBlockchainId
     ) public view returns (string memory) {
         return vm.toString(getContractAddress(contract_, otherBlockchainId));
-    }
-
-    function getRoleAddress(Role role) public view returns (address) {
-        address roleAddress = _roleContractInfo[role].address_;
-        require(roleAddress != address(0), "Error: Address is zero");
-        return roleAddress;
     }
 
     function readContractAddresses(Blockchain memory blockchain) public {
@@ -180,22 +161,6 @@ abstract contract PantosBaseAddresses is PantosBaseScript {
         }
     }
 
-    function readRoleAddresses() public {
-        string memory path = string.concat(
-            thisBlockchain.name,
-            _rolesJsonExtention
-        );
-        string memory json = vm.readFile(path);
-        string[] memory keys = vm.parseJsonKeys(json, "$");
-        for (uint256 i = 0; i < keys.length; i++) {
-            address address_ = vm.parseJsonAddress(
-                json,
-                string.concat(".", keys[i])
-            );
-            _roleContractInfo[_keysToRoles[keys[i]]].address_ = address_;
-        }
-    }
-
     function exportContractAddresses(
         ContractAddress[] memory contractAddresses,
         bool isRedeployed
@@ -227,40 +192,6 @@ abstract contract PantosBaseAddresses is PantosBaseScript {
             ? _redeployedAddressesJsonExtention
             : _addressesJsonExtention;
         vm.writeJson(addresses, string.concat(blockchainName, jsonExtention));
-    }
-
-    function exportPantosRolesAddresses(
-        address pauser,
-        address deployer,
-        address mediumCriticalOps,
-        address superCriticalOps
-    ) public {
-        string memory blockchainName = thisBlockchain.name;
-        string memory roles;
-        vm.serializeAddress(
-            _roleSerializer,
-            _roleContractInfo[Role.PAUSER].key,
-            pauser
-        );
-        vm.serializeAddress(
-            _roleSerializer,
-            _roleContractInfo[Role.DEPLOYER].key,
-            deployer
-        );
-        vm.serializeAddress(
-            _roleSerializer,
-            _roleContractInfo[Role.MEDIUM_CRITICAL_OPS].key,
-            mediumCriticalOps
-        );
-        roles = vm.serializeAddress(
-            _roleSerializer,
-            _roleContractInfo[Role.SUPER_CRITICAL_OPS].key,
-            superCriticalOps
-        );
-        vm.writeJson(
-            roles,
-            string.concat(blockchainName, _rolesJsonExtention)
-        );
     }
 
     function overrideWithRedeployedAddresses() public {
@@ -305,10 +236,6 @@ abstract contract PantosBaseAddresses is PantosBaseScript {
 
     function getContractsLength() public pure returns (uint256) {
         return uint256(type(Contract).max) + 1;
-    }
-
-    function getRolesLength() public pure returns (uint256) {
-        return uint256(type(Role).max) + 1;
     }
 
     constructor() {
@@ -452,30 +379,6 @@ abstract contract PantosBaseAddresses is PantosBaseScript {
             _keysToContracts[
                 _currentChainContractInfo[Contract(i)].contractInfo.key
             ] = Contract(i);
-        }
-
-        _roleContractInfo[Role.DEPLOYER] = ContractInfo(
-            "deployer",
-            address(0),
-            false
-        );
-        _roleContractInfo[Role.PAUSER] = ContractInfo(
-            "pauser",
-            address(0),
-            false
-        );
-        _roleContractInfo[Role.MEDIUM_CRITICAL_OPS] = ContractInfo(
-            "medium_critical_ops",
-            address(0),
-            false
-        );
-        _roleContractInfo[Role.SUPER_CRITICAL_OPS] = ContractInfo(
-            "super_critical_ops",
-            address(0),
-            false
-        );
-        for (uint256 i; i < getRolesLength(); i++) {
-            _keysToRoles[_roleContractInfo[Role(i)].key] = Role(i);
         }
     }
 

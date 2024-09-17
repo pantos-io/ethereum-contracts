@@ -57,11 +57,17 @@ Enter password: # (Hit enter for an empty password)
 `local_deployer` keystore was saved successfully. Address: 0xf39fd6e51aad88f6f4ce6ab8827279cfffb92266
 ```
 
+### DeploySafe
+
+```bash
+$ forge script ./script/DeploySafe.s.sol --account local_deployer --password '' --sender 0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266 --rpc-url local-8545 -vvvv --sig "run(address[],uint256,address[],uint256,address[],uint256,address[],uint256)" [0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266] 1 [0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266] 1 [0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266] 1 [0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266] 1
+```
+
 ### DeployContracts
 
 Deploy all contracts from any gas paying account
 ```bash
-$ forge script ./script/DeployContracts.s.sol --account local_deployer --password '' --sender 0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266 --rpc-url local-8545 -vvvv --sig "deploy(address,address,address,address,uint256,uint256)" 0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266 0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266 0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266 0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266 100000000000000000 100000000000000000
+$ forge script ./script/DeployContracts.s.sol --account local_deployer --password '' --sender 0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266 --rpc-url local-8545 -vvvv --sig "deploy(uint256,uint256)" 100000000000000000 100000000000000000
 ```
 
 RoleActions for all deployed contracts (simulation only!)

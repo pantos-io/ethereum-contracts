@@ -110,7 +110,8 @@ contract RegisterExternalTokens is PantosBaseAddresses {
             );
 
             if (
-                otherBlockchain.blockchainId != thisBlockchain.blockchainId &&
+                otherBlockchain.blockchainId !=
+                determineBlockchain().blockchainId &&
                 !otherBlockchain.skip
             ) {
                 registerExternalToken(otherBlockchain);
