@@ -121,8 +121,6 @@ contract RegisterExternalTokens is PantosBaseAddresses {
     function roleActions() public {
         readContractAddressesAllChains();
 
-        vm.startBroadcast();
-
         thisBlockchain = determineBlockchain();
         pantosHubProxy = IPantosHub(
             getContractAddress(Contract.HUB_PROXY, false)
@@ -131,7 +129,7 @@ contract RegisterExternalTokens is PantosBaseAddresses {
             getContractAddress(Contract.ACCESS_CONTROLLER, false)
         );
 
-        vm.broadcast(accessController.superCriticalOps());
+        vm.startBroadcast(accessController.superCriticalOps());
         registerExternalTokens();
 
         vm.stopBroadcast();
