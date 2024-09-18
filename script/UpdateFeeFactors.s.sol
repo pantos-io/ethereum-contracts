@@ -17,9 +17,9 @@ import {SafeAddresses} from "./helpers/SafeAddresses.s.sol";
  * @notice Update the fee factors at the Pantos Hub.
  *
  * @dev Usage
- * forge script ./script/UpdateFeeFactors.s.sol --account <account> \
- *     --sender <sender> --rpc-url <rpc alias> --slow --force \
- *     --sig "run(address)" <pantosHubProxy>
+ * forge script ./script/UpdateFeeFactors.s.sol --rpc-url <rpc alias>
+ *      --sig "roleActions(address,address)" <accessControllerAddress> \
+ *      <pantosHubProxy>
  */
 contract UpdateFeeFactors is PantosBaseScript, SafeAddresses {
     function roleActions(

@@ -11,9 +11,19 @@ import {Enum} from "@safe/common/Enum.sol";
 
 using stdJson for string;
 
+/**
+ * @title SubmitSafeTxs
+ *
+ * @notice Submits the list of signed SafeTxs.
+ *
+ * @dev Expects a file named `flat_output.json` in project root with all the
+ *  SafeTxs to be submited to Gnosis safes's `execTransaction` sequentially.
+ *  Usage:
+ * forge script script/SubmitSafeTxs.s.sol --account <account> \
+ *     --sender <sender> --rpc-url <rpc alias> --sig "run()" -vvvv\
+ *    --slow
+ */
 contract SubmitSafeTxs is Script {
-    address SAFE_WALLET = 0x884146EC361b5fB9c33030833B02fD2FDA2e755a;
-
     // This needs to be in alphabetical order!
     struct SafeTxDetail {
         uint256 chainId;

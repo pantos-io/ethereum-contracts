@@ -22,9 +22,13 @@ import {SafeAddresses} from "../helpers/SafeAddresses.s.sol";
  * @notice Deploy and upgrade facets of the Pantos Hub.
  *
  * @dev Usage
+ * 1. Deploy by any gas paying account:
  * forge script ./script/redeploy/UpgradeHub.s.sol --account <account> \
  *     --sender <sender> --rpc-url <rpc alias> --slow --force \
- *     --sig "run(address)" <pantosHubProxyAddress>
+ *     --sig "deploy()"
+ * 2. Simulate roleActions to be later signed by appropriate roles
+ * forge script ./script/redeploy/UpgradeHub.s.sol --rpc-url <rpc alias> \
+ * -vvvv --sig "roleActions()"
  */
 contract UpgradeHub is PantosBaseAddresses, SafeAddresses, PantosHubDeployer {
     PantosHubProxy pantosHubProxy;

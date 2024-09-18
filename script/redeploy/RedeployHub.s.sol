@@ -40,9 +40,13 @@ import {SafeAddresses} from "../helpers/SafeAddresses.s.sol";
  * to the new one.
  *
  * @dev Usage
+ * 1. Deploy by any gas paying account:
  * forge script ./script/redeploy/RedeployHub.s.sol --account <account> \
  *     --sender <sender> --rpc-url <rpc alias> --slow --force \
- *     --sig "run(address,uint256)" <oldPantosHubProxyAddress>
+ *     --sig "deploy(address)" <accessControllerAddress>
+ * 2. Simulate roleActions to be later signed by appropriate roles
+ * forge script ./script/redeploy/RedeployHub.s.sol --rpc-url <rpc alias> \
+ *     --sig "roleActions() -vvvv"
  */
 contract RedeployHub is
     PantosBaseAddresses,

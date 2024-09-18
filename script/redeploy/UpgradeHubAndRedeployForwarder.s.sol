@@ -33,9 +33,13 @@ import {SafeAddresses} from "../helpers/SafeAddresses.s.sol";
  * 3. Configure the new Pantos Forwarder at the Pantos Hub.
  * 4. Configure the new Pantos Forwarder at Pantos, Best and Wrapper tokens.
  * @dev Usage
- * forge script ./script/redeploy/UpgradeHubAndRedeployForwarder.s.sol --account <account> \
- *     --sender <sender> --rpc-url <rpc alias> --slow --force \
- *     --sig "run(address)" <pantosHubProxyAddress>
+ * 1. Deploy by any gas paying account:
+ * forge script ./script/redeploy/UpgradeHubAndRedeployForwarder.s.sol \
+ *  --account <account> --sender <sender> --rpc-url <rpc alias> --slow \
+ *          --sig "deploy(address)" <accessControllerAddress> --force
+ * 2. Simulate roleActions to be later signed by appropriate roles
+ * forge script ./script/redeploy/UpgradeHubAndRedeployForwarder.s.sol \
+ *   --rpc-url <rpc alias> --sig "roleActions() -vvvv"
  */
 contract UpgradeHubAndRedeployForwarder is
     PantosBaseAddresses,

@@ -17,8 +17,8 @@ import {SafeAddresses} from "./helpers/SafeAddresses.s.sol";
  * Ethereum-compatible blockchain.
  *
  * @dev Usage
- * forge script ./script/RegisterExternalTokens.s.sol --account <account> \
- *     --sender <sender> --rpc-url <rpc alias> --slow --force
+ * forge script ./script/RegisterExternalTokens.s.sol --rpc-url <rpc alias> \
+ * --sig "roleActions() -vvvv
  *
  * This scripts expect all the address json files to be available at project
  * root dir.

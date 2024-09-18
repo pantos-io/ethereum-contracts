@@ -30,11 +30,15 @@ import {SafeAddresses} from "./helpers/SafeAddresses.s.sol";
  * Ethereum-compatible single blockchain.
  *
  * @dev Usage
+ * 1. Deploy by any gas paying account:
  * forge script ./script/DeployContracts.s.sol --account <account> \
  *     --sender <sender> --rpc-url <rpc alias> --slow --force --sig \
- *     "run(address,address,address,address,address,uint256,uint256,uint256,address[])" \
- *     <validator> <pauser> <deployer> <mediumCriticalOps> <superCriticalOps> \
- *     <panSupply> <bestSupply> <nextTransferId> <otherValidators>
+ *     "deploy(uint256,uint256)" <panSupply> <bestSupply>
+ *
+ * 2. Simulate roleActions to be later signed by appropriate roles
+ * forge script ./script/DeployContracts.s.sol --rpc-url <rpc alias> \
+ *          -vvvv --sig "roleActions(uint256,address,address[])" \
+ *          <nextTransferId>  <primaryValidator> <otherValidators>
  */
 contract DeployContracts is
     PantosBaseAddresses,
