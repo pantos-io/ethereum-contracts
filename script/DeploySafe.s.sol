@@ -11,6 +11,25 @@ import {SafeProxy} from "@safe/proxies/SafeProxy.sol";
 
 import {SafeAddresses} from "./helpers/SafeAddresses.s.sol";
 
+/**
+ * @title DeployContracts
+ *
+ * @notice Deploy the gnosis safe contracts which act as the multi-sig
+ * Pantos roles.
+ *
+ * @dev Usage
+ * Deploy by any gas paying account:
+ * forge script ./script/DeployContracts.s.sol --account <account> \
+ *     --sender <sender> --rpc-url <rpc alias> --slow --force --sig \
+ *     "deploySafes(address[], uint256, address[], uint256, address[], \
+ *     uint256, address[], uint256)" \
+ *     <pauserAddresses> <pauserSafeThreshold> \
+ *     <deployerAddresses> <deployerSafeThreshold> \
+ *     <mediumCriticalOpsAddresses> <mediumCriticalOpsSafeThreshold> \
+ *     <superCriticalOpsAddresses> <superCriticalOpsSafeThreshold>
+ *
+ */
+
 contract DeploySafe is SafeAddresses {
     uint256 private constant PAUSER_SALT = 1;
     uint256 private constant DEPLOYER_SALT = 2;

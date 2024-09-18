@@ -23,6 +23,7 @@ import {BitpandaEcosystemTokenDeployer} from "./helpers/BitpandaEcosystemTokenDe
 import {AccessControllerDeployer} from "./helpers/AccessControllerDeployer.s.sol";
 import {PantosBaseAddresses} from "./helpers/PantosBaseAddresses.s.sol";
 import {SafeAddresses} from "./helpers/SafeAddresses.s.sol";
+
 /**
  * @title DeployContracts
  *
@@ -38,7 +39,7 @@ import {SafeAddresses} from "./helpers/SafeAddresses.s.sol";
  * 2. Simulate roleActions to be later signed by appropriate roles
  * forge script ./script/DeployContracts.s.sol --rpc-url <rpc alias> \
  *          -vvvv --sig "roleActions(uint256,address,address[])" \
- *          <nextTransferId>  <primaryValidator> <otherValidators>
+ *          <nextTransferId> <primaryValidator> <otherValidators>
  */
 contract DeployContracts is
     PantosBaseAddresses,

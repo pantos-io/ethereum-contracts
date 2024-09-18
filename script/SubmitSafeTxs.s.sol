@@ -46,9 +46,6 @@ contract SubmitSafeTxs is Script {
         return safeTxDetails;
     }
 
-    // forge script script/SubmitSafeTxs.s.sol --rpc-url local-8545
-    // --account local_deployer --password '' --sender 0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266
-    // --sig "run()" -vvvv --broadcast
     function run() external {
         // read transactions
         string memory path = string.concat(
