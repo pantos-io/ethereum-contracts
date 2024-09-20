@@ -33,20 +33,17 @@ contract PantosTransferFacet is IPantosTransfer, PantosBaseFacet {
         _verifyTransfer(request);
         // Assign a new transfer ID
         uint256 transferId = s.nextTransferId++;
-        emit Transfer(
-            transferId,
-            request.sender,
-            request.recipient,
-            request.token,
-            request.amount,
-            request.fee,
-            request.serviceNode
-        );
         // Forward the transfer request
-        IPantosForwarder(s.pantosForwarder).verifyAndForwardTransfer(
-            request,
-            signature
-        );
+        bool succeeded;
+        bytes32 tokenData;
+        // slither-disable-next-line reentrancy-events
+        (succeeded, tokenData) = IPantosForwarder(s.pantosForwarder)
+            .verifyAndForwardTransfer(request, signature);
+        if (succeeded) {
+            emit TransferSucceeded(transferId, request, signature);
+        } else {
+            emit TransferFailed(transferId, request, signature, tokenData);
+        }
         return transferId;
     }
 
@@ -66,17 +63,6 @@ contract PantosTransferFacet is IPantosTransfer, PantosBaseFacet {
         _verifyTransferFrom(request);
         // Assign a new transfer ID
         uint256 sourceTransferId = s.nextTransferId++;
-        emit TransferFrom(
-            sourceTransferId,
-            request.destinationBlockchainId,
-            request.sender,
-            request.recipient,
-            request.sourceToken,
-            request.destinationToken,
-            request.amount,
-            request.fee,
-            request.serviceNode
-        );
         // Forward the transfer request
         uint256 sourceBlockchainFactor = s
             .validatorFeeFactors[s.currentBlockchainId]
@@ -84,12 +70,26 @@ contract PantosTransferFacet is IPantosTransfer, PantosBaseFacet {
         uint256 destinationBlockchainFactor = s
             .validatorFeeFactors[request.destinationBlockchainId]
             .currentValue;
-        IPantosForwarder(s.pantosForwarder).verifyAndForwardTransferFrom(
-            sourceBlockchainFactor,
-            destinationBlockchainFactor,
-            request,
-            signature
-        );
+        bool succeeded;
+        bytes32 sourceTokenData;
+        // slither-disable-next-line reentrancy-events
+        (succeeded, sourceTokenData) = IPantosForwarder(s.pantosForwarder)
+            .verifyAndForwardTransferFrom(
+                sourceBlockchainFactor,
+                destinationBlockchainFactor,
+                request,
+                signature
+            );
+        if (succeeded) {
+            emit TransferFromSucceeded(sourceTransferId, request, signature);
+        } else {
+            emit TransferFromFailed(
+                sourceTransferId,
+                request,
+                signature,
+                sourceTokenData
+            );
+        }
         return sourceTransferId;
     }
 
@@ -97,7 +97,7 @@ contract PantosTransferFacet is IPantosTransfer, PantosBaseFacet {
      * @dev See {IPantosTransfer-transferTo}.
      */
     function transferTo(
-        PantosTypes.TransferToRequest memory request,
+        PantosTypes.TransferToRequest calldata request,
         address[] memory signerAddresses,
         bytes[] memory signatures
     )
@@ -115,17 +115,9 @@ contract PantosTransferFacet is IPantosTransfer, PantosBaseFacet {
         ] = true;
         // Assign a new transfer ID
         uint256 destinationTransferId = s.nextTransferId++;
-        emit TransferTo(
-            request.sourceBlockchainId,
-            request.sourceTransferId,
-            request.sourceTransactionId,
+        emit TransferToSucceeded(
             destinationTransferId,
-            request.sender,
-            request.recipient,
-            request.sourceToken,
-            request.destinationToken,
-            request.amount,
-            request.nonce,
+            request,
             signerAddresses,
             signatures
         );
@@ -199,7 +191,7 @@ contract PantosTransferFacet is IPantosTransfer, PantosBaseFacet {
      * @dev See {IPantosTransfer-verifyTransferTo}.
      */
     function verifyTransferTo(
-        PantosTypes.TransferToRequest memory request,
+        PantosTypes.TransferToRequest calldata request,
         address[] memory signerAddresses,
         bytes[] memory signatures
     ) external view override {
@@ -247,7 +239,7 @@ contract PantosTransferFacet is IPantosTransfer, PantosBaseFacet {
     }
 
     function _verifyTransferTo(
-        PantosTypes.TransferToRequest memory request
+        PantosTypes.TransferToRequest calldata request
     ) private view {
         if (request.sourceBlockchainId != s.currentBlockchainId) {
             _verifyTransferBlockchain(request.sourceBlockchainId);

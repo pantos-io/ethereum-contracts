@@ -2485,17 +2485,51 @@ contract PantosHubTest is PantosHubDeployer {
         mockPantosForwarder_verifyAndForwardTransfer(
             PANTOS_FORWARDER_ADDRESS,
             transferRequest(),
+            "",
+            true,
             ""
         );
         vm.expectEmit();
-        emit IPantosTransfer.Transfer(
+        emit IPantosTransfer.TransferSucceeded(
             NEXT_TRANSFER_ID,
-            transferSender,
-            TRANSFER_RECIPIENT,
+            transferRequest(),
+            ""
+        );
+        vm.prank(SERVICE_NODE_ADDRESS);
+        vm.expectCall(
+            PANTOS_FORWARDER_ADDRESS,
+            abi.encodeWithSelector(
+                IPantosForwarder.verifyAndForwardTransfer.selector,
+                transferRequest(),
+                ""
+            )
+        );
+
+        uint256 transferId = pantosHubProxy.transfer(transferRequest(), "");
+        assertEq(transferId, NEXT_TRANSFER_ID);
+        assertEq(pantosHubProxy.getNextTransferId(), NEXT_TRANSFER_ID + 1);
+    }
+
+    function test_transfer_PandasTokenFailure() external {
+        registerToken();
+        registerServiceNode();
+        mockPandasToken_getPantosForwarder(
             PANDAS_TOKEN_ADDRESS,
-            TRANSFER_AMOUNT,
-            TRANSFER_FEE,
-            SERVICE_NODE_ADDRESS
+            PANTOS_FORWARDER_ADDRESS
+        );
+        mockPantosForwarder_verifyAndForwardTransfer(
+            PANTOS_FORWARDER_ADDRESS,
+            transferRequest(),
+            "",
+            false,
+            PANDAS_TOKEN_FAILURE_DATA
+        );
+        vm.expectEmit();
+        emit IPantosTransfer.TransferFailed(
+            NEXT_TRANSFER_ID,
+            transferRequest(),
+            "",
+            PANDAS_TOKEN_FAILURE_DATA
         );
         vm.prank(SERVICE_NODE_ADDRESS);
         vm.expectCall(
@@ -2528,20 +2562,61 @@ contract PantosHubTest is PantosHubDeployer {
         );
         mockPantosForwarder_verifyAndForwardTransferFrom(
             PANTOS_FORWARDER_ADDRESS,
+            thisBlockchain.feeFactor,
+            otherBlockchain.feeFactor,
             transferFromRequest(),
+            "",
+            true,
             ""
         );
         vm.expectEmit();
-        emit IPantosTransfer.TransferFrom(
+        emit IPantosTransfer.TransferFromSucceeded(
             NEXT_TRANSFER_ID,
-            uint256(otherBlockchain.blockchainId),
-            transferSender,
-            vm.toString(TRANSFER_RECIPIENT),
+            transferFromRequest(),
+            ""
+        );
+        vm.prank(SERVICE_NODE_ADDRESS);
+        vm.expectCall(
+            PANTOS_FORWARDER_ADDRESS,
+            abi.encodeWithSelector(
+                IPantosForwarder.verifyAndForwardTransferFrom.selector,
+                thisBlockchain.feeFactor,
+                otherBlockchain.feeFactor,
+                transferFromRequest(),
+                ""
+            )
+        );
+
+        uint256 transferId = pantosHubProxy.transferFrom(
+            transferFromRequest(),
+            ""
+        );
+        assertEq(transferId, NEXT_TRANSFER_ID);
+        assertEq(pantosHubProxy.getNextTransferId(), NEXT_TRANSFER_ID + 1);
+    }
+
+    function test_transferFrom_PandasTokenFailure() external {
+        registerTokenAndExternalToken(PANDAS_TOKEN_OWNER);
+        registerServiceNode();
+        mockPandasToken_getPantosForwarder(
             PANDAS_TOKEN_ADDRESS,
-            EXTERNAL_PANDAS_TOKEN_ADDRESS,
-            TRANSFER_AMOUNT,
-            TRANSFER_FEE,
-            SERVICE_NODE_ADDRESS
+            PANTOS_FORWARDER_ADDRESS
+        );
+        mockPantosForwarder_verifyAndForwardTransferFrom(
+            PANTOS_FORWARDER_ADDRESS,
+            thisBlockchain.feeFactor,
+            otherBlockchain.feeFactor,
+            transferFromRequest(),
+            "",
+            false,
+            PANDAS_TOKEN_FAILURE_DATA
+        );
+        vm.expectEmit();
+        emit IPantosTransfer.TransferFromFailed(
+            NEXT_TRANSFER_ID,
+            transferFromRequest(),
+            "",
+            PANDAS_TOKEN_FAILURE_DATA
         );
         vm.prank(SERVICE_NODE_ADDRESS);
         vm.expectCall(
@@ -2586,17 +2661,9 @@ contract PantosHubTest is PantosHubDeployer {
             new bytes[](0)
         );
         vm.expectEmit();
-        emit IPantosTransfer.TransferTo(
-            uint256(otherBlockchain.blockchainId),
-            OTHER_BLOCKCHAIN_TRANSFER_ID,
-            OTHER_BLOCKCHAIN_TRANSACTION_ID,
+        emit IPantosTransfer.TransferToSucceeded(
             NEXT_TRANSFER_ID,
-            vm.toString(transferSender),
-            TRANSFER_RECIPIENT,
-            EXTERNAL_PANDAS_TOKEN_ADDRESS,
-            PANDAS_TOKEN_ADDRESS,
-            TRANSFER_AMOUNT,
-            TRANSFER_NONCE,
+            transferToRequest(),
             new address[](0),
             new bytes[](0)
         );
@@ -2641,17 +2708,9 @@ contract PantosHubTest is PantosHubDeployer {
             thisBlockchain.blockchainId
         );
         vm.expectEmit();
-        emit IPantosTransfer.TransferTo(
-            uint256(thisBlockchain.blockchainId),
-            OTHER_BLOCKCHAIN_TRANSFER_ID,
-            OTHER_BLOCKCHAIN_TRANSACTION_ID,
+        emit IPantosTransfer.TransferToSucceeded(
             NEXT_TRANSFER_ID,
-            vm.toString(transferSender),
-            TRANSFER_RECIPIENT,
-            EXTERNAL_PANDAS_TOKEN_ADDRESS,
-            PANDAS_TOKEN_ADDRESS,
-            TRANSFER_AMOUNT,
-            TRANSFER_NONCE,
+            transferToRequest_,
             new address[](0),
             new bytes[](0)
         );
@@ -3421,7 +3480,9 @@ contract PantosHubTest is PantosHubDeployer {
     function mockPantosForwarder_verifyAndForwardTransfer(
         address pantosForwarder,
         PantosTypes.TransferRequest memory request,
-        bytes memory signature
+        bytes memory signature,
+        bool succeeded,
+        bytes32 tokenData
     ) public {
         vm.mockCall(
             pantosForwarder,
@@ -3430,23 +3491,29 @@ contract PantosHubTest is PantosHubDeployer {
                 request,
                 signature
             ),
-            abi.encode()
+            abi.encode(succeeded, tokenData)
         );
     }
 
     function mockPantosForwarder_verifyAndForwardTransferFrom(
         address pantosForwarder,
+        uint256 sourceBlockchainFactor,
+        uint256 destinationBlockchainFactor,
         PantosTypes.TransferFromRequest memory request,
-        bytes memory signature
+        bytes memory signature,
+        bool succeeded,
+        bytes32 sourceTokenData
     ) public {
         vm.mockCall(
             pantosForwarder,
             abi.encodeWithSelector(
                 PantosForwarder.verifyAndForwardTransferFrom.selector,
+                sourceBlockchainFactor,
+                destinationBlockchainFactor,
                 request,
                 signature
             ),
-            abi.encode()
+            abi.encode(succeeded, sourceTokenData)
         );
     }
 

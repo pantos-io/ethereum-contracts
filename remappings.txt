@@ -3,3 +3,4 @@ forge-std/=lib/forge-std/src/
 @openzeppelin/contracts/=lib/openzeppelin-contracts/contracts/
 @diamond/=lib/diamond-3-hardhat/contracts/
 @safe/=lib/safe-smart-account/contracts/
+@excessivelysafecall/=lib/ExcessivelySafeCall/src/

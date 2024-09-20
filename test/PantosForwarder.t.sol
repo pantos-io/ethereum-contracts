@@ -4,7 +4,6 @@ pragma solidity 0.8.26;
 
 import {Strings} from "@openzeppelin/contracts/utils/Strings.sol";
 import {MessageHashUtils} from "@openzeppelin/contracts/utils/cryptography/MessageHashUtils.sol";
-import {console2} from "forge-std/console2.sol";
 import {Vm} from "forge-std/Test.sol";
 
 import {IPantosForwarder} from "../src/interfaces/IPantosForwarder.sol";
@@ -21,6 +20,16 @@ contract PantosForwarderTest is PantosBaseTest {
         address(uint160(uint256(keccak256("PantosHubAddress"))));
     address constant PANTOS_TOKEN_ADDRESS =
         address(uint160(uint256(keccak256("PantosTokenAddress"))));
+
+    string constant EIP712_DOMAIN_NAME = "Pantos";
+    bytes32 constant EIP712_DOMAIN_TYPE_HASH =
+        keccak256(
+            "EIP712Domain("
+            "string name,"
+            "string version,"
+            "uint256 chainId,"
+            "address verifyingContract)"
+        );
 
     PantosForwarder public pantosForwarder;
     AccessController public accessController;
@@ -566,10 +575,44 @@ contract PantosForwarderTest is PantosBaseTest {
         PantosTypes.TransferRequest memory request = transferRequest();
         bytes32 digest = getDigest(request);
         bytes memory signature = sign(testWallet, digest);
-        setupMockAndExpectFor_verifyAndForwardTransfer(request);
+        setupMockAndExpectFor_verifyAndForwardTransfer(request, true, "");
         vm.prank(PANTOS_HUB_ADDRESS);
 
-        pantosForwarder.verifyAndForwardTransfer(request, signature);
+        bool succeeded;
+        bytes32 tokenData;
+        (succeeded, tokenData) = pantosForwarder.verifyAndForwardTransfer(
+            request,
+            signature
+        );
+
+        assertTrue(succeeded);
+        assertEq(tokenData, "");
+    }
+
+    function test_verifyAndForwardTransfer_PandasTokenFailure()
+        external
+        parameterizedTest(validatorCounts)
+    {
+        initializePantosForwarder();
+        PantosTypes.TransferRequest memory request = transferRequest();
+        bytes32 digest = getDigest(request);
+        bytes memory signature = sign(testWallet, digest);
+        setupMockAndExpectFor_verifyAndForwardTransfer(
+            request,
+            false,
+            PANDAS_TOKEN_FAILURE_DATA
+        );
+        vm.prank(PANTOS_HUB_ADDRESS);
+
+        bool succeeded;
+        bytes32 tokenData;
+        (succeeded, tokenData) = pantosForwarder.verifyAndForwardTransfer(
+            request,
+            signature
+        );
+
+        assertFalse(succeeded);
+        assertEq(tokenData, PANDAS_TOKEN_FAILURE_DATA);
     }
 
     function test_verifyAndForwardTransfer_NotByPantosHub()
@@ -598,7 +641,7 @@ contract PantosForwarderTest is PantosBaseTest {
         PantosTypes.TransferRequest memory request = transferRequest();
         bytes32 digest = getDigest(request);
         bytes memory signature = sign(testWallet, digest);
-        setupMockAndExpectFor_verifyAndForwardTransfer(request);
+        setupMockAndExpectFor_verifyAndForwardTransfer(request, true, "");
 
         vm.prank(PANTOS_HUB_ADDRESS);
         pantosForwarder.verifyAndForwardTransfer(request, signature);
@@ -616,17 +659,29 @@ contract PantosForwarderTest is PantosBaseTest {
         PantosTypes.TransferRequest memory request = transferRequest();
         bytes32 digest = getDigest(request);
         bytes memory signature = sign(testWallet, digest);
-        setupMockAndExpectFor_verifyAndForwardTransfer(request);
+        setupMockAndExpectFor_verifyAndForwardTransfer(request, true, "");
+        bool succeeded;
+        bytes32 tokenData;
 
         vm.prank(PANTOS_HUB_ADDRESS);
-        pantosForwarder.verifyAndForwardTransfer(request, signature);
+        (succeeded, tokenData) = pantosForwarder.verifyAndForwardTransfer(
+            request,
+            signature
+        );
+        assertTrue(succeeded);
+        assertEq(tokenData, "");
 
         request.sender = transferSender2;
         digest = getDigest(request);
         signature = sign(testWallet2, digest);
-        setupMockAndExpectFor_verifyAndForwardTransfer(request);
+        setupMockAndExpectFor_verifyAndForwardTransfer(request, true, "");
         vm.prank(PANTOS_HUB_ADDRESS);
-        pantosForwarder.verifyAndForwardTransfer(request, signature);
+        (succeeded, tokenData) = pantosForwarder.verifyAndForwardTransfer(
+            request,
+            signature
+        );
+        assertTrue(succeeded);
+        assertEq(tokenData, "");
     }
 
     function test_verifyAndForwardTransfer_SameSenderDifferentNonce()
@@ -637,17 +692,29 @@ contract PantosForwarderTest is PantosBaseTest {
         PantosTypes.TransferRequest memory request = transferRequest();
         bytes32 digest = getDigest(request);
         bytes memory signature = sign(testWallet, digest);
-        setupMockAndExpectFor_verifyAndForwardTransfer(request);
+        setupMockAndExpectFor_verifyAndForwardTransfer(request, true, "");
+        bool succeeded;
+        bytes32 tokenData;
 
         vm.prank(PANTOS_HUB_ADDRESS);
-        pantosForwarder.verifyAndForwardTransfer(request, signature);
+        (succeeded, tokenData) = pantosForwarder.verifyAndForwardTransfer(
+            request,
+            signature
+        );
+        assertTrue(succeeded);
+        assertEq(tokenData, "");
 
         request.nonce = 99;
         digest = getDigest(request);
         signature = sign(testWallet, digest);
-        setupMockAndExpectFor_verifyAndForwardTransfer(request);
+        setupMockAndExpectFor_verifyAndForwardTransfer(request, true, "");
         vm.prank(PANTOS_HUB_ADDRESS);
-        pantosForwarder.verifyAndForwardTransfer(request, signature);
+        (succeeded, tokenData) = pantosForwarder.verifyAndForwardTransfer(
+            request,
+            signature
+        );
+        assertTrue(succeeded);
+        assertEq(tokenData, "");
     }
 
     function test_verifyAndForwardTransfer_ValidUntilExpired()
@@ -700,16 +767,57 @@ contract PantosForwarderTest is PantosBaseTest {
         setupMockAndExpectFor_verifyAndForwardTransferFrom(
             request,
             sourceBlockchainFactor,
-            destinationBlockchainFactor
+            destinationBlockchainFactor,
+            true,
+            ""
         );
         vm.prank(PANTOS_HUB_ADDRESS);
 
-        pantosForwarder.verifyAndForwardTransferFrom(
+        bool succeeded;
+        bytes32 sourceTokenData;
+        (succeeded, sourceTokenData) = pantosForwarder
+            .verifyAndForwardTransferFrom(
+                sourceBlockchainFactor,
+                destinationBlockchainFactor,
+                request,
+                signature
+            );
+
+        assertTrue(succeeded);
+        assertEq(sourceTokenData, "");
+    }
+
+    function test_verifyAndForwardTransferFrom_PandasTokenFailure()
+        external
+        parameterizedTest(validatorCounts)
+    {
+        initializePantosForwarder();
+        PantosTypes.TransferFromRequest memory request = transferFromRequest();
+        bytes32 digest = getDigest(request);
+        bytes memory signature = sign(testWallet, digest);
+        uint256 sourceBlockchainFactor = 2;
+        uint256 destinationBlockchainFactor = 2;
+        setupMockAndExpectFor_verifyAndForwardTransferFrom(
+            request,
             sourceBlockchainFactor,
             destinationBlockchainFactor,
-            request,
-            signature
+            false,
+            PANDAS_TOKEN_FAILURE_DATA
         );
+        vm.prank(PANTOS_HUB_ADDRESS);
+
+        bool succeeded;
+        bytes32 sourceTokenData;
+        (succeeded, sourceTokenData) = pantosForwarder
+            .verifyAndForwardTransferFrom(
+                sourceBlockchainFactor,
+                destinationBlockchainFactor,
+                request,
+                signature
+            );
+
+        assertFalse(succeeded);
+        assertEq(sourceTokenData, PANDAS_TOKEN_FAILURE_DATA);
     }
 
     function test_verifyAndForwardTransferFrom_NotByPantosHub()
@@ -747,7 +855,9 @@ contract PantosForwarderTest is PantosBaseTest {
         setupMockAndExpectFor_verifyAndForwardTransferFrom(
             request,
             sourceBlockchainFactor,
-            destinationBlockchainFactor
+            destinationBlockchainFactor,
+            true,
+            ""
         );
         vm.prank(PANTOS_HUB_ADDRESS);
         pantosForwarder.verifyAndForwardTransferFrom(
@@ -777,18 +887,25 @@ contract PantosForwarderTest is PantosBaseTest {
         bytes memory signature = sign(testWallet, digest);
         uint256 sourceBlockchainFactor = 2;
         uint256 destinationBlockchainFactor = 2;
+        bool succeeded;
+        bytes32 sourceTokenData;
         setupMockAndExpectFor_verifyAndForwardTransferFrom(
             request,
             sourceBlockchainFactor,
-            destinationBlockchainFactor
+            destinationBlockchainFactor,
+            true,
+            ""
         );
         vm.prank(PANTOS_HUB_ADDRESS);
-        pantosForwarder.verifyAndForwardTransferFrom(
-            sourceBlockchainFactor,
-            destinationBlockchainFactor,
-            request,
-            signature
-        );
+        (succeeded, sourceTokenData) = pantosForwarder
+            .verifyAndForwardTransferFrom(
+                sourceBlockchainFactor,
+                destinationBlockchainFactor,
+                request,
+                signature
+            );
+        assertTrue(succeeded);
+        assertEq(sourceTokenData, "");
 
         request.sender = transferSender2;
         digest = getDigest(request);
@@ -796,16 +913,21 @@ contract PantosForwarderTest is PantosBaseTest {
         setupMockAndExpectFor_verifyAndForwardTransferFrom(
             request,
             sourceBlockchainFactor,
-            destinationBlockchainFactor
+            destinationBlockchainFactor,
+            true,
+            ""
         );
 
         vm.prank(PANTOS_HUB_ADDRESS);
-        pantosForwarder.verifyAndForwardTransferFrom(
-            sourceBlockchainFactor,
-            destinationBlockchainFactor,
-            request,
-            signature
-        );
+        (succeeded, sourceTokenData) = pantosForwarder
+            .verifyAndForwardTransferFrom(
+                sourceBlockchainFactor,
+                destinationBlockchainFactor,
+                request,
+                signature
+            );
+        assertTrue(succeeded);
+        assertEq(sourceTokenData, "");
     }
 
     function test_verifyAndForwardTransferFrom_SameSenderDifferentNonce()
@@ -818,18 +940,25 @@ contract PantosForwarderTest is PantosBaseTest {
         bytes memory signature = sign(testWallet, digest);
         uint256 sourceBlockchainFactor = 2;
         uint256 destinationBlockchainFactor = 2;
+        bool succeeded;
+        bytes32 sourceTokenData;
         setupMockAndExpectFor_verifyAndForwardTransferFrom(
             request,
             sourceBlockchainFactor,
-            destinationBlockchainFactor
+            destinationBlockchainFactor,
+            true,
+            ""
         );
         vm.prank(PANTOS_HUB_ADDRESS);
-        pantosForwarder.verifyAndForwardTransferFrom(
-            sourceBlockchainFactor,
-            destinationBlockchainFactor,
-            request,
-            signature
-        );
+        (succeeded, sourceTokenData) = pantosForwarder
+            .verifyAndForwardTransferFrom(
+                sourceBlockchainFactor,
+                destinationBlockchainFactor,
+                request,
+                signature
+            );
+        assertTrue(succeeded);
+        assertEq(sourceTokenData, "");
 
         request.nonce = 99;
         digest = getDigest(request);
@@ -837,16 +966,21 @@ contract PantosForwarderTest is PantosBaseTest {
         setupMockAndExpectFor_verifyAndForwardTransferFrom(
             request,
             sourceBlockchainFactor,
-            destinationBlockchainFactor
+            destinationBlockchainFactor,
+            true,
+            ""
         );
 
         vm.prank(PANTOS_HUB_ADDRESS);
-        pantosForwarder.verifyAndForwardTransferFrom(
-            sourceBlockchainFactor,
-            destinationBlockchainFactor,
-            request,
-            signature
-        );
+        (succeeded, sourceTokenData) = pantosForwarder
+            .verifyAndForwardTransferFrom(
+                sourceBlockchainFactor,
+                destinationBlockchainFactor,
+                request,
+                signature
+            );
+        assertTrue(succeeded);
+        assertEq(sourceTokenData, "");
     }
 
     function test_verifyAndForwardTransferFrom_ValidUntilExpired()
@@ -1196,7 +1330,9 @@ contract PantosForwarderTest is PantosBaseTest {
         address tokenAddress,
         address sender,
         address recipient,
-        uint256 amount
+        uint256 amount,
+        bool succeeded,
+        bytes32 tokenData
     ) public {
         bytes memory abiEncodedWithSelector = abi.encodeWithSelector(
             PantosBaseToken.pantosTransfer.selector,
@@ -1204,19 +1340,41 @@ contract PantosForwarderTest is PantosBaseTest {
             recipient,
             amount
         );
-        vm.mockCall(tokenAddress, abiEncodedWithSelector, abi.encode());
+        if (succeeded) {
+            vm.mockCall(tokenAddress, abiEncodedWithSelector, abi.encode());
+        } else {
+            vm.mockCallRevert(
+                tokenAddress,
+                abiEncodedWithSelector,
+                abi.encode(tokenData)
+            );
+        }
         vm.expectCall(tokenAddress, abiEncodedWithSelector);
     }
 
     function mockAndExpectPantosBaseToken_pantosTransferFrom(
-        PantosTypes.TransferFromRequest memory request
+        PantosTypes.TransferFromRequest memory request,
+        bool succeeded,
+        bytes32 sourceTokenData
     ) public {
         bytes memory abiEncodedWithSelector = abi.encodeWithSelector(
             PantosBaseToken.pantosTransferFrom.selector,
             request.sender,
             request.amount
         );
-        vm.mockCall(request.sourceToken, abiEncodedWithSelector, abi.encode());
+        if (succeeded) {
+            vm.mockCall(
+                request.sourceToken,
+                abiEncodedWithSelector,
+                abi.encode()
+            );
+        } else {
+            vm.mockCallRevert(
+                request.sourceToken,
+                abiEncodedWithSelector,
+                abi.encode(sourceTokenData)
+            );
+        }
         vm.expectCall(request.sourceToken, abiEncodedWithSelector);
     }
 
@@ -1235,7 +1393,9 @@ contract PantosForwarderTest is PantosBaseTest {
     }
 
     function setupMockAndExpectFor_verifyAndForwardTransfer(
-        PantosTypes.TransferRequest memory request
+        PantosTypes.TransferRequest memory request,
+        bool succeeded,
+        bytes32 tokenData
     ) public {
         mockAndExpectPantosHub_getCurrentBlockchainId(
             thisBlockchain.blockchainId
@@ -1244,25 +1404,35 @@ contract PantosForwarderTest is PantosBaseTest {
             request.token,
             request.sender,
             request.recipient,
-            request.amount
+            request.amount,
+            succeeded,
+            tokenData
         );
         mockAndExpectPantosBaseToken_pantosTransfer(
             PANTOS_TOKEN_ADDRESS,
             request.sender,
             request.serviceNode,
-            request.fee
+            request.fee,
+            true,
+            ""
         );
     }
 
     function setupMockAndExpectFor_verifyAndForwardTransferFrom(
         PantosTypes.TransferFromRequest memory request,
         uint256 sourceBlockchainFactor,
-        uint256 destinationBlockchainFactor
+        uint256 destinationBlockchainFactor,
+        bool succeeded,
+        bytes32 sourceTokenData
     ) public {
         mockAndExpectPantosHub_getCurrentBlockchainId(
             thisBlockchain.blockchainId
         );
-        mockAndExpectPantosBaseToken_pantosTransferFrom(request);
+        mockAndExpectPantosBaseToken_pantosTransferFrom(
+            request,
+            succeeded,
+            sourceTokenData
+        );
         uint256 totalFactor = sourceBlockchainFactor +
             destinationBlockchainFactor;
         uint256 serviceNodeFee = (sourceBlockchainFactor * request.fee) /
@@ -1271,16 +1441,22 @@ contract PantosForwarderTest is PantosBaseTest {
             PANTOS_TOKEN_ADDRESS,
             request.sender,
             request.serviceNode,
-            serviceNodeFee
+            serviceNodeFee,
+            true,
+            ""
         );
-        uint256 validatorFee = request.fee - serviceNodeFee;
-        mockAndExpectPantosBaseToken_pantosTransfer(
-            PANTOS_TOKEN_ADDRESS,
-            request.sender,
-            validatorAddress,
-            validatorFee
-        );
-        mockAndExpectPantosHub_getPrimaryValidatorNode();
+        if (succeeded) {
+            uint256 validatorFee = request.fee - serviceNodeFee;
+            mockAndExpectPantosBaseToken_pantosTransfer(
+                PANTOS_TOKEN_ADDRESS,
+                request.sender,
+                validatorAddress,
+                validatorFee,
+                true,
+                ""
+            );
+            mockAndExpectPantosHub_getPrimaryValidatorNode();
+        }
     }
 
     function setupMockAndExpectFor_verifyAndForwardTransferTo(
@@ -1299,7 +1475,10 @@ contract PantosForwarderTest is PantosBaseTest {
     // Mocks end here
 
     function deployPantosForwarder(AccessController accessController_) public {
-        pantosForwarder = new PantosForwarder(address(accessController_));
+        pantosForwarder = new PantosForwarder(
+            MAJOR_PROTOCOL_VERSION,
+            address(accessController_)
+        );
     }
 
     function getValidatorNodeAddresses()
@@ -1388,20 +1567,33 @@ contract PantosForwarderTest is PantosBaseTest {
 
     function getDigest(
         PantosTypes.TransferRequest memory request
-    ) public view returns (bytes32) {
+    ) public returns (bytes32) {
         return
-            MessageHashUtils.toEthSignedMessageHash(
+            _hashTypedData(
                 keccak256(
-                    abi.encodePacked(
+                    abi.encode(
+                        keccak256(
+                            abi.encodePacked(
+                                PantosTypes.TRANSFER_TYPE,
+                                PantosTypes.TRANSFER_REQUEST_TYPE
+                            )
+                        ),
+                        keccak256(
+                            abi.encode(
+                                keccak256(
+                                    bytes(PantosTypes.TRANSFER_REQUEST_TYPE)
+                                ),
+                                request.sender,
+                                request.recipient,
+                                request.token,
+                                request.amount,
+                                request.serviceNode,
+                                request.fee,
+                                request.nonce,
+                                request.validUntil
+                            )
+                        ),
                         uint256(thisBlockchain.blockchainId),
-                        request.sender,
-                        request.recipient,
-                        request.token,
-                        request.amount,
-                        request.serviceNode,
-                        request.fee,
-                        request.nonce,
-                        request.validUntil,
                         PANTOS_HUB_ADDRESS,
                         address(pantosForwarder),
                         PANTOS_TOKEN_ADDRESS
@@ -1412,28 +1604,40 @@ contract PantosForwarderTest is PantosBaseTest {
 
     function getDigest(
         PantosTypes.TransferFromRequest memory request
-    ) public view returns (bytes32) {
+    ) public returns (bytes32) {
         return
-            MessageHashUtils.toEthSignedMessageHash(
+            _hashTypedData(
                 keccak256(
-                    abi.encodePacked(
+                    abi.encode(
+                        keccak256(
+                            abi.encodePacked(
+                                PantosTypes.TRANSFER_FROM_TYPE,
+                                PantosTypes.TRANSFER_FROM_REQUEST_TYPE
+                            )
+                        ),
+                        keccak256(
+                            abi.encode(
+                                keccak256(
+                                    bytes(
+                                        PantosTypes.TRANSFER_FROM_REQUEST_TYPE
+                                    )
+                                ),
+                                request.destinationBlockchainId,
+                                request.sender,
+                                keccak256(bytes(request.recipient)),
+                                request.sourceToken,
+                                keccak256(bytes(request.destinationToken)),
+                                request.amount,
+                                request.serviceNode,
+                                request.fee,
+                                request.nonce,
+                                request.validUntil
+                            )
+                        ),
                         uint256(thisBlockchain.blockchainId),
-                        request.destinationBlockchainId,
-                        request.sender,
-                        request.recipient,
-                        request.sourceToken,
-                        request.destinationToken,
-                        request.amount,
-                        request.serviceNode,
-                        request.fee,
-                        request.nonce,
-                        // Required because of solc stack depth limit
-                        abi.encodePacked(
-                            request.validUntil,
-                            PANTOS_HUB_ADDRESS,
-                            address(pantosForwarder),
-                            PANTOS_TOKEN_ADDRESS
-                        )
+                        PANTOS_HUB_ADDRESS,
+                        address(pantosForwarder),
+                        PANTOS_TOKEN_ADDRESS
                     )
                 )
             );
@@ -1441,29 +1645,64 @@ contract PantosForwarderTest is PantosBaseTest {
 
     function getDigest(
         PantosTypes.TransferToRequest memory request
-    ) public view returns (bytes32) {
+    ) public returns (bytes32) {
         return
-            MessageHashUtils.toEthSignedMessageHash(
+            _hashTypedData(
                 keccak256(
-                    abi.encodePacked(
-                        request.sourceBlockchainId,
+                    abi.encode(
+                        keccak256(
+                            abi.encodePacked(
+                                PantosTypes.TRANSFER_TO_TYPE,
+                                PantosTypes.TRANSFER_TO_REQUEST_TYPE
+                            )
+                        ),
+                        keccak256(
+                            abi.encode(
+                                keccak256(
+                                    bytes(PantosTypes.TRANSFER_TO_REQUEST_TYPE)
+                                ),
+                                request.sourceBlockchainId,
+                                request.sourceTransferId,
+                                keccak256(bytes(request.sourceTransactionId)),
+                                keccak256(bytes(request.sender)),
+                                request.recipient,
+                                keccak256(bytes(request.sourceToken)),
+                                request.destinationToken,
+                                request.amount,
+                                request.nonce
+                            )
+                        ),
                         uint256(thisBlockchain.blockchainId),
-                        request.sourceTransactionId,
-                        request.sourceTransferId,
-                        request.sender,
-                        request.recipient,
-                        request.sourceToken,
-                        request.destinationToken,
-                        request.amount,
-                        request.nonce,
-                        // Required because of solc stack depth limit
-                        abi.encodePacked(
-                            PANTOS_HUB_ADDRESS,
-                            address(pantosForwarder),
-                            PANTOS_TOKEN_ADDRESS
-                        )
+                        PANTOS_HUB_ADDRESS,
+                        address(pantosForwarder),
+                        PANTOS_TOKEN_ADDRESS
                     )
                 )
             );
+    }
+
+    function _hashTypedData(bytes32 structHash) private returns (bytes32) {
+        string memory name;
+        string memory version;
+        uint256 chainId;
+        address verifyingContract;
+        (, name, version, chainId, verifyingContract, , ) = pantosForwarder
+            .eip712Domain();
+
+        assertEq(name, EIP712_DOMAIN_NAME);
+        assertEq(version, Strings.toString(MAJOR_PROTOCOL_VERSION));
+        assertEq(chainId, block.chainid);
+        assertEq(verifyingContract, address(pantosForwarder));
+
+        bytes32 domainSeparator = keccak256(
+            abi.encode(
+                EIP712_DOMAIN_TYPE_HASH,
+                keccak256(bytes(name)),
+                keccak256(bytes(version)),
+                chainId,
+                verifyingContract
+            )
+        );
+        return MessageHashUtils.toTypedDataHash(domainSeparator, structHash);
     }
 }
