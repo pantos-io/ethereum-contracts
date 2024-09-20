@@ -18,7 +18,7 @@ import {SafeAddresses} from "./helpers/SafeAddresses.s.sol";
  *
  * @dev Usage
  * forge script ./script/RegisterExternalTokens.s.sol --rpc-url <rpc alias> \
- * --sig "roleActions() -vvvv
+ * --sig "roleActions(bool)" <writeSafeInfo> -vvvv
  *
  * This scripts expect all the address json files to be available at project
  * root dir.
@@ -120,7 +120,7 @@ contract RegisterExternalTokens is PantosBaseAddresses, SafeAddresses {
         }
     }
 
-    function roleActions() public {
+    function roleActions(bool writeSafeInfo) public {
         readContractAddressesAllChains();
 
         pantosHubProxy = IPantosHub(
@@ -134,6 +134,8 @@ contract RegisterExternalTokens is PantosBaseAddresses, SafeAddresses {
         registerExternalTokens();
 
         vm.stopBroadcast();
-        writeAllSafeInfo(accessController);
+        if (writeSafeInfo) {
+            writeAllSafeInfo(accessController);
+        }
     }
 }

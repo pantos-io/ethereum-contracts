@@ -76,13 +76,13 @@ RoleActions for all deployed contracts (simulation only!)
 With single validator
 
 ```bash
-$ forge script ./script/DeployContracts.s.sol --rpc-url local-8545 -vvvv --sig "roleActions(uint256,address,address[])" 0 0x88CE2c1d82328f84Dd197f63482A3B68E18cD707 []
+$ forge script ./script/DeployContracts.s.sol --rpc-url local-8545 -vvvv --sig "roleActions(uint256,address,address[],bool)" 0 0x88CE2c1d82328f84Dd197f63482A3B68E18cD707 [] true
 ```
 
 With multiple validators
 
 ```bash
-$ forge script ./script/DeployContracts.s.sol --rpc-url local-8545 -vvvv --sig "roleActions(uint256,address,address[])" 0 0x88CE2c1d82328f84Dd197f63482A3B68E18cD707 [0xAa1ea8611639537A89Cb5925903Fd1fb28027DE9,0xBB2166dC315dC02F314597eCf867C3dfB45ED205,0xCC0DF974953820B649Bb67F167f01cd265Ea5B0A]
+$ forge script ./script/DeployContracts.s.sol --rpc-url local-8545 -vvvv --sig "roleActions(uint256,address,address[],bool)" 0 0x88CE2c1d82328f84Dd197f63482A3B68E18cD707 [0xAa1ea8611639537A89Cb5925903Fd1fb28027DE9,0xBB2166dC315dC02F314597eCf867C3dfB45ED205,0xCC0DF974953820B649Bb67F167f01cd265Ea5B0A] true
 ```
 
 ### SubmitSafeTxs
@@ -94,7 +94,7 @@ $ forge script ./script/SubmitSafeTxs.s.sol --account local_deployer --password 
 ### RegisterExternalTokens
 
 ```bash
-$ forge script ./script/RegisterExternalTokens.s.sol --rpc-url local-8545 -vvvv --sig "roleActions()"
+$ forge script ./script/RegisterExternalTokens.s.sol --rpc-url local-8545 -vvvv --sig "roleActions(bool)" true
 ```
 
 ### UpdateFeeFactors
