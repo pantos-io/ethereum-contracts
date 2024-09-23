@@ -12,7 +12,7 @@ import {Enum} from "@safe/common/Enum.sol";
 using stdJson for string;
 
 /**
- * @title SubmitSafeTxs
+ * @title Submit transactions to the safe
  *
  * @notice Submits the list of signed SafeTxs.
  *

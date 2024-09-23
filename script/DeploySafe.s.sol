@@ -12,7 +12,7 @@ import {SafeProxy} from "@safe/proxies/SafeProxy.sol";
 import {SafeAddresses} from "./helpers/SafeAddresses.s.sol";
 
 /**
- * @title DeployContracts
+ * @title Deploy safe contracts
  *
  * @notice Deploy the gnosis safe contracts which act as the multi-sig
  * Pantos roles.
@@ -29,7 +29,6 @@ import {SafeAddresses} from "./helpers/SafeAddresses.s.sol";
  *     <superCriticalOpsAddresses> <superCriticalOpsSafeThreshold>
  *
  */
-
 contract DeploySafe is SafeAddresses {
     uint256 private constant PAUSER_SALT = 1;
     uint256 private constant DEPLOYER_SALT = 2;
