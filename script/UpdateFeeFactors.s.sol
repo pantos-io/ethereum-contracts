@@ -6,8 +6,10 @@ import {console} from "forge-std/console.sol";
 
 import {IPantosHub} from "../src/interfaces/IPantosHub.sol";
 import {PantosTypes} from "../src/interfaces/PantosTypes.sol";
+import {AccessController} from "../src/access/AccessController.sol";
 
 import {PantosBaseScript} from "./helpers/PantosHubDeployer.s.sol";
+import {SafeAddresses} from "./helpers/SafeAddresses.s.sol";
 
 /**
  * @title UpdateFeeFactors
@@ -15,14 +17,20 @@ import {PantosBaseScript} from "./helpers/PantosHubDeployer.s.sol";
  * @notice Update the fee factors at the Pantos Hub.
  *
  * @dev Usage
- * forge script ./script/UpdateFeeFactors.s.sol --account <account> \
- *     --sender <sender> --rpc-url <rpc alias> --slow --force \
- *     --sig "run(address)" <pantosHubProxy>
+ * forge script ./script/UpdateFeeFactors.s.sol --rpc-url <rpc alias>
+ *      --sig "roleActions(address,address)" <accessControllerAddress> \
+ *      <pantosHubProxy>
  */
-contract UpdateFeeFactors is PantosBaseScript {
-    function run(address pantosHubProxyAddress) public {
+contract UpdateFeeFactors is PantosBaseScript, SafeAddresses {
+    function roleActions(
+        address accessControllerAddress,
+        address pantosHubProxyAddress
+    ) public {
         IPantosHub pantosHubProxy = IPantosHub(pantosHubProxyAddress);
-        vm.startBroadcast();
+        AccessController accessController = AccessController(
+            accessControllerAddress
+        );
+        vm.startBroadcast(accessController.mediumCriticalOps());
 
         for (uint256 i; i < getBlockchainsLength(); i++) {
             Blockchain memory blockchain = getBlockchainById(BlockchainId(i));
@@ -72,5 +80,6 @@ contract UpdateFeeFactors is PantosBaseScript {
         }
 
         vm.stopBroadcast();
+        writeAllSafeInfo(accessController);
     }
 }

@@ -7,17 +7,37 @@ import {AccessController} from "../src/access/AccessController.sol";
 
 import {PantosTokenDeployer} from "./helpers/PantosTokenDeployer.s.sol";
 import {Constants} from "./helpers/Constants.s.sol";
+import {SafeAddresses} from "./helpers/SafeAddresses.s.sol";
 
-contract DeployLocalPantosTokenStandalone is PantosTokenDeployer {
-    function run(address forwarder, address accessControllerAddress) external {
+contract DeployLocalPantosTokenStandalone is
+    PantosTokenDeployer,
+    SafeAddresses
+{
+    function deploy(address accessControllerAddress) public {
         vm.startBroadcast();
-
-        PantosToken pantosToken = deployPantosToken(
+        deployPantosToken(
             Constants.INITIAL_SUPPLY_PAN,
             AccessController(accessControllerAddress)
         );
-        initializePantosToken(pantosToken, PantosForwarder(forwarder));
-
         vm.stopBroadcast();
+    }
+
+    function roleActions(
+        address accessControllerAddress,
+        address pantosTokenAddress,
+        address pantosForwarderAddress
+    ) external {
+        AccessController accessController = AccessController(
+            accessControllerAddress
+        );
+        PantosForwarder pantosForwarder = PantosForwarder(
+            pantosForwarderAddress
+        );
+        PantosToken pantosToken = PantosToken(pantosTokenAddress);
+
+        vm.startBroadcast(accessController.superCriticalOps());
+        initializePantosToken(pantosToken, pantosForwarder);
+        vm.stopBroadcast();
+        writeAllSafeInfo(accessController);
     }
 }

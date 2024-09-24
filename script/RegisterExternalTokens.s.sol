@@ -4,9 +4,11 @@ pragma solidity 0.8.26;
 /* solhint-disable no-console*/
 import {console2} from "forge-std/console2.sol";
 
+import {AccessController} from "../src/access/AccessController.sol";
 import {PantosTypes} from "../src/interfaces/PantosTypes.sol";
 import {IPantosHub} from "../src/interfaces/IPantosHub.sol";
 import {PantosBaseAddresses} from "./helpers/PantosBaseAddresses.s.sol";
+import {SafeAddresses} from "./helpers/SafeAddresses.s.sol";
 
 /**
  * @title RegisterExternalTokens
@@ -15,26 +17,24 @@ import {PantosBaseAddresses} from "./helpers/PantosBaseAddresses.s.sol";
  * Ethereum-compatible blockchain.
  *
  * @dev Usage
- * forge script ./script/RegisterExternalTokens.s.sol --account <account> \
- *     --sender <sender> --rpc-url <rpc alias> --slow --force
+ * forge script ./script/RegisterExternalTokens.s.sol --rpc-url <rpc alias> \
+ * --sig "roleActions(bool)" <writeSafeInfo> -vvvv
  *
  * This scripts expect all the address json files to be available at project
  * root dir.
  */
-contract RegisterExternalTokens is PantosBaseAddresses {
-    Blockchain public thisBlockchain;
+contract RegisterExternalTokens is PantosBaseAddresses, SafeAddresses {
+    AccessController accessController;
     IPantosHub public pantosHubProxy;
 
-    function registerExternalToken(Blockchain memory otherBlockchain) public {
+    function registerExternalToken(Blockchain memory otherBlockchain) private {
         string[] memory tokenSymbols = getTokenSymbols();
         for (uint256 i = 0; i < tokenSymbols.length; i++) {
-            string memory tokenSymbol = tokenSymbols[i];
-            address token = vm.parseAddress(
-                getContractAddress(thisBlockchain, tokenSymbol)
-            );
-            string memory externalToken = getContractAddress(
-                otherBlockchain,
-                tokenSymbol
+            Contract contract_ = _keysToContracts[tokenSymbols[i]];
+            address token = getContractAddress(contract_, false);
+            string memory externalToken = getContractAddressAsString(
+                contract_,
+                otherBlockchain.blockchainId
             );
 
             PantosTypes.ExternalTokenRecord
@@ -52,7 +52,7 @@ contract RegisterExternalTokens is PantosBaseAddresses {
                 );
                 console2.log(
                     "%s externally registered on chain=%s; externalToken=%s",
-                    tokenSymbol,
+                    tokenSymbols[i],
                     otherBlockchain.name,
                     externalToken
                 );
@@ -65,7 +65,7 @@ contract RegisterExternalTokens is PantosBaseAddresses {
                 ) {
                     console2.log(
                         "(Mismatch) %s already registered; chain=%s ; externalToken=%s",
-                        tokenSymbol,
+                        tokenSymbols[i],
                         otherBlockchain.name,
                         externalTokenRecord.externalToken
                     );
@@ -95,7 +95,7 @@ contract RegisterExternalTokens is PantosBaseAddresses {
                     console2.log(
                         "%s already registered; chain=%s ; externalToken=%s, "
                         "skipping registerExternalToken",
-                        tokenSymbol,
+                        tokenSymbols[i],
                         otherBlockchain.name,
                         externalTokenRecord.externalToken
                     );
@@ -104,14 +104,15 @@ contract RegisterExternalTokens is PantosBaseAddresses {
         }
     }
 
-    function registerExternalTokens() public {
+    function registerExternalTokens() private {
         for (uint256 i; i < getBlockchainsLength(); i++) {
             Blockchain memory otherBlockchain = getBlockchainById(
                 BlockchainId(i)
             );
 
             if (
-                otherBlockchain.blockchainId != thisBlockchain.blockchainId &&
+                otherBlockchain.blockchainId !=
+                determineBlockchain().blockchainId &&
                 !otherBlockchain.skip
             ) {
                 registerExternalToken(otherBlockchain);
@@ -119,18 +120,22 @@ contract RegisterExternalTokens is PantosBaseAddresses {
         }
     }
 
-    function run() public {
+    function roleActions(bool writeSafeInfo) public {
         readContractAddressesAllChains();
 
-        vm.startBroadcast();
-
-        thisBlockchain = determineBlockchain();
         pantosHubProxy = IPantosHub(
-            vm.parseAddress(getContractAddress(thisBlockchain, "hub_proxy"))
+            getContractAddress(Contract.HUB_PROXY, false)
+        );
+        accessController = AccessController(
+            getContractAddress(Contract.ACCESS_CONTROLLER, false)
         );
 
+        vm.startBroadcast(accessController.superCriticalOps());
         registerExternalTokens();
 
         vm.stopBroadcast();
+        if (writeSafeInfo) {
+            writeAllSafeInfo(accessController);
+        }
     }
 }

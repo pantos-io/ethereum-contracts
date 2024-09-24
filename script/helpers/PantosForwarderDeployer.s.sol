@@ -2,7 +2,7 @@
 pragma solidity 0.8.26;
 
 /* solhint-disable no-console*/
-import {console2} from "forge-std/console2.sol";
+import {console} from "forge-std/console.sol";
 
 import {IPantosHub} from "../../src/interfaces/IPantosHub.sol";
 import {PantosForwarder} from "../../src/PantosForwarder.sol";
@@ -20,7 +20,7 @@ abstract contract PantosForwarderDeployer is PantosBaseScript {
             Constants.MAJOR_PROTOCOL_VERSION,
             address(accessController)
         );
-        console2.log(
+        console.log(
             "PantosForwarder deployed; paused=%s; address=%s; "
             "accessController=%s",
             pantosForwarder.paused(),
@@ -38,20 +38,20 @@ abstract contract PantosForwarderDeployer is PantosBaseScript {
     ) public {
         // Set the hub, PAN token, and validator node addresses
         pantosForwarder.setPantosHub(address(pantosHubProxy));
-        console2.log(
+        console.log(
             "PantosForwarder.setPantosHub(%s)",
             address(pantosHubProxy)
         );
 
         pantosForwarder.setPantosToken(address(pantosToken));
-        console2.log(
+        console.log(
             "PantosForwarder.setPantosToken(%s)",
             address(pantosToken)
         );
 
         for (uint i = 0; i < validatorNodeAddresses.length; i++) {
             pantosForwarder.addValidatorNode(validatorNodeAddresses[i]);
-            console2.log(
+            console.log(
                 "PantosForwarder.addValidatorNode(%s)",
                 validatorNodeAddresses[i]
             );
@@ -60,7 +60,7 @@ abstract contract PantosForwarderDeployer is PantosBaseScript {
         pantosForwarder.setMinimumValidatorNodeSignatures(
             Constants.MINIMUM_VALIDATOR_NODE_SIGNATURES
         );
-        console2.log(
+        console.log(
             "PantosForwarder.setMinimumValidatorNodeSignatures(%s)",
             vm.toString(Constants.MINIMUM_VALIDATOR_NODE_SIGNATURES)
         );
@@ -68,9 +68,20 @@ abstract contract PantosForwarderDeployer is PantosBaseScript {
         // Unpause the forwarder contract after initialization
         pantosForwarder.unpause();
 
-        console2.log(
+        console.log(
             "PantosForwarder initialized; paused=%s",
             pantosForwarder.paused()
         );
+    }
+
+    function pauseForwarder(PantosForwarder pantosForwarder) public {
+        if (!pantosForwarder.paused()) {
+            pantosForwarder.pause();
+            console.log(
+                "PantosForwarder(%s): paused=%s",
+                address(pantosForwarder),
+                pantosForwarder.paused()
+            );
+        }
     }
 }

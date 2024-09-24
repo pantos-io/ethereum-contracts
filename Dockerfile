@@ -29,12 +29,14 @@ RUN echo ${MNEMONIC} > mnemonic.txt
 
 RUN anvil --port 8545 --chain-id 31337 --state-interval 1 --dump-state anvil-state.json --config-out accounts --mnemonic "${MNEMONIC}" & \
     while ! nc -z 127.0.0.1 8545; do echo 'Waiting for anvil to be available'; sleep 1; done && \
+    echo '{"deployer": "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266","medium_critical_ops":"0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266","pauser": "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266","super_critical_ops": "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266"}' > ETHEREUM-ROLES.json && \
     forge script ./script/DeployContracts.s.sol --account local_deployer \
     --password '' --sender 0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266 --rpc-url local-8545 \
-    --sig "run(address,address,address,address,address,uint256,uint256,uint256,address[])" \
-    0x88CE2c1d82328f84Dd197f63482A3B68E18cD707 0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266 \
-    0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266 0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266 \
-    0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266 100000000000000000 100000000000000000 0 [] --broadcast && \
+    --sig "deploy(uint256,uint256)" 100000000000000000 100000000000000000 --broadcast && \
+    forge script ./script/DeployContracts.s.sol --account local_deployer --password '' \
+    --sender 0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266 --rpc-url local-8545 --sig \
+    "roleActions(uint256,address,address[],bool)" 0 0x88CE2c1d82328f84Dd197f63482A3B68E18cD707 \
+    [] false --broadcast && \
     # Convert the Ethereum json to an env file and copy it over
     for chain in ETHEREUM BNB_CHAIN AVALANCHE POLYGON CRONOS FANTOM CELO; do \
     file="$chain.json"; \
@@ -48,7 +50,7 @@ RUN anvil --port 8545 --chain-id 31337 --state-interval 1 --dump-state anvil-sta
     HASH=$(sha256sum anvil-state.json | cut -d ' ' -f 1) && \
     forge script ./script/RegisterExternalTokens.s.sol --account local_deployer \
     --password '' --sender 0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266 \
-    --rpc-url local-8545 --sig "run()" --broadcast && \
+    --rpc-url local-8545 --sig "roleActions(bool)" false --broadcast && \
     echo "Waiting for the state to change..." && \
     # While the state is the same, keep waiting
     while [ $(sha256sum anvil-state.json | cut -d ' ' -f 1) = $HASH ]; do sleep 1; done
