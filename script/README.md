@@ -60,7 +60,7 @@ Enter password: # (Hit enter for an empty password)
 ### DeploySafe
 
 ```bash
-$ forge script ./script/DeploySafe.s.sol --account local_deployer --password '' --sender 0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266 --rpc-url local-8545 -vvvv --sig "deploySafes(address[],uint256,address[],uint256,address[],uint256,address[],uint256)" [0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266] 1 [0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266] 1 [0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266] 1 [0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266] 1
+$ forge script ./script/DeploySafe.s.sol --account local_deployer --password '' --rpc-url local-8545 -vvvv --sig "deploySafes(address[],uint256,address[],uint256,address[],uint256,address[],uint256)" [0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266] 1 [0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266] 1 [0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266] 1 [0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266] 1
 ```
 
 ### DeployContracts
@@ -68,7 +68,7 @@ $ forge script ./script/DeploySafe.s.sol --account local_deployer --password '' 
 Deploy all contracts from any gas paying account
 
 ```bash
-$ forge script ./script/DeployContracts.s.sol --account local_deployer --password '' --sender 0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266 --rpc-url local-8545 -vvvv --sig "deploy(uint256,uint256)" 100000000000000000 100000000000000000
+$ forge script ./script/DeployContracts.s.sol --account local_deployer --password '' --rpc-url local-8545 -vvvv --sig "deploy(uint256,uint256)" 100000000000000000 100000000000000000
 ```
 
 RoleActions for all deployed contracts (simulation only!)
@@ -88,7 +88,7 @@ $ forge script ./script/DeployContracts.s.sol --rpc-url local-8545 -vvvv --sig "
 ### SubmitSafeTxs
 
 ```bash
-$ forge script ./script/SubmitSafeTxs.s.sol --account local_deployer --password '' --sender 0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266 --rpc-url local-8545  -vvvv --sig "run()"
+$ forge script ./script/SubmitSafeTxs.s.sol --account local_deployer --password '' --rpc-url local-8545  -vvvv --sig "run()"
 ```
 
 ### RegisterExternalTokens
@@ -108,7 +108,7 @@ $ forge script ./script/UpdateFeeFactors.s.sol --rpc-url local-8545 -vvvv --sig 
 Deploy all contracts from any gas paying account
 
 ```bash
-$ forge script ./script/redeploy/RedeployHub.s.sol --account local_deployer --password '' --sender 0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266 --rpc-url local-8545 -vvvv --sig "deploy(address)" 0x9fE46736679d2D9a65F0992F2272dE9f3c7fa6e0
+$ forge script ./script/redeploy/RedeployHub.s.sol --account local_deployer --password '' --rpc-url local-8545 -vvvv --sig "deploy(address)" 0x9fE46736679d2D9a65F0992F2272dE9f3c7fa6e0
 
 ```
 
@@ -124,7 +124,7 @@ forge script ./script/redeploy/RedeployHub.s.sol --rpc-url local-8545 -vvvv --si
 Deploy all facet contracts from any gas paying account
 
 ```bash
-$ forge script ./script/redeploy/UpgradeHub.s.sol --account local_deployer --password '' --sender 0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266 --rpc-url local-8545 -vvvv --sig "deploy()"
+$ forge script ./script/redeploy/UpgradeHub.s.sol --account local_deployer --password '' --rpc-url local-8545 -vvvv --sig "deploy()"
 ```
 
 RoleActions for all redeployed contracts (simulation only!)
@@ -137,7 +137,7 @@ forge script ./script/redeploy/UpgradeHub.s.sol --rpc-url local-8545 -vvvv --sig
 Deploy new contracts from any gas paying account
 
 ```bash
-forge script ./script/redeploy/RedeployForwarder.s.sol --account local_deployer --password '' --sender 0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266 --rpc-url local-8545 -vvvv --sig "deploy(address)" 0x9fE46736679d2D9a65F0992F2272dE9f3c7fa6e0
+forge script ./script/redeploy/RedeployForwarder.s.sol --account local_deployer --password '' --rpc-url local-8545 -vvvv --sig "deploy(address)" 0x9fE46736679d2D9a65F0992F2272dE9f3c7fa6e0
 ```
 RoleActions for all redeployed contracts (simulation only!)
 ```bash
@@ -149,7 +149,7 @@ forge script ./script/redeploy/RedeployForwarder.s.sol --rpc-url local-8545 -vvv
 Deploy new contracts from any gas paying account
 
 ```bash
-$ forge script ./script/redeploy/RedeployHubAndForwarder.s.sol --account local_deployer --password '' --sender 0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266 --rpc-url local-8545 -vvvv --sig "deploy(address)" 0x9fE46736679d2D9a65F0992F2272dE9f3c7fa6e0
+$ forge script ./script/redeploy/RedeployHubAndForwarder.s.sol --account local_deployer --password '' --rpc-url local-8545 -vvvv --sig "deploy(address)" 0x9fE46736679d2D9a65F0992F2272dE9f3c7fa6e0
 ```
 RoleActions for all redeployed contracts (simulation only!)
 ```bash
@@ -159,7 +159,7 @@ forge script ./script/redeploy/RedeployHubAndForwarder.s.sol --rpc-url local-854
 ### UpgradeHubAndRedeployForwarder
 
 ```bash
-forge script ./script/redeploy/UpgradeHubAndRedeployForwarder.s.sol --account local_deployer --password '' --sender 0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266 --rpc-url local-8545 -vvvv --sig "deploy(address)" 0x9fE46736679d2D9a65F0992F2272dE9f3c7fa6e0
+forge script ./script/redeploy/UpgradeHubAndRedeployForwarder.s.sol --account local_deployer --password '' --rpc-url local-8545 -vvvv --sig "deploy(address)" 0x9fE46736679d2D9a65F0992F2272dE9f3c7fa6e0
 ```
 
 RoleActions for all redeployed contracts (simulation only!)
