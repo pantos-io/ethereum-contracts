@@ -19,7 +19,7 @@ services:
     networks:
       pantos-ethereum:
     environment:
-      CHAIN_ID: 31337
+      CHAIN: ethereum
     volumes:
       # Workaround so that we can also access the data locally
       # Without needing an additional container
@@ -32,6 +32,26 @@ services:
       timeout: 10s
       retries: 5
       start_period: 10s
+    develop:
+      watch:
+        - action: rebuild
+          path: src
+        - action: rebuild
+          path: script
+        - action: rebuild
+          path: lib
+        - action: rebuild
+          path: deploy_chain.sh
+        - action: rebuild
+          path: remappings.txt
+        - action: rebuild
+          path: Dockerfile
+        - action: sync+restart
+          path: entrypoint.sh
+          target: /root/entrypoint.sh
+        - action: sync+restart
+          path: docker-compose.yml
+          target: /root/docker-compose.yml
   bnb:
     restart: always
     image: pantosio/ethereum-node:${DOCKER_TAG-local}
@@ -52,13 +72,33 @@ services:
       source: bnb-data
       target: /data
     environment:
-      CHAIN_ID: 31338
+      CHAIN: bnb_chain
     healthcheck:
       test: ["CMD-SHELL", "cast block-number"]
       interval: 30s
       timeout: 10s
       retries: 5
       start_period: 10s
+    develop:
+      watch:
+        - action: rebuild
+          path: src
+        - action: rebuild
+          path: script
+        - action: rebuild
+          path: lib
+        - action: rebuild
+          path: deploy_chain.sh
+        - action: rebuild
+          path: remappings.txt
+        - action: rebuild
+          path: Dockerfile
+        - action: sync+restart
+          path: entrypoint.sh
+          target: /root/entrypoint.sh
+        - action: sync+restart
+          path: docker-compose.yml
+          target: /root/docker-compose.yml
 
 volumes:
   eth-data:

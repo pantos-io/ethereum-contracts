@@ -8,7 +8,4 @@
 !remappings.txt
 !.git
 !entrypoint.sh
-Dockerfile
-docker-compose.yml
-data
-venv*
+!deploy_chain.sh

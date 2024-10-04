@@ -3,5 +3,15 @@ name: ${STACK_NAME-local}
 services:
   eth:
     platform: linux/amd64
+    develop:
+      watch:
+        - action: sync+restart
+          path: docker-compose.ci.yml
+          target: /root/docker-compose.ci.yml
   bnb:
     platform: linux/amd64
+    develop:
+      watch:
+        - action: sync+restart
+          path: docker-compose.ci.yml
+          target: /root/docker-compose.ci.yml

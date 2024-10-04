@@ -62,6 +62,10 @@ jobs:
   docker-build:
     name: Build Docker images
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        arch: ['amd64']
     steps:
       - uses: step-security/harden-runner@v2
         with:
@@ -86,13 +90,12 @@ jobs:
 
       - name: Build and load
         run: |
-          docker buildx bake \
-            --set "*.cache-from=type=gha" \
+          mkdir export
+          make docker-build ARGS='--set "*.cache-from=type=gha" \
             --set "*.cache-to=type=gha,mode=max" \
-            --set "*.platform=linux/amd64" \
+            --set "*.platform=linux/${{ matrix.arch }}" \
             --builder ${{ steps.buildx.outputs.name }} \
-            -f docker-compose.yml \
-            --load
+            --set "eth.output=type=tar,dest=export/eth.tar"'
 
       - name: Test
         timeout-minutes: 5
@@ -104,6 +107,13 @@ jobs:
         if: always()
         run: |
           make docker-logs || true
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: docker-images-${{ matrix.arch }}
+          path: export
+          retention-days: 1
   
   static-analysis:
     name: Static analysis
@@ -135,3 +145,35 @@ jobs:
         uses: github/codeql-action/upload-sarif@v3
         with:
           sarif_file: ${{ steps.slither.outputs.sarif }}
+
+  e2e-tests:
+    name: E2E tests
+    needs: docker-build
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        arch: ['amd64']
+    env:
+      PANTOS_ETHEREUM_CONTRACTS: ${{ github.workspace }}/ethereum-contracts
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          path: ${{ env.PANTOS_ETHEREUM_CONTRACTS }}
+          sparse-checkout: |
+            docker-compose.yml
+            Makefile
+            
+      - name: Download artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: docker-images-${{ matrix.arch }}
+          path: export
+
+      - name: Load images
+        run: |
+          cat export/eth.tar | docker import - pantosio/ethereum-node:local
+      - uses: pantos-io/e2e-testing/.github/actions/run-tests@main
+        with:
+          ethereum-contracts-path: ${{ env.PANTOS_ETHEREUM_CONTRACTS }}
+          ethereum-contracts-version: 'local'

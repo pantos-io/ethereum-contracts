@@ -66,6 +66,24 @@ This will also create two docker volumes, `eth-data` and `bnb-data`, containing 
 
 If using this project alongside the service or validator node projects one can run the full stack by first starting the blockchain nodes with `make docker` and, after these are running, doing the same in the other projects. They will automatically pick up the data exposed by this project.
 
+#### Local development with Docker
+
+You can do local development with Docker by enabling dev mode (Docker watch mode). To do so, set the environment variable `DEV_MODE` to true, like this:
+
+`DEV_MODE=true make docker`
+
+#### Multiple local deployments
+
+We support multiple local deployments, for example for testing purposes, you can run the stacks like this:
+
+`make docker INSTANCE_COUNT=<number of instances>`
+
+To remove all the stacks, run the following:
+
+`make docker-remove`
+
+Please note that this mode uses an incremental amount of resources and that Docker Desktop doesn't fully support displaying it, but it should be good enough to test multi-sig locally.
+
 ### Deploy & Operations
 
 Please see ```scripts/README.md```
