@@ -14,6 +14,7 @@ import {PantosHubInit} from "../src/upgradeInitializers/PantosHubInit.sol";
 import {PantosRegistryFacet} from "../src/facets/PantosRegistryFacet.sol";
 import {PantosTransferFacet} from "../src/facets/PantosTransferFacet.sol";
 import {DiamondCutFacet} from "../src/facets/DiamondCutFacet.sol";
+import {PantosTokenMigrator} from "../src/PantosTokenMigrator.sol";
 
 import {PantosHubDeployer, PantosFacets} from "./helpers/PantosHubDeployer.s.sol";
 import {PantosForwarderDeployer} from "./helpers/PantosForwarderDeployer.s.sol";
@@ -27,19 +28,27 @@ import {SafeAddresses} from "./helpers/SafeAddresses.s.sol";
 /**
  * @title DeployContracts
  *
- * @notice Deploy and initialize all the Pantos smart contracts on an
+ * @notice Deploy and initialize the Pantos smart contracts on an
  * Ethereum-compatible single blockchain.
  *
  * @dev Usage
- * 1. Deploy by any gas paying account:
+ * 1. Deploy by any gas paying account (on chains where
+ *    the old PAN does not exist):
  * forge script ./script/DeployContracts.s.sol --account <account> \
  *     --sender <sender> --rpc-url <rpc alias> --slow --force --sig \
  *     "deploy(uint256,uint256)" <panSupply> <bestSupply>
  *
- * 2. Simulate roleActions to be later signed by appropriate roles
+ * 2. Deploy the remaining contracts from any gas paying account
+ *    (on chains where the old PAN, new PAN, Access Controller,
+ *    and the PAN migrator exist)
+ * forge script ./script/DeployContracts.s.sol --account <account> \
+ *     --sender <sender> --rpc-url <rpc alias> --slow --force --sig \
+ *     "deploy(uint256)" <bestSupply>
+ *
+ * 3. Simulate roleActions to be later signed by appropriate roles
  * forge script ./script/DeployContracts.s.sol --rpc-url <rpc alias> \
- *          -vvvv --sig "roleActions(uint256,address,address[],bool)" \
- *          <nextTransferId> <primaryValidator> <otherValidators> <writeSafeInfo>
+ *     -vvvv --sig "roleActions(uint256,address,address[],bool)" \
+ *     <nextTransferId> <primaryValidator> <otherValidators> <writeSafeInfo>
  */
 contract DeployContracts is
     PantosBaseAddresses,
@@ -59,6 +68,7 @@ contract DeployContracts is
     PantosToken pantosToken;
     BitpandaEcosystemToken bitpandaEcosystemToken;
     PantosWrapper[] pantosWrappers;
+    PantosTokenMigrator pantosTokenMigrator;
 
     function deploy(uint256 panSupply, uint256 bestSupply) public {
         vm.startBroadcast();
@@ -76,8 +86,8 @@ contract DeployContracts is
         (pantosHubProxy, pantosHubInit, pantosFacets) = deployPantosHub(
             accessController
         );
-        pantosForwarder = deployPantosForwarder(accessController);
         pantosToken = deployPantosToken(panSupply, accessController);
+        pantosForwarder = deployPantosForwarder(accessController);
         bitpandaEcosystemToken = deployBitpandaEcosystemToken(
             bestSupply,
             accessController
@@ -85,7 +95,21 @@ contract DeployContracts is
         pantosWrappers = deployCoinWrappers(accessController);
         vm.stopBroadcast();
 
-        exportAllContractAddresses();
+        exportAllContractAddresses(false);
+    }
+
+    function deploy(uint256 bestSupply) public {
+        vm.startBroadcast();
+        importMigratorAndDependencies();
+        pantosForwarder = deployPantosForwarder(accessController);
+        bitpandaEcosystemToken = deployBitpandaEcosystemToken(
+            bestSupply,
+            accessController
+        );
+        pantosWrappers = deployCoinWrappers(accessController);
+        vm.stopBroadcast();
+
+        exportAllContractAddresses(true);
     }
 
     function roleActions(
@@ -141,9 +165,14 @@ contract DeployContracts is
         }
     }
 
-    function exportAllContractAddresses() internal {
+    function exportAllContractAddresses(
+        bool isMigratorIncludedInExport
+    ) internal {
+        uint256 length = isMigratorIncludedInExport
+            ? 11 + pantosWrappers.length
+            : 10 + pantosWrappers.length;
         ContractAddress[] memory contractAddresses = new ContractAddress[](
-            10 + pantosWrappers.length
+            length
         );
         contractAddresses[0] = ContractAddress(
             Contract.ACCESS_CONTROLLER,
@@ -189,6 +218,12 @@ contract DeployContracts is
             contractAddresses[i + 10] = ContractAddress(
                 _keysToContracts[pantosWrappers[i].symbol()],
                 address(pantosWrappers[i])
+            );
+        }
+        if (isMigratorIncludedInExport) {
+            contractAddresses[length - 1] = ContractAddress(
+                Contract.PAN_MIGRATOR,
+                address(pantosTokenMigrator)
             );
         }
         exportContractAddresses(contractAddresses, false);
@@ -248,6 +283,18 @@ contract DeployContracts is
         );
         pantosWrappers[6] = PantosWrapper(
             getContractAddress(Contract.PAN_MATIC, false)
+        );
+    }
+
+    function importMigratorAndDependencies() internal {
+        readContractAddresses(determineBlockchain());
+
+        accessController = AccessController(
+            getContractAddress(Contract.ACCESS_CONTROLLER, false)
+        );
+        pantosToken = PantosToken(getContractAddress(Contract.PAN, false));
+        pantosTokenMigrator = PantosTokenMigrator(
+            getContractAddress(Contract.PAN_MIGRATOR, false)
         );
     }
 }
