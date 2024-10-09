@@ -34,6 +34,7 @@ abstract contract PantosBaseAddresses is PantosBaseScript {
         ACCESS_CONTROLLER,
         BEST,
         PAN,
+        PAN_MIGRATOR,
         PAN_AVAX,
         PAN_BNB,
         PAN_CELO,
@@ -281,6 +282,9 @@ abstract contract PantosBaseAddresses is PantosBaseScript {
                     Contract.PAN
                 ] = _getPanContractInfo();
                 _otherChaincontractInfo[blockchainId][
+                    Contract.PAN_MIGRATOR
+                ] = _getPanMigratorContractInfo();
+                _otherChaincontractInfo[blockchainId][
                     Contract.PAN_AVAX
                 ] = _getPanAVAXContractInfo();
                 _otherChaincontractInfo[blockchainId][
@@ -348,6 +352,12 @@ abstract contract PantosBaseAddresses is PantosBaseScript {
         );
         _currentChainContractInfo[Contract.PAN] = CurrentChainContractInfo(
             _getPanContractInfo(),
+            address(0)
+        );
+        _currentChainContractInfo[
+            Contract.PAN_MIGRATOR
+        ] = CurrentChainContractInfo(
+            _getPanMigratorContractInfo(),
             address(0)
         );
         _currentChainContractInfo[
@@ -506,6 +516,19 @@ abstract contract PantosBaseAddresses is PantosBaseScript {
             true
         );
         return panContractInfo;
+    }
+
+    function _getPanMigratorContractInfo()
+        private
+        pure
+        returns (ContractInfo memory)
+    {
+        ContractInfo memory panMigratorContractInfo = ContractInfo(
+            "pan_migrator",
+            address(0),
+            false
+        );
+        return panMigratorContractInfo;
     }
 
     function _getPanAVAXContractInfo()
