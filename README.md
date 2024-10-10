@@ -60,6 +60,10 @@ $ forge snapshot
 
 ### Docker
 
+**IMPORTANT**: This setup is meant for Docker Desktop. While you may be able to get the same configuration with a locally installed docker engine, we don't actively support this because of the variation amongst distributions.
+
+This setup has been tested with Docker Desktop 2.29.2.
+
 You can run local blockchain nodes using `make docker`. This will start two nodes in ports `8545` and `8546` (called eth and bnb respectively) with the contracts deployed on the same addresses.
 
 This will also create two docker volumes, `eth-data` and `bnb-data`, containing the list of deployed addresses (both in json and .env formats) alongside with the keystore and accounts used. You can access these by using either a docker GUI or by mounting it into a container like this `docker run --rm -v bnb-data:/volume alpine ls /volume`
