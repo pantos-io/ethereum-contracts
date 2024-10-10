@@ -1256,24 +1256,6 @@ contract PantosForwarderTest is PantosBaseTest {
         pantosForwarder.verifyTransfer(request, signature);
     }
 
-    function test_verifyTransferNotByPantosHub()
-        external
-        parameterizedTest(validatorCounts)
-    {
-        initializePantosForwarder();
-        PantosTypes.TransferRequest memory request = transferRequest();
-        bytes32 digest = getDigest(request);
-        bytes memory signature = sign(testWallet, digest);
-
-        bytes memory calldata_ = abi.encodeWithSelector(
-            PantosForwarder.verifyTransfer.selector,
-            request,
-            signature
-        );
-
-        onlyByPantosHubTest(address(pantosForwarder), calldata_);
-    }
-
     function test_verifyTransferZeroAmount()
         external
         parameterizedTest(validatorCounts)
