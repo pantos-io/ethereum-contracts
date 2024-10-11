@@ -69,11 +69,12 @@ deploy_for_chain() {
 
     forge script "$ROOT_DIR/script/DeployContracts.s.sol" --account local_deployer --chain-id $chain_id \
         --password '' --rpc-url http://127.0.0.1:$port \
-        --sig "deploy(uint256,uint256)" 100000000000000000 100000000000000000 --broadcast -vvv
+        --sig "deploy(uint256,uint256)" 10000000000000000 100000000000000000 --broadcast -vvv
+
 
     forge script "$ROOT_DIR/script/DeployContracts.s.sol" --account local_deployer --chain-id $chain_id \
         --password '' --rpc-url http://127.0.0.1:$port \
-         --sig "roleActions(uint256,address,address[],bool)" 0 0x88CE2c1d82328f84Dd197f63482A3B68E18cD707 \
+         --sig "roleActions(uint256,address,address[],bool)" 0 0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266 \
         [] false --broadcast -vvv
 
     jq --arg chain "$chain" -r 'to_entries | map({key: (if .key == "hub_proxy" then "hub" elif .key == "pan" then "pan_token" else .key end), value: .value}) | map("\($chain|ascii_upcase)_\(.key|ascii_upcase)=\(.value|tostring)") | .[]' "$ROOT_DIR/$chain.json" > "$chain_dir/$chain.env"
