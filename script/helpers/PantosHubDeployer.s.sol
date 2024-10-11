@@ -201,6 +201,13 @@ abstract contract PantosHubDeployer is PantosBaseScript {
 
         address currentPantosToken = pantosHub.getPantosToken();
         if (currentPantosToken != address(pantosToken)) {
+            if (pantosToken.getPantosForwarder() != address(pantosForwarder)) {
+                pantosToken.setPantosForwarder(address(pantosForwarder));
+                console.log(
+                    "PantosToken.setPantosForwarder(%s)",
+                    address(pantosForwarder)
+                );
+            }
             pantosHub.setPantosToken(address(pantosToken));
             console.log("PantosHub.setPantosToken(%s)", address(pantosToken));
         } else {
