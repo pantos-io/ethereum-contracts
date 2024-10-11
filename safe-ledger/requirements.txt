@@ -1,0 +1,13 @@
+safe-eth-py==v6.0.0b36
+eth-typing~=4.4.0
+eth-utils~=4.1.1
+bandit==1.7.5
+flake8==6.0.0
+isort==5.12.0
+mypy==1.0.1
+pre-commit==3.3.3
+pytest==7.4.0
+pytest-cov==4.1.0
+types-PyYAML==6.0.12.10
+wheel==0.38.1
+yapf==0.40.1
