@@ -419,7 +419,7 @@ contract PantosForwarder is IPantosForwarder, EIP712, Pausable, PantosRBAC {
      */
     function isValidValidatorNodeNonce(
         uint256 nonce
-    ) external view override onlyPantosHub returns (bool) {
+    ) external view override returns (bool) {
         return !_usedValidatorNodeNonces[nonce];
     }
 
@@ -429,7 +429,7 @@ contract PantosForwarder is IPantosForwarder, EIP712, Pausable, PantosRBAC {
     function isValidSenderNonce(
         address sender,
         uint256 nonce
-    ) public view override onlyPantosHub returns (bool) {
+    ) public view override returns (bool) {
         return !_usedSenderNonces[sender][nonce];
     }
 
@@ -439,7 +439,7 @@ contract PantosForwarder is IPantosForwarder, EIP712, Pausable, PantosRBAC {
     function verifyTransfer(
         PantosTypes.TransferRequest calldata request,
         bytes memory signature
-    ) public view override onlyPantosHub {
+    ) public view override {
         // Token and service node are verified by the PantosHub
         // In a token transfer within a single blockchain, the sender and
         // recipient addresses must not be identical
@@ -460,7 +460,7 @@ contract PantosForwarder is IPantosForwarder, EIP712, Pausable, PantosRBAC {
     function verifyTransferFrom(
         PantosTypes.TransferFromRequest calldata request,
         bytes memory signature
-    ) public view override onlyPantosHub {
+    ) public view override {
         // Destination blockchain, token, and service node are verified by the
         // PantosHub
         // Verify the amount, sender nonce, validity period, and signature
@@ -477,7 +477,7 @@ contract PantosForwarder is IPantosForwarder, EIP712, Pausable, PantosRBAC {
         PantosTypes.TransferToRequest calldata request,
         address[] memory signerAddresses,
         bytes[] memory signatures
-    ) public view override onlyPantosHub {
+    ) public view override {
         // Source blockchain and token are verified by the PantosHub
         // Verify the amount, validator nonce, and signatures
         _verifyAmount(request.amount);
