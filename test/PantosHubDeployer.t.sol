@@ -172,6 +172,10 @@ abstract contract PantosHubDeployer is PantosBaseTest {
 
     function _initializePantosHubValues() public {
         mockPandasToken_getOwner(PANTOS_TOKEN_ADDRESS, SUPER_CRITICAL_OPS);
+        mockPandasToken_getPantosForwarder(
+            PANTOS_TOKEN_ADDRESS,
+            PANTOS_FORWARDER_ADDRESS
+        );
 
         // Set the forwarder, PAN token, and primary validator addresses
         vm.startPrank(SUPER_CRITICAL_OPS);
@@ -223,6 +227,19 @@ abstract contract PantosHubDeployer is PantosBaseTest {
             tokenAddress,
             abi.encodeWithSelector(PantosBaseToken.getOwner.selector),
             abi.encode(owner)
+        );
+    }
+
+    function mockPandasToken_getPantosForwarder(
+        address tokenAddress,
+        address pantosForwarderAddress
+    ) public {
+        vm.mockCall(
+            tokenAddress,
+            abi.encodeWithSelector(
+                PantosBaseToken.getPantosForwarder.selector
+            ),
+            abi.encode(pantosForwarderAddress)
         );
     }
 
