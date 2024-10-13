@@ -63,12 +63,26 @@ Enter password: # (Hit enter for an empty password)
 $ forge script ./script/DeploySafe.s.sol --account local_deployer --password '' --rpc-url local-8545 -vvvv --sig "deploySafes(address[],uint256,address[],uint256,address[],uint256,address[],uint256)" [0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266] 1 [0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266] 1 [0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266] 1 [0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266] 1
 ```
 
+### DeployPanMigrator
+
+Deploy the PAN migrator and all of its dependencies (Access Controller and the new PAN token)
+
+```bash
+$ forge script ./script/DeployPanMigrator.s.sol --account local_deployer --password '' --rpc-url local-8545 -vvvv --sig "deploy(address)" 0x536381a8628dBcC8C70aC9A30A7258442eAb4c92
+```
+
 ### DeployContracts
 
-Deploy all contracts from any gas paying account
+Deploy all contracts from any gas paying account (on chains where the old PAN does not exist)
 
 ```bash
 $ forge script ./script/DeployContracts.s.sol --account local_deployer --password '' --rpc-url local-8545 -vvvv --sig "deploy(uint256,uint256)" 100000000000000000 100000000000000000
+```
+
+Deploy the remaining contracts from any gas paying account (on chains where the old PAN, new PAN, Access Controller, and the PAN migrator exist)
+
+```bash
+forge script ./script/DeployContracts.s.sol --account local_deployer --password '' --rpc-url local-8545 -vvvv --sig "deploy(uint256)" 100000000000000000 --broadcast
 ```
 
 RoleActions for all deployed contracts (simulation only!)
