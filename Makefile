@@ -1,9 +1,7 @@
 STACK_BASE_NAME=stack-ethereum-contracts
 INSTANCE_COUNT ?= 1
 DEV_MODE ?= false
-SHELL := $(shell which bash || which sh)
-
-$(shell echo "Using shell: $(SHELL)")
+SHELL := $(shell which bash) -x
 
 .PHONY: build
 build:
