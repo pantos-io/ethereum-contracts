@@ -163,6 +163,7 @@ jobs:
           sparse-checkout: |
             docker-compose.yml
             docker-compose.ci.yml
+            docker-compose.local.yml
             Makefile
             
       - name: Download artifacts
