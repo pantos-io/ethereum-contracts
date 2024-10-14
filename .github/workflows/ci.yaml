@@ -95,7 +95,7 @@ jobs:
             --set "*.cache-to=type=gha,mode=max" \
             --set "*.platform=linux/${{ matrix.arch }}" \
             --builder ${{ steps.buildx.outputs.name }} \
-            --set "eth.output=type=tar,dest=export/eth.tar"'
+            --set "*.output=type=tar,dest=export/eth.tar"'
 
       - name: Test
         timeout-minutes: 5
@@ -161,29 +161,15 @@ jobs:
         with:
           path: ${{ env.PANTOS_ETHEREUM_CONTRACTS }}
             
-      - name: Set up QEMU
-        uses: docker/setup-qemu-action@v3
+      - name: Download artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: docker-images-${{ matrix.arch }}
+          path: export
 
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-        id: buildx
-
-      - name: Check docker config and disable live reload
-        working-directory: ${{ env.PANTOS_ETHEREUM_CONTRACTS }}
+      - name: Load images
         run: |
-          cat /etc/docker/daemon.json
-          echo '{ "live-restore": false }' | sudo tee /etc/docker/daemon.json
-          sudo systemctl reload docker
-          make check-swarm-init
-
-      - name: Build and load
-        working-directory: ${{ env.PANTOS_ETHEREUM_CONTRACTS }}
-        run: |
-          make docker-build ARGS='--set "*.cache-from=type=gha" \
-            --set "*.cache-to=type=gha,mode=max" \
-            --set "*.platform=linux/${{ matrix.arch }}" \
-            --builder ${{ steps.buildx.outputs.name }} \
-            --load'
+          cat export/eth.tar | docker import - pantosio/ethereum-node:local
 
       - uses: pantos-io/e2e-testing/.github/actions/run-tests@main
         with:
