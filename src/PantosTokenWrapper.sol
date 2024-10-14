@@ -3,6 +3,7 @@
 pragma solidity 0.8.26;
 
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
 import {PantosWrapper} from "./PantosWrapper.sol";
 
@@ -16,6 +17,8 @@ import {PantosWrapper} from "./PantosWrapper.sol";
  * address on exactly one supported blockchain network.
  */
 contract PantosTokenWrapper is PantosWrapper {
+    using SafeERC20 for IERC20;
+
     address private immutable _wrappedToken;
 
     constructor(
@@ -50,13 +53,10 @@ contract PantosTokenWrapper is PantosWrapper {
             msg.sender,
             address(this)
         );
-        require(
-            IERC20(_wrappedToken).transferFrom(
-                msg.sender,
-                address(this),
-                amount
-            ),
-            "PantosTokenWrapper: transfer of tokens failed"
+        IERC20(_wrappedToken).safeTransferFrom(
+            msg.sender,
+            address(this),
+            amount
         );
         _mint(msg.sender, amount);
     }
@@ -66,10 +66,7 @@ contract PantosTokenWrapper is PantosWrapper {
      */
     function unwrap(uint256 amount) public override whenNotPaused onlyNative {
         _burn(msg.sender, amount);
-        require(
-            IERC20(_wrappedToken).transfer(msg.sender, amount),
-            "PantosTokenWrapper: transfer of tokens failed"
-        );
+        IERC20(_wrappedToken).safeTransfer(msg.sender, amount);
     }
 
     /**
