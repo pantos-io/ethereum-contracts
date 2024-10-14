@@ -220,8 +220,8 @@ interface IPantosRegistry {
      *
      * @param pantosToken The address of the Pantos Token contract.
      *
-     * @dev The function can only be called by the deployer role
-     * and only if the contract is paused.
+     * @dev The function can only be called by the super critical ops
+     * role and only if the contract is paused.
      */
     function setPantosToken(address pantosToken) external;
 
