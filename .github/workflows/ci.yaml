@@ -162,6 +162,7 @@ jobs:
           path: ${{ env.PANTOS_ETHEREUM_CONTRACTS }}
           sparse-checkout: |
             docker-compose.yml
+            docker-compose.ci.yml
             Makefile
             
       - name: Download artifacts
