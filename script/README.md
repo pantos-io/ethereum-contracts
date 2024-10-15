@@ -60,7 +60,7 @@ Enter password: # (Hit enter for an empty password)
 ### DeploySafe
 
 ```bash
-$ forge script ./script/DeploySafe.s.sol --account local_deployer --password '' --rpc-url local-8545 -vvvv --sig "deploySafes(address[],uint256,address[],uint256,address[],uint256,address[],uint256)" [0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266] 1 [0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266] 1 [0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266] 1 [0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266] 1
+$ forge script ./script/DeploySafe.s.sol --account local_deployer --password '' --rpc-url local-8545 -vvvv --sig "deploySafes(address[],uint256,address[],uint256,address[],uint256,address[],uint256)" [0x8C3229EC621644789d7F61FAa82c6d0E5F97d43D] 1 [0x9586A4833970847aef259aD5BFB7aa8901DDf746] 1 [0x0e9971c0005D91336c1441b8F03c1C4fe5FB4584] 1 [0xC4c81D5C1851702d27d602aA8ff830A7689F17cc] 1
 ```
 
 ### DeployPanMigrator
@@ -90,13 +90,13 @@ RoleActions for all deployed contracts (simulation only!)
 With single validator
 
 ```bash
-$ forge script ./script/DeployContracts.s.sol --rpc-url local-8545 -vvvv --sig "roleActions(uint256,address,address[],bool)" 0 0x88CE2c1d82328f84Dd197f63482A3B68E18cD707 [] true
+$ forge script ./script/DeployContracts.s.sol --rpc-url local-8545 -vvvv --sig "roleActions(uint256,address,address[])" 0 0x88CE2c1d82328f84Dd197f63482A3B68E18cD707 []
 ```
 
 With multiple validators
 
 ```bash
-$ forge script ./script/DeployContracts.s.sol --rpc-url local-8545 -vvvv --sig "roleActions(uint256,address,address[],bool)" 0 0x88CE2c1d82328f84Dd197f63482A3B68E18cD707 [0xAa1ea8611639537A89Cb5925903Fd1fb28027DE9,0xBB2166dC315dC02F314597eCf867C3dfB45ED205,0xCC0DF974953820B649Bb67F167f01cd265Ea5B0A] true
+$ forge script ./script/DeployContracts.s.sol --rpc-url local-8545 -vvvv --sig "roleActions(uint256,address,address[])" 0 0x88CE2c1d82328f84Dd197f63482A3B68E18cD707 [0xAa1ea8611639537A89Cb5925903Fd1fb28027DE9,0xBB2166dC315dC02F314597eCf867C3dfB45ED205,0xCC0DF974953820B649Bb67F167f01cd265Ea5B0A]
 ```
 
 ### SubmitSafeTxs
@@ -108,7 +108,7 @@ $ forge script ./script/SubmitSafeTxs.s.sol --account local_deployer --password 
 ### RegisterExternalTokens
 
 ```bash
-$ forge script ./script/RegisterExternalTokens.s.sol --rpc-url local-8545 -vvvv --sig "roleActions(bool)" true
+$ forge script ./script/RegisterExternalTokens.s.sol --rpc-url local-8545 -vvvv --sig "roleActions()"
 ```
 
 ### UpdateFeeFactors

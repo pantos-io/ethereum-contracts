@@ -4,9 +4,24 @@ set -e
 
 mkdir -p .foundry/keystores
 
-echo '{"crypto":{"cipher":"aes-128-ctr","cipherparams":{"iv":"5159c4a67ae85ebbbc2ac7411cc965ef"},"ciphertext":"07a8f37ddc742b96688c6612d1d4c0f0e3a3e2902a3544ca9fe8c081aad22786","kdf":"scrypt","kdfparams":{"dklen":32,"n":8192,"p":1,"r":8,"salt":"3ef92b928e55339fb020a68358be76f7f186bdf40978a353e5f7c7e244936ac0"},"mac":"aa6a17a67b132a3f1babd4a0b02bfaa28ee4810c43b59a31780b921c8c4ac0b4"},"id":"d27236b7-d5c7-441e-aa72-1178bf76eb25","version":3}' > .foundry/keystores/local_deployer
-
 MNEMONIC="test test test test test test test test test test test junk"
+
+GAS_PAYER_PRIVATE_KEY=$(cast wallet private-key --mnemonic "$MNEMONIC" --mnemonic-index 0) # 0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266
+PAUSER_PRIVATE_KEY=$(cast wallet private-key --mnemonic "$MNEMONIC" --mnemonic-index 100) # 0x8C3229EC621644789d7F61FAa82c6d0E5F97d43D
+DEPLOYER_PRIVATE_KEY=$(cast wallet private-key --mnemonic "$MNEMONIC" --mnemonic-index 101) # 0x9586A4833970847aef259aD5BFB7aa8901DDf746
+MEDIUM_CRITICAL_OPS_PRIVATE_KEY=$(cast wallet private-key --mnemonic "$MNEMONIC" --mnemonic-index 102) # 0x0e9971c0005D91336c1441b8F03c1C4fe5FB4584
+SUPER_CRITICAL_OPS_PRIVATE_KEY=$(cast wallet private-key --mnemonic "$MNEMONIC" --mnemonic-index 103) # 0xC4c81D5C1851702d27d602aA8ff830A7689F17cc
+
+cast wallet import --unsafe-password '' --private-key "$GAS_PAYER_PRIVATE_KEY" gas_payer
+cast wallet import --unsafe-password '' --private-key "$PAUSER_PRIVATE_KEY" pauser
+cast wallet import --unsafe-password '' --private-key "$DEPLOYER_PRIVATE_KEY" deployer
+cast wallet import --unsafe-password '' --private-key "$MEDIUM_CRITICAL_OPS_PRIVATE_KEY" medium_critical_ops
+cast wallet import --unsafe-password '' --private-key "$SUPER_CRITICAL_OPS_PRIVATE_KEY" super_critical_ops
+
+PAUSER_SIGNER_ADDRESS=$(cast wallet address --account pauser --password '')
+DEPLOYER_SIGNER_ADDRESS=$(cast wallet address --account deployer --password '')
+MEDIUM_CRITICAL_OPS_SIGNER_ADDRESS=$(cast wallet address --account medium_critical_ops --password '')
+SUPER_CRITICAL_OPS_SIGNER_ADDRESS=$(cast wallet address --account super_critical_ops --password '')
 
 declare -A chains
 chains=(
@@ -40,6 +55,27 @@ DATA_DIR="$ROOT_DIR/data-static"
 
 mkdir -p $DATA_DIR
 
+sign_safe_transactions() {
+    local args=("$@")
+    local script_name="${args[0]}"
+    local function_name="${args[1]}"
+    local chain="${args[2]}"
+    local chain_id="${args[3]}"
+
+    python3 "$ROOT_DIR/safe-ledger/cli/safe-ledger.py" extend -i \
+        "$ROOT_DIR/broadcast/$script_name.s.sol/$chain_id/dry-run/$function_name-latest.json" \
+        -s "$ROOT_DIR/$chain-SAFE.json" -o "$ROOT_DIR/safe-transactions-$chain.json"
+
+    for (( i=4; i<${#args[@]}; i++ )); do
+        python3 "$ROOT_DIR/safe-ledger/cli/sign_with_cast_wallet.py" "${args[$i]}" \
+            "$ROOT_DIR/safe-transactions-$chain.json"
+    done
+
+    python3 "$ROOT_DIR/safe-ledger/cli/safe-ledger.py" collate \
+        -i "$ROOT_DIR/safe-transactions-$chain.json" \
+        -o full_output.json -f "$ROOT_DIR"/"$chain"_flat_output.json
+}
+
 deploy_for_chain() {
     local chain=$1
     local chain_id=$2
@@ -50,11 +86,7 @@ deploy_for_chain() {
     cd $chain_dir
 
     echo ${MNEMONIC} > $chain_dir/mnemonic.txt
-
-    cp -f ~/.foundry/keystores/local_deployer $chain_dir/keystore
     
-    echo '{"deployer": "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266","medium_critical_ops":"0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266","pauser": "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266","super_critical_ops": "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266"}' > $ROOT_DIR/$chain-ROLES.json
-
     echo "Starting deployment for $chain (Chain ID: $chain_id, Port: $port)"
 
     # Start anvil in the background
@@ -67,20 +99,34 @@ deploy_for_chain() {
         sleep 1
     done
 
-    forge script "$ROOT_DIR/script/DeployContracts.s.sol" --account local_deployer --chain-id $chain_id \
+    forge script "$ROOT_DIR/script/DeploySafe.s.sol" --account gas_payer --chain-id $chain_id \
         --password '' --rpc-url http://127.0.0.1:$port \
-        --sig "deploy(uint256,uint256)" 10000000000000000 100000000000000000 --broadcast -vvv
+        --sig "deploySafes(address[],uint256,address[],uint256,address[],uint256,address[],uint256)" \
+        ["$PAUSER_SIGNER_ADDRESS"] 1 ["$DEPLOYER_SIGNER_ADDRESS"] 1 ["$MEDIUM_CRITICAL_OPS_SIGNER_ADDRESS"] 1 \
+        ["$SUPER_CRITICAL_OPS_SIGNER_ADDRESS"] 1 --broadcast -vvv
 
-
-    forge script "$ROOT_DIR/script/DeployContracts.s.sol" --account local_deployer --chain-id $chain_id \
+    forge script "$ROOT_DIR/script/DeployContracts.s.sol" --account gas_payer --chain-id $chain_id \
         --password '' --rpc-url http://127.0.0.1:$port \
-         --sig "roleActions(uint256,address,address[],bool)" 0 0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266 \
-        [] false --broadcast -vvv
+        --sig "deploy(uint256,uint256)" 10000000000000000 10000000000000000 --broadcast -vvv
+
+    forge script "$ROOT_DIR/script/DeployContracts.s.sol" --chain-id $chain_id --rpc-url http://127.0.0.1:$port \
+         --sig "roleActions(uint256,address,address[])" 0 0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266 []
+
+    sign_safe_transactions "DeployContracts" "roleActions" "$chain" "$chain_id" "deployer" "super_critical_ops"
+
+    forge script "$ROOT_DIR/script/SubmitSafeTxs.s.sol" --account gas_payer --chain-id $chain_id \
+        --password '' --rpc-url http://127.0.0.1:$port --sig "run()" --broadcast -vvv
 
     jq --arg chain "$chain" -r 'to_entries | map({key: (if .key == "hub_proxy" then "hub" elif .key == "pan" then "pan_token" else .key end), value: .value}) | map("\($chain|ascii_upcase)_\(.key|ascii_upcase)=\(.value|tostring)") | .[]' "$ROOT_DIR/$chain.json" > "$chain_dir/$chain.env"
     cat "$chain_dir/$chain.env" > "$chain_dir/all.env"
     cp "$ROOT_DIR/$chain.json" "$chain_dir/$chain.json"
     cp "$ROOT_DIR/$chain-ROLES.json" "$chain_dir/$chain-ROLES.json"
+
+    cp -f ~/.foundry/keystores/gas_payer $chain_dir/keystore
+    cp -f ~/.foundry/keystores/pauser $chain_dir/pauser
+    cp -f ~/.foundry/keystores/deployer $chain_dir/deployer
+    cp -f ~/.foundry/keystores/medium_critical_ops $chain_dir/medium_critical_ops
+    cp -f ~/.foundry/keystores/super_critical_ops $chain_dir/super_critical_ops
 
     echo "Anvil started for $chain..."
 }
@@ -96,9 +142,13 @@ register_tokens() {
     HASH=$(sha256sum "$ROOT_DIR/anvil-state-$chain.json" | cut -d ' ' -f 1)
 
     # Run the register external tokens script
-    forge script "$ROOT_DIR/script/RegisterExternalTokens.s.sol" --account local_deployer --chain-id $chain_id \
-        --password '' --rpc-url http://127.0.0.1:$port  --sig "roleActions(bool)" false \
-        --broadcast -vvv
+    forge script "$ROOT_DIR/script/RegisterExternalTokens.s.sol" --chain-id $chain_id \
+        --rpc-url http://127.0.0.1:$port  --sig "roleActions()"
+
+    sign_safe_transactions "RegisterExternalTokens" "roleActions" "$chain" "$chain_id" "super_critical_ops"
+
+    forge script "$ROOT_DIR/script/SubmitSafeTxs.s.sol" --account gas_payer --chain-id $chain_id \
+        --password '' --rpc-url http://127.0.0.1:$port --sig "run()" --broadcast -vvv
 
     echo "Waiting for the state to change for $chain..."
 
@@ -129,6 +179,8 @@ kill_anvil_processes() {
 }
 
 trap 'kill_anvil_processes' EXIT
+
+source "$ROOT_DIR/safe-ledger/venv/bin/activate"
 
 for chain in "${!chains[@]}"; do
     deploy_for_chain "$chain" "${chains[$chain]}" "${ports[$chain]}"
