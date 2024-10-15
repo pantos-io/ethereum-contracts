@@ -1,4 +1,5 @@
 #syntax=docker/dockerfile:1.7.0-labs
+# SPDX-License-Identifier: GPL-3.0-only
 FROM --platform=linux/amd64 ghcr.io/foundry-rs/foundry:latest AS build
 
 RUN apk add --no-cache bash
