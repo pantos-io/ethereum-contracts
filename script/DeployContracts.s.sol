@@ -130,6 +130,7 @@ contract DeployContracts is
         IPantosHub pantosHub = IPantosHub(address(pantosHubProxy));
 
         vm.startBroadcast(accessController.superCriticalOps());
+        initializePantosToken(pantosToken, pantosForwarder);
         initializePantosHub(
             pantosHub,
             pantosForwarder,
@@ -152,7 +153,6 @@ contract DeployContracts is
             pantosToken,
             validatorNodeAddresses
         );
-        initializePantosToken(pantosToken, pantosForwarder);
         initializeBitpandaEcosystemToken(
             bitpandaEcosystemToken,
             pantosHub,
