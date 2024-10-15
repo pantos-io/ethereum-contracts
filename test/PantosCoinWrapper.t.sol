@@ -9,6 +9,7 @@ import {PantosWrapper} from "../src/PantosWrapper.sol";
 import {PantosCoinWrapper} from "../src/PantosCoinWrapper.sol";
 import {AccessController} from "../src/access/AccessController.sol";
 
+import {FailingContract} from "./helpers/FailingContract.sol";
 import {PantosBaseTest} from "./PantosBaseTest.t.sol";
 
 contract PantosCoinWrapperTest is PantosBaseTest {
@@ -116,6 +117,20 @@ contract PantosCoinWrapperTest is PantosBaseTest {
         );
 
         onlyNativeTest(address(pantosCoinWrapper_), calldata_);
+    }
+
+    function test_unwrap_TransferFailed() external {
+        initializePantosCoinWrapper();
+        FailingContract failingContract = new FailingContract();
+        vm.deal(address(failingContract), 1 ether);
+        vm.startPrank(address(failingContract));
+        pantosCoinWrapper.wrap{value: WRAPPED_AMOUNT}();
+        vm.expectRevert(
+            abi.encodePacked("PantosCoinWrapper: transfer failed")
+        );
+
+        pantosCoinWrapper.unwrap(WRAPPED_AMOUNT);
+        vm.stopPrank();
     }
 
     function wrap(uint256 amount) public {

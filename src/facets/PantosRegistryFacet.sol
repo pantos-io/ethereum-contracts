@@ -339,6 +339,10 @@ contract PantosRegistryFacet is IPantosRegistry, PantosBaseFacet {
             IPantosToken(token).getOwner() == msg.sender,
             "PantosHub: caller is not the token owner"
         );
+        require(
+            IPantosToken(token).getPantosForwarder() == s.pantosForwarder,
+            "PantosHub: PantosForwarder must match"
+        );
         // Validate the stored token data
         PantosTypes.TokenRecord storage tokenRecord = s.tokenRecords[token];
         require(!tokenRecord.active, "PantosHub: token must not be active");
