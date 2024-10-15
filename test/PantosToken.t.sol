@@ -21,7 +21,7 @@ contract PantosTokenTest is PantosBaseTokenTest {
         );
     }
 
-    function test_SetUpState() external {
+    function test_SetUpState() external view {
         assertEq(
             pantosToken.balanceOf(SUPER_CRITICAL_OPS),
             INITIAL_SUPPLY_PAN
@@ -117,19 +117,19 @@ contract PantosTokenTest is PantosBaseTokenTest {
         onlyOwnerTest(address(pantosToken), calldata_);
     }
 
-    function test_decimals() external {
+    function test_decimals() external view {
         assertEq(8, pantosToken.decimals());
     }
 
-    function test_symbol() external {
+    function test_symbol() external view {
         assertEq("PAN", pantosToken.symbol());
     }
 
-    function test_name() external {
+    function test_name() external view {
         assertEq("Pantos", pantosToken.name());
     }
 
-    function test_getOwner() external {
+    function test_getOwner() external view {
         assertEq(token().getOwner(), SUPER_CRITICAL_OPS);
     }
 

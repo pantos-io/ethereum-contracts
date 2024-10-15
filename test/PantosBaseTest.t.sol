@@ -246,7 +246,7 @@ abstract contract PantosBaseTest is Test {
         }
     }
 
-    function assertSortedAscending(address[] memory addresses) public {
+    function assertSortedAscending(address[] memory addresses) public pure {
         if (addresses.length > 1) {
             for (uint i; i < addresses.length - 1; i++) {
                 assertTrue(addresses[i] < addresses[i + 1]);
@@ -322,7 +322,7 @@ abstract contract PantosBaseTest is Test {
         );
     }
 
-    function assertEq(bytes4[] memory a, bytes4[] memory b) public {
+    function assertEq(bytes4[] memory a, bytes4[] memory b) public pure {
         assertEq(a.length, b.length);
         for (uint i; i < a.length; i++) {
             assertEq(a[i], b[i]);

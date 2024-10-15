@@ -25,7 +25,7 @@ contract PantosHubTest is PantosHubDeployer {
         deployPantosHub(accessController);
     }
 
-    function test_SetUpState() external {
+    function test_SetUpState() external view {
         checkStatePantosHubAfterDeployment();
     }
 
@@ -1757,7 +1757,7 @@ contract PantosHubTest is PantosHubDeployer {
             serviceNodeRecord.withdrawalAddress,
             SERVICE_NODE_WITHDRAWAL_ADDRESS
         );
-        assertEq(serviceNodeRecord.unregisterTime, 0);
+        assertEq(serviceNodeRecord.withdrawalTime, 0);
         assertEq(serviceNodes.length, 1);
         assertEq(serviceNodes[0], SERVICE_NODE_ADDRESS);
         checkServiceNodeIndices();
@@ -1895,7 +1895,10 @@ contract PantosHubTest is PantosHubDeployer {
             .getServiceNodeRecord(SERVICE_NODE_ADDRESS);
         address[] memory serviceNodes = pantosHubProxy.getServiceNodes();
         assertFalse(serviceNodeRecord.active);
-        assertEq(serviceNodeRecord.unregisterTime, BLOCK_TIMESTAMP);
+        assertEq(
+            serviceNodeRecord.withdrawalTime,
+            BLOCK_TIMESTAMP + SERVICE_NODE_DEPOSIT_UNBONDING_PERIOD
+        );
         assertEq(serviceNodeRecord.deposit, MINIMUM_SERVICE_NODE_DEPOSIT);
         assertEq(serviceNodes.length, 0);
         checkServiceNodeIndices();
@@ -2042,7 +2045,7 @@ contract PantosHubTest is PantosHubDeployer {
 
         PantosTypes.ServiceNodeRecord memory serviceNodeRecord = pantosHubProxy
             .getServiceNodeRecord(SERVICE_NODE_ADDRESS);
-        assertEq(serviceNodeRecord.unregisterTime, 0);
+        assertEq(serviceNodeRecord.withdrawalTime, 0);
         assertEq(serviceNodeRecord.deposit, 0);
     }
 
@@ -2070,7 +2073,7 @@ contract PantosHubTest is PantosHubDeployer {
 
         PantosTypes.ServiceNodeRecord memory serviceNodeRecord = pantosHubProxy
             .getServiceNodeRecord(SERVICE_NODE_ADDRESS);
-        assertEq(serviceNodeRecord.unregisterTime, 0);
+        assertEq(serviceNodeRecord.withdrawalTime, 0);
         assertEq(serviceNodeRecord.deposit, 0);
     }
 
@@ -2124,24 +2127,22 @@ contract PantosHubTest is PantosHubDeployer {
             MINIMUM_SERVICE_NODE_DEPOSIT,
             true
         );
-        uint256 unregisterTime;
         uint256 withdrawalTime;
 
         registerServiceNode();
         PantosTypes.ServiceNodeRecord memory storedStruct;
         storedStruct = loadPantosHubServiceNodeRecord(SERVICE_NODE_ADDRESS);
         assertTrue(storedStruct.active);
-        assertEq(storedStruct.unregisterTime, 0);
+        assertEq(storedStruct.withdrawalTime, 0);
 
         // Service node is unregistered for the first time
         unregisterServiceNode();
-        unregisterTime = BLOCK_TIMESTAMP;
         withdrawalTime =
-            unregisterTime +
+            BLOCK_TIMESTAMP +
             SERVICE_NODE_DEPOSIT_UNBONDING_PERIOD;
         storedStruct = loadPantosHubServiceNodeRecord(SERVICE_NODE_ADDRESS);
         assertFalse(storedStruct.active);
-        assertEq(storedStruct.unregisterTime, unregisterTime);
+        assertEq(storedStruct.withdrawalTime, withdrawalTime);
 
         // Unbonding period has passed
         vm.warp(withdrawalTime);
@@ -2151,17 +2152,14 @@ contract PantosHubTest is PantosHubDeployer {
         pantosHubProxy.cancelServiceNodeUnregistration(SERVICE_NODE_ADDRESS);
         storedStruct = loadPantosHubServiceNodeRecord(SERVICE_NODE_ADDRESS);
         assertTrue(storedStruct.active);
-        assertEq(storedStruct.unregisterTime, 0);
+        assertEq(storedStruct.withdrawalTime, 0);
 
         // Service node is unregistered immediately again
         unregisterServiceNode();
-        unregisterTime = withdrawalTime;
-        withdrawalTime =
-            unregisterTime +
-            SERVICE_NODE_DEPOSIT_UNBONDING_PERIOD;
+        withdrawalTime += SERVICE_NODE_DEPOSIT_UNBONDING_PERIOD;
         storedStruct = loadPantosHubServiceNodeRecord(SERVICE_NODE_ADDRESS);
         assertFalse(storedStruct.active);
-        assertEq(storedStruct.unregisterTime, unregisterTime);
+        assertEq(storedStruct.withdrawalTime, withdrawalTime);
 
         // Service node deposit cannot be withdrawn without the
         // unbonding period having passed again
@@ -2170,7 +2168,7 @@ contract PantosHubTest is PantosHubDeployer {
         pantosHubProxy.withdrawServiceNodeDeposit(SERVICE_NODE_ADDRESS);
         storedStruct = loadPantosHubServiceNodeRecord(SERVICE_NODE_ADDRESS);
         assertFalse(storedStruct.active);
-        assertEq(storedStruct.unregisterTime, unregisterTime);
+        assertEq(storedStruct.withdrawalTime, withdrawalTime);
 
         // Unbonding period has passed again
         vm.warp(withdrawalTime);
@@ -2180,7 +2178,7 @@ contract PantosHubTest is PantosHubDeployer {
         pantosHubProxy.withdrawServiceNodeDeposit(SERVICE_NODE_ADDRESS);
         storedStruct = loadPantosHubServiceNodeRecord(SERVICE_NODE_ADDRESS);
         assertFalse(storedStruct.active);
-        assertEq(storedStruct.unregisterTime, 0);
+        assertEq(storedStruct.withdrawalTime, 0);
     }
 
     function test_cancelServiceNodeUnregistration_ByWithdrawalAddress()
@@ -2202,7 +2200,7 @@ contract PantosHubTest is PantosHubDeployer {
             serviceNodeRecord.withdrawalAddress,
             SERVICE_NODE_WITHDRAWAL_ADDRESS
         );
-        assertEq(serviceNodeRecord.unregisterTime, 0);
+        assertEq(serviceNodeRecord.withdrawalTime, 0);
         assertEq(serviceNodes.length, 1);
         assertEq(serviceNodes[0], SERVICE_NODE_ADDRESS);
         checkServiceNodeIndices();
@@ -2225,7 +2223,7 @@ contract PantosHubTest is PantosHubDeployer {
             serviceNodeRecord.withdrawalAddress,
             SERVICE_NODE_WITHDRAWAL_ADDRESS
         );
-        assertEq(serviceNodeRecord.unregisterTime, 0);
+        assertEq(serviceNodeRecord.withdrawalTime, 0);
         assertEq(serviceNodes.length, 1);
         assertEq(serviceNodes[0], SERVICE_NODE_ADDRESS);
         checkServiceNodeIndices();
@@ -2824,6 +2822,7 @@ contract PantosHubTest is PantosHubDeployer {
 
     function test_isServiceNodeInTheUnbondingPeriod_WhenNeverRegistered()
         external
+        view
     {
         assertFalse(
             pantosHubProxy.isServiceNodeInTheUnbondingPeriod(
@@ -3224,28 +3223,28 @@ contract PantosHubTest is PantosHubDeployer {
         assertEq(validatorAddress, pantosHubProxy.getPrimaryValidatorNode());
     }
 
-    function test_getNumberBlockchains() external {
+    function test_getNumberBlockchains() external view {
         assertEq(
             uint256(type(BlockchainId).max),
             pantosHubProxy.getNumberBlockchains()
         );
     }
 
-    function test_getNumberActiveBlockchains() external {
+    function test_getNumberActiveBlockchains() external view {
         assertEq(
             uint256(type(BlockchainId).max),
             pantosHubProxy.getNumberActiveBlockchains()
         );
     }
 
-    function test_getCurrentBlockchainId() external {
+    function test_getCurrentBlockchainId() external view {
         assertEq(
             uint256(thisBlockchain.blockchainId),
             pantosHubProxy.getCurrentBlockchainId()
         );
     }
 
-    function test_getBlockchainRecord() external {
+    function test_getBlockchainRecord() external view {
         PantosTypes.BlockchainRecord
             memory thisBlockchainRecord = pantosHubProxy.getBlockchainRecord(
                 uint256(thisBlockchain.blockchainId)
@@ -3255,14 +3254,14 @@ contract PantosHubTest is PantosHubDeployer {
         assertTrue(thisBlockchainRecord.active);
     }
 
-    function test_getCurrentMinimumServiceNodeDeposit() external {
+    function test_getCurrentMinimumServiceNodeDeposit() external view {
         assertEq(
             pantosHubProxy.getCurrentMinimumServiceNodeDeposit(),
             MINIMUM_SERVICE_NODE_DEPOSIT
         );
     }
 
-    function test_getMinimumServiceNodeDeposit() external {
+    function test_getMinimumServiceNodeDeposit() external view {
         PantosTypes.UpdatableUint256
             memory minimumServiceNodeDeposit = pantosHubProxy
                 .getMinimumServiceNodeDeposit();
@@ -3274,14 +3273,14 @@ contract PantosHubTest is PantosHubDeployer {
         assertEq(minimumServiceNodeDeposit.updateTime, 0);
     }
 
-    function test_getCurrentUnbondingPeriodServiceNodeDeposit() external {
+    function test_getCurrentUnbondingPeriodServiceNodeDeposit() external view {
         assertEq(
             pantosHubProxy.getCurrentUnbondingPeriodServiceNodeDeposit(),
             SERVICE_NODE_DEPOSIT_UNBONDING_PERIOD
         );
     }
 
-    function test_getUnbondingPeriodServiceNodeDeposit() external {
+    function test_getUnbondingPeriodServiceNodeDeposit() external view {
         PantosTypes.UpdatableUint256
             memory unbondingPeriodServiceNodeDeposit = pantosHubProxy
                 .getUnbondingPeriodServiceNodeDeposit();
@@ -3321,7 +3320,7 @@ contract PantosHubTest is PantosHubDeployer {
         assertTrue(tokenRecord.active);
     }
 
-    function test_getTokenRecord_WhenTokenNotRegistered() external {
+    function test_getTokenRecord_WhenTokenNotRegistered() external view {
         PantosTypes.TokenRecord memory tokenRecord = pantosHubProxy
             .getTokenRecord(address(123));
 
@@ -3348,6 +3347,7 @@ contract PantosHubTest is PantosHubDeployer {
 
     function test_getExternalTokenRecord_WhenExternalTokenNotRegistered()
         external
+        view
     {
         PantosTypes.ExternalTokenRecord
             memory externalTokenRecord = pantosHubProxy.getExternalTokenRecord(
@@ -3359,7 +3359,7 @@ contract PantosHubTest is PantosHubDeployer {
         assertEq(externalTokenRecord.externalToken, "");
     }
 
-    function test_getServiceNodes__WhenServiceNodeRegistered() external {
+    function test_getServiceNodes_WhenServiceNodeRegistered() external {
         registerServiceNode();
 
         address[] memory serviceNodes = pantosHubProxy.getServiceNodes();
@@ -3368,7 +3368,10 @@ contract PantosHubTest is PantosHubDeployer {
         assertEq(serviceNodes[0], SERVICE_NODE_ADDRESS);
     }
 
-    function test_getServiceNodes__WhenServiceNodeNotRegistered() external {
+    function test_getServiceNodes_WhenServiceNodeNotRegistered()
+        external
+        view
+    {
         address[] memory serviceNodes = pantosHubProxy.getServiceNodes();
 
         assertEq(serviceNodes.length, 0);
@@ -3387,11 +3390,12 @@ contract PantosHubTest is PantosHubDeployer {
             serviceNodeRecord.withdrawalAddress,
             SERVICE_NODE_WITHDRAWAL_ADDRESS
         );
-        assertEq(serviceNodeRecord.unregisterTime, 0);
+        assertEq(serviceNodeRecord.withdrawalTime, 0);
     }
 
     function test_getServiceNodeRecord_WhenServiceNodeNotRegistered()
         external
+        view
     {
         PantosTypes.ServiceNodeRecord memory serviceNodeRecord = pantosHubProxy
             .getServiceNodeRecord(address(123));
@@ -3400,14 +3404,14 @@ contract PantosHubTest is PantosHubDeployer {
         assertEq(serviceNodeRecord.url, "");
         assertEq(serviceNodeRecord.deposit, 0);
         assertEq(serviceNodeRecord.withdrawalAddress, ADDRESS_ZERO);
-        assertEq(serviceNodeRecord.unregisterTime, 0);
+        assertEq(serviceNodeRecord.withdrawalTime, 0);
     }
 
-    function test_getNextTransferId() external {
+    function test_getNextTransferId() external view {
         assertEq(pantosHubProxy.getNextTransferId(), 0);
     }
 
-    function test_getCurrentValidatorFeeFactor() external {
+    function test_getCurrentValidatorFeeFactor() external view {
         assertEq(
             pantosHubProxy.getCurrentValidatorFeeFactor(
                 uint256(thisBlockchain.blockchainId)
@@ -3416,7 +3420,7 @@ contract PantosHubTest is PantosHubDeployer {
         );
     }
 
-    function test_getValidatorFeeFactor() external {
+    function test_getValidatorFeeFactor() external view {
         PantosTypes.UpdatableUint256 memory validatorFeeFactor = pantosHubProxy
             .getValidatorFeeFactor(uint256(thisBlockchain.blockchainId));
         assertEq(validatorFeeFactor.currentValue, thisBlockchain.feeFactor);
@@ -3424,14 +3428,14 @@ contract PantosHubTest is PantosHubDeployer {
         assertEq(validatorFeeFactor.updateTime, 0);
     }
 
-    function test_getCurrentParameterUpdateDelay() external {
+    function test_getCurrentParameterUpdateDelay() external view {
         assertEq(
             pantosHubProxy.getCurrentParameterUpdateDelay(),
             PARAMETER_UPDATE_DELAY
         );
     }
 
-    function test_getParameterUpdateDelay() external {
+    function test_getParameterUpdateDelay() external view {
         PantosTypes.UpdatableUint256
             memory parameterUpdateDelay = pantosHubProxy
                 .getParameterUpdateDelay();
@@ -3660,7 +3664,7 @@ contract PantosHubTest is PantosHubDeployer {
         unregisterServiceNode(SERVICE_NODE_ADDRESS);
     }
 
-    function checkTokenIndices() private {
+    function checkTokenIndices() private view {
         address[] memory tokenAddresses = loadPantosHubTokens();
         for (uint256 i = 0; i < tokenAddresses.length; i++) {
             address tokenAddress = tokenAddresses[i];
@@ -3671,7 +3675,7 @@ contract PantosHubTest is PantosHubDeployer {
     function checkTokenRegistrations(
         address[] memory tokenAddresses,
         bool[] memory tokenRegistered
-    ) private {
+    ) private view {
         assertEq(tokenAddresses.length, tokenRegistered.length);
         address[] memory registeredTokenAddresses = loadPantosHubTokens();
         for (uint256 i = 0; i < tokenAddresses.length; i++) {
@@ -3689,7 +3693,7 @@ contract PantosHubTest is PantosHubDeployer {
         checkTokenIndices();
     }
 
-    function checkServiceNodeIndices() private {
+    function checkServiceNodeIndices() private view {
         address[] memory serviceNodeAddresses = loadPantosHubServiceNodes();
         for (uint256 i = 0; i < serviceNodeAddresses.length; i++) {
             address serviceNodeAddress = serviceNodeAddresses[i];
@@ -3700,7 +3704,7 @@ contract PantosHubTest is PantosHubDeployer {
     function checkServiceNodeRegistrations(
         address[] memory serviceNodeAddresses,
         bool[] memory serviceNodeRegistered
-    ) private {
+    ) private view {
         assertEq(serviceNodeAddresses.length, serviceNodeRegistered.length);
         address[]
             memory registeredServiceNodeAddresses = loadPantosHubServiceNodes();

@@ -37,6 +37,7 @@ contract PantosCoinWrapper is PantosWrapper {
      */
     function unwrap(uint256 amount) public override whenNotPaused onlyNative {
         _burn(msg.sender, amount);
+        // slither-disable-next-line low-level-calls
         (bool success, ) = payable(msg.sender).call{value: amount}("");
         require(success, "PantosCoinWrapper: transfer failed");
     }
