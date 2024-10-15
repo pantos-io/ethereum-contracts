@@ -29,6 +29,8 @@ interface IPantosToken is IERC20, IBEP20 {
      * @dev The function is only callable by a trusted Pantos Forwarder
      * contract and thefore can't be invoked by a user. The function is used
      * to transfer tokens on a blockchain between the sender and recipient.
+     *
+     * Revert if anything prevents the transfer from happening.
      */
     function pantosTransfer(
         address sender,
@@ -47,6 +49,8 @@ interface IPantosToken is IERC20, IBEP20 {
      * contract and thefore can't be invoked by a user. The function is used
      * to burn tokens on the source blockchain to initiate a cross-chain
      * transfer.
+     *
+     * Revert if anything prevents the transfer from happening.
      */
     function pantosTransferFrom(address sender, uint256 amount) external;
 
@@ -61,6 +65,8 @@ interface IPantosToken is IERC20, IBEP20 {
      * contract and thefore can't be invoked by a user. The function is used
      * to mint tokens on the destination blockchain to finish a cross-chain
      * transfer.
+     *
+     * Revert if anything prevents the transfer from happening.
      */
     function pantosTransferTo(address recipient, uint256 amount) external;
 
