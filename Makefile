@@ -1,6 +1,7 @@
 STACK_BASE_NAME=stack-ethereum-contracts
 INSTANCE_COUNT ?= 1
 DEV_MODE ?= false
+SHELL := $(shell which bash) -x
 
 .PHONY: build
 build:
@@ -69,14 +70,16 @@ docker: check-swarm-init
         if [ "$(DEV_MODE)" = "true" ]; then \
             echo "Running in development mode"; \
             export ARGS="$(ARGS) --watch"; \
+            echo "Running docker compose with ARGS: $$ARGS"; \
             docker compose -f docker-compose.yml -f docker-compose.ci.yml -p $$STACK_NAME $$EXTRA_COMPOSE up $$ARGS & \
             COMPOSE_PID=$$!; \
-            trap 'echo "Caught SIGINT, killing background processes..."; kill $$COMPOSE_PID; exit 1' SIGINT; \
+            trap 'echo "Caught INT, killing background processes..."; kill $$COMPOSE_PID; exit 1' INT; \
         else \
             export ARGS="--detach --wait $(ARGS)"; \
+            echo "Running docker compose with ARGS: $$ARGS"; \
             docker compose -f docker-compose.yml -f docker-compose.ci.yml -p $$STACK_NAME $$EXTRA_COMPOSE up $$ARGS; \
         fi; \
-        trap 'exit 1' SIGINT; \
+        trap 'exit 1' INT; \
         for service in $$(yq e '.services | with_entries(select(.value.image | contains("ethereum-node"))) | keys | .[]' docker-compose.yml); do \
             if [ "$(DEV_MODE)" = "true" ]; then \
                 echo "Waiting for $$STACK_NAME-$$service-1 to be healthy"; \
@@ -99,7 +102,7 @@ docker: check-swarm-init
         fi; \
         ) & \
     done; \
-    trap 'echo "Caught SIGINT, killing all background processes..."; kill 0; exit 1' SIGINT; \
+    trap 'echo "Caught INT, killing all background processes..."; kill 0; exit 1' INT; \
     wait
     # We need to use compose because swarm goes absolutely crazy on MacOS when using cross architecture
     # And can't pull the correct images
