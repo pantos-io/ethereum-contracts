@@ -13,6 +13,9 @@ RUN git submodule update --init --recursive
 
 RUN forge build
 
+ENTRYPOINT ["sh", "-c"]
+CMD ["echo 'Ready'"]
+
 FROM --platform=linux/amd64 ghcr.io/foundry-rs/foundry:latest AS deployed-contracts
 
 RUN apk add --no-cache jq bash
@@ -23,11 +26,13 @@ COPY --exclude=/app/.git* --from=build /app .
 
 RUN ./deploy_chain.sh
 
-ENTRYPOINT ["anvil", "--load-state", "anvil-state-ETHEREUM.json", "--chain-id", "31337"]
+ENTRYPOINT ["anvil"]
+CMD ["--load-state", "anvil-state-ETHEREUM.json", "--chain-id", "31337"]
 
 FROM --platform=linux/amd64 ghcr.io/foundry-rs/foundry:latest AS blockchain-node
 
 COPY --from=deployed-contracts /root/data-static /data-static/
 COPY ./entrypoint.sh /root/entrypoint.sh
 
-ENTRYPOINT ["/root/entrypoint.sh"]
+ENTRYPOINT ["sh", "-c"]
+CMD ["/root/entrypoint.sh"]
