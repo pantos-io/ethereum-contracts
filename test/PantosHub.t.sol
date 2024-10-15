@@ -115,6 +115,10 @@ contract PantosHubTest is PantosHubDeployer {
         vm.prank(SUPER_CRITICAL_OPS);
         pantosHubProxy.setPantosForwarder(PANTOS_FORWARDER_ADDRESS);
         mockPandasToken_getOwner(PANTOS_TOKEN_ADDRESS, SUPER_CRITICAL_OPS);
+        mockPandasToken_getPantosForwarder(
+            PANTOS_TOKEN_ADDRESS,
+            PANTOS_FORWARDER_ADDRESS
+        );
         vm.startPrank(SUPER_CRITICAL_OPS);
         pantosHubProxy.setPantosToken(PANTOS_TOKEN_ADDRESS);
         vm.expectRevert(
@@ -172,10 +176,15 @@ contract PantosHubTest is PantosHubDeployer {
 
     function test_setPantosToken() external {
         mockPandasToken_getOwner(PANTOS_TOKEN_ADDRESS, SUPER_CRITICAL_OPS);
+        mockPandasToken_getPantosForwarder(
+            PANTOS_TOKEN_ADDRESS,
+            PANTOS_FORWARDER_ADDRESS
+        );
+        vm.startPrank(SUPER_CRITICAL_OPS);
+        pantosHubProxy.setPantosForwarder(PANTOS_FORWARDER_ADDRESS);
         vm.expectEmit(address(pantosHubProxy));
         emit IPantosRegistry.PantosTokenSet(PANTOS_TOKEN_ADDRESS);
 
-        vm.prank(SUPER_CRITICAL_OPS);
         pantosHubProxy.setPantosToken(PANTOS_TOKEN_ADDRESS);
 
         assertEq(pantosHubProxy.getPantosToken(), PANTOS_TOKEN_ADDRESS);
@@ -209,7 +218,12 @@ contract PantosHubTest is PantosHubDeployer {
 
     function test_setPantosToken_AlreadySet() external {
         mockPandasToken_getOwner(PANTOS_TOKEN_ADDRESS, SUPER_CRITICAL_OPS);
+        mockPandasToken_getPantosForwarder(
+            PANTOS_TOKEN_ADDRESS,
+            PANTOS_FORWARDER_ADDRESS
+        );
         vm.startPrank(SUPER_CRITICAL_OPS);
+        pantosHubProxy.setPantosForwarder(PANTOS_FORWARDER_ADDRESS);
         pantosHubProxy.setPantosToken(PANTOS_TOKEN_ADDRESS);
         vm.expectRevert("PantosHub: PantosToken already set");
 
@@ -987,6 +1001,10 @@ contract PantosHubTest is PantosHubDeployer {
     function test_registerToken() external {
         initializePantosHub();
         mockPandasToken_getOwner(PANDAS_TOKEN_ADDRESS, PANDAS_TOKEN_OWNER);
+        mockPandasToken_getPantosForwarder(
+            PANDAS_TOKEN_ADDRESS,
+            PANTOS_FORWARDER_ADDRESS
+        );
         assertFalse(inArray(PANDAS_TOKEN_ADDRESS, loadPantosHubTokens()));
         vm.expectEmit();
         emit IPantosRegistry.TokenRegistered(PANDAS_TOKEN_ADDRESS);
@@ -1004,6 +1022,10 @@ contract PantosHubTest is PantosHubDeployer {
     function test_registerToken_BySuperCriticalOps() external {
         initializePantosHub();
         mockPandasToken_getOwner(PANDAS_TOKEN_ADDRESS, SUPER_CRITICAL_OPS);
+        mockPandasToken_getPantosForwarder(
+            PANDAS_TOKEN_ADDRESS,
+            PANTOS_FORWARDER_ADDRESS
+        );
         assertFalse(inArray(PANDAS_TOKEN_ADDRESS, loadPantosHubTokens()));
         vm.expectEmit();
         emit IPantosRegistry.TokenRegistered(PANDAS_TOKEN_ADDRESS);
@@ -1024,6 +1046,10 @@ contract PantosHubTest is PantosHubDeployer {
         pantosHubProxy.pause();
 
         mockPandasToken_getOwner(PANDAS_TOKEN_ADDRESS, SUPER_CRITICAL_OPS);
+        mockPandasToken_getPantosForwarder(
+            PANDAS_TOKEN_ADDRESS,
+            PANTOS_FORWARDER_ADDRESS
+        );
         assertFalse(inArray(PANDAS_TOKEN_ADDRESS, loadPantosHubTokens()));
         vm.expectEmit();
         emit IPantosRegistry.TokenRegistered(PANDAS_TOKEN_ADDRESS);
@@ -1061,6 +1087,22 @@ contract PantosHubTest is PantosHubDeployer {
 
         vm.expectRevert("PantosHub: caller is not the token owner");
 
+        pantosHubProxy.registerToken(PANDAS_TOKEN_ADDRESS);
+    }
+
+    function test_registerToken_WithNonMatchingForwarder() external {
+        address nonMatchingForwarderAddress = PANTOS_TOKEN_ADDRESS;
+        assertNotEq(nonMatchingForwarderAddress, PANTOS_FORWARDER_ADDRESS);
+        initializePantosHub();
+        mockPandasToken_getOwner(PANDAS_TOKEN_ADDRESS, PANDAS_TOKEN_OWNER);
+        mockPandasToken_getPantosForwarder(
+            PANDAS_TOKEN_ADDRESS,
+            nonMatchingForwarderAddress
+        );
+
+        vm.expectRevert("PantosHub: PantosForwarder must match");
+
+        vm.prank(PANDAS_TOKEN_OWNER);
         pantosHubProxy.registerToken(PANDAS_TOKEN_ADDRESS);
     }
 
@@ -3414,19 +3456,6 @@ contract PantosHubTest is PantosHubDeployer {
         modifierTest(callee, calldata_, revertMessage);
     }
 
-    function mockPandasToken_getPantosForwarder(
-        address tokenAddress,
-        address pantosForwarderAddress
-    ) public {
-        vm.mockCall(
-            tokenAddress,
-            abi.encodeWithSelector(
-                PantosBaseToken.getPantosForwarder.selector
-            ),
-            abi.encode(pantosForwarderAddress)
-        );
-    }
-
     function mockPantosForwarder_verifyTransfer(
         address pantosForwarder,
         PantosTypes.TransferRequest memory request,
@@ -3570,6 +3599,10 @@ contract PantosHubTest is PantosHubDeployer {
     function registerToken(address tokenAddress, address tokenOwner) public {
         initializePantosHub();
         mockPandasToken_getOwner(tokenAddress, tokenOwner);
+        mockPandasToken_getPantosForwarder(
+            tokenAddress,
+            PANTOS_FORWARDER_ADDRESS
+        );
         vm.prank(tokenOwner);
         pantosHubProxy.registerToken(tokenAddress);
     }
