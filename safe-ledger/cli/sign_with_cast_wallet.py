@@ -1,3 +1,41 @@
+"""Script to sign gnosis safe-ready transactions using Foundry keystores.
+
+This script lists the accounts available in the Foundry keystore and checks 
+if the specified account is present. If the account is found, it retrieves 
+the account address and reads the transactions from the provided JSON file.
+For each transaction, it checks if the account is required to sign and, 
+if so, signs the transaction and updates the JSON file with the signature.
+
+The script expects the JSON file to have the following structure:
+{
+    "transactions": [
+        {
+            "safeTx": <transaction_data>,
+            "signatures": [
+                {
+                    "signer": <account_address>,
+                    "signature": <signature>
+                },
+                ...
+        },
+        ...
+}
+
+The script will update the "signature" field for the required signers with the generated signature.
+
+Usage
+-----
+    python3 sign_with_keystore.py <account_name> <safe_transactions_file_path>
+
+Arguments
+---------
+    <account_name> : str
+        The name of the Foundry account to use for signing transactions.
+    <safe_transactions_file_path> : str
+        The path to the JSON file containing the transactions to be signed.
+
+"""
+
 import json
 import subprocess
 import sys

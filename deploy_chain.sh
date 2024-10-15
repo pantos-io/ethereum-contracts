@@ -18,6 +18,7 @@ cast wallet import --unsafe-password '' --private-key "$DEPLOYER_PRIVATE_KEY" de
 cast wallet import --unsafe-password '' --private-key "$MEDIUM_CRITICAL_OPS_PRIVATE_KEY" medium_critical_ops
 cast wallet import --unsafe-password '' --private-key "$SUPER_CRITICAL_OPS_PRIVATE_KEY" super_critical_ops
 
+GAS_PAYER_ADDRESS=$(cast wallet address --account gas_payer --password '')
 PAUSER_SIGNER_ADDRESS=$(cast wallet address --account pauser --password '')
 DEPLOYER_SIGNER_ADDRESS=$(cast wallet address --account deployer --password '')
 MEDIUM_CRITICAL_OPS_SIGNER_ADDRESS=$(cast wallet address --account medium_critical_ops --password '')
@@ -55,6 +56,9 @@ DATA_DIR="$ROOT_DIR/data-static"
 
 mkdir -p $DATA_DIR
 
+# Sign the safe transactions with the given signers generated 
+# using the given script name, function name, chain, and chain_id.
+# It picks the latest run of the script/chain-id
 sign_safe_transactions() {
     local args=("$@")
     local script_name="${args[0]}"
@@ -86,6 +90,12 @@ deploy_for_chain() {
     cd $chain_dir
 
     echo ${MNEMONIC} > $chain_dir/mnemonic.txt
+
+    cp -f ~/.foundry/keystores/gas_payer $chain_dir/keystore
+    cp -f ~/.foundry/keystores/pauser $chain_dir/pauser
+    cp -f ~/.foundry/keystores/deployer $chain_dir/deployer
+    cp -f ~/.foundry/keystores/medium_critical_ops $chain_dir/medium_critical_ops
+    cp -f ~/.foundry/keystores/super_critical_ops $chain_dir/super_critical_ops
     
     echo "Starting deployment for $chain (Chain ID: $chain_id, Port: $port)"
 
@@ -110,23 +120,37 @@ deploy_for_chain() {
         --sig "deploy(uint256,uint256)" 10000000000000000 10000000000000000 --broadcast -vvv
 
     forge script "$ROOT_DIR/script/DeployContracts.s.sol" --chain-id $chain_id --rpc-url http://127.0.0.1:$port \
-         --sig "roleActions(uint256,address,address[])" 0 0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266 []
+        --sig "roleActions(uint256,address,address[])" 0 0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266 []
 
     sign_safe_transactions "DeployContracts" "roleActions" "$chain" "$chain_id" "deployer" "super_critical_ops"
 
     forge script "$ROOT_DIR/script/SubmitSafeTxs.s.sol" --account gas_payer --chain-id $chain_id \
         --password '' --rpc-url http://127.0.0.1:$port --sig "run()" --broadcast -vvv
 
+    # send the PAN tokens from the super critical role safe to the gas payer
+    calldata=$(cast calldata "transfer(address,uint256)" $GAS_PAYER_ADDRESS 10000000000000000)
+    super_critical_ops_safe_address=$(jq -r '.super_critical_ops' "$ROOT_DIR/$chain-ROLES.json")
+    pan_token_contract_address=$(jq -r '.pan' "$ROOT_DIR/$chain.json")
+    nonce=$(cast call $super_critical_ops_safe_address "nonce()(uint256)" --rpc-url http://127.0.0.1:$port)
+    tx_hash=$(cast call $super_critical_ops_safe_address \
+        "getTransactionHash(address,uint256,bytes,uint8,uint256,uint256,uint256,address,address,uint256)" \
+        $pan_token_contract_address 0 $calldata 0 0 0 0 0x0000000000000000000000000000000000000000 \
+        0x0000000000000000000000000000000000000000 $nonce --rpc-url http://127.0.0.1:$port)
+    cast send --account gas_payer --password '' $SUPER_CRITICAL_OPS_SIGNER_ADDRESS --value 1ether \
+        --rpc-url http://127.0.0.1:$port --gas-price 10gwei --confirmations 1
+    cast send --account super_critical_ops --password '' $super_critical_ops_safe_address \
+        "approveHash(bytes32)" $tx_hash --rpc-url http://127.0.0.1:$port --gas-price 10gwei --confirmations 1
+    cast send --account gas_payer --password '' $super_critical_ops_safe_address \
+        "execTransaction(address,uint256,bytes,uint8,uint256,uint256,uint256,address,address,bytes)" \
+        $pan_token_contract_address 0 $calldata 0 0 0 0 0x0000000000000000000000000000000000000000 \
+        0x0000000000000000000000000000000000000000 \
+        "0x000000000000000000000000${SUPER_CRITICAL_OPS_SIGNER_ADDRESS:2}000000000000000000000000000000000000000000000000000000000000000001" \
+        --rpc-url http://127.0.0.1:$port --gas-price 10gwei --confirmations 1
+
     jq --arg chain "$chain" -r 'to_entries | map({key: (if .key == "hub_proxy" then "hub" elif .key == "pan" then "pan_token" else .key end), value: .value}) | map("\($chain|ascii_upcase)_\(.key|ascii_upcase)=\(.value|tostring)") | .[]' "$ROOT_DIR/$chain.json" > "$chain_dir/$chain.env"
     cat "$chain_dir/$chain.env" > "$chain_dir/all.env"
     cp "$ROOT_DIR/$chain.json" "$chain_dir/$chain.json"
     cp "$ROOT_DIR/$chain-ROLES.json" "$chain_dir/$chain-ROLES.json"
-
-    cp -f ~/.foundry/keystores/gas_payer $chain_dir/keystore
-    cp -f ~/.foundry/keystores/pauser $chain_dir/pauser
-    cp -f ~/.foundry/keystores/deployer $chain_dir/deployer
-    cp -f ~/.foundry/keystores/medium_critical_ops $chain_dir/medium_critical_ops
-    cp -f ~/.foundry/keystores/super_critical_ops $chain_dir/super_critical_ops
 
     echo "Anvil started for $chain..."
 }
