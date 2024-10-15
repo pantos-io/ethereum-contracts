@@ -160,19 +160,31 @@ jobs:
       - uses: actions/checkout@v4
         with:
           path: ${{ env.PANTOS_ETHEREUM_CONTRACTS }}
-          sparse-checkout: |
-            docker-compose.yml
-            Makefile
             
-      - name: Download artifacts
-        uses: actions/download-artifact@v4
-        with:
-          name: docker-images-${{ matrix.arch }}
-          path: export
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
 
-      - name: Load images
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+        id: buildx
+
+      - name: Check docker config and disable live reload
+        working-directory: ${{ env.PANTOS_ETHEREUM_CONTRACTS }}
         run: |
-          cat export/eth.tar | docker import - pantosio/ethereum-node:local
+          cat /etc/docker/daemon.json
+          echo '{ "live-restore": false }' | sudo tee /etc/docker/daemon.json
+          sudo systemctl reload docker
+          make check-swarm-init
+
+      - name: Build and load
+        working-directory: ${{ env.PANTOS_ETHEREUM_CONTRACTS }}
+        run: |
+          make docker-build ARGS='--set "*.cache-from=type=gha" \
+            --set "*.cache-to=type=gha,mode=max" \
+            --set "*.platform=linux/${{ matrix.arch }}" \
+            --builder ${{ steps.buildx.outputs.name }} \
+            --load'
+
       - uses: pantos-io/e2e-testing/.github/actions/run-tests@main
         with:
           ethereum-contracts-path: ${{ env.PANTOS_ETHEREUM_CONTRACTS }}
