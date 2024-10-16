@@ -59,7 +59,7 @@ contract PantosForwarderTest is PantosBaseTest {
         _validatorWallets[validatorAddress4] = validatorWallet4;
     }
 
-    function test_SetUpState() external {
+    function test_SetUpState() external view {
         assertTrue(pantosForwarder.paused());
     }
 
@@ -1549,7 +1549,7 @@ contract PantosForwarderTest is PantosBaseTest {
 
     function getDigest(
         PantosTypes.TransferRequest memory request
-    ) public returns (bytes32) {
+    ) public view returns (bytes32) {
         return
             _hashTypedData(
                 keccak256(
@@ -1586,7 +1586,7 @@ contract PantosForwarderTest is PantosBaseTest {
 
     function getDigest(
         PantosTypes.TransferFromRequest memory request
-    ) public returns (bytes32) {
+    ) public view returns (bytes32) {
         return
             _hashTypedData(
                 keccak256(
@@ -1627,7 +1627,7 @@ contract PantosForwarderTest is PantosBaseTest {
 
     function getDigest(
         PantosTypes.TransferToRequest memory request
-    ) public returns (bytes32) {
+    ) public view returns (bytes32) {
         return
             _hashTypedData(
                 keccak256(
@@ -1663,7 +1663,9 @@ contract PantosForwarderTest is PantosBaseTest {
             );
     }
 
-    function _hashTypedData(bytes32 structHash) private returns (bytes32) {
+    function _hashTypedData(
+        bytes32 structHash
+    ) private view returns (bytes32) {
         string memory name;
         string memory version;
         uint256 chainId;

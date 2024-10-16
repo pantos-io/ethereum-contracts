@@ -687,7 +687,7 @@ contract PantosHubProxyTest is PantosHubDeployer {
 
     function checkInitialCutFacetAdresses(
         address[] memory facetAddresses
-    ) public {
+    ) public view {
         assertEq(facetAddresses.length, 4);
         assertEq(facetAddresses[0], address(dCutFacet));
         assertEq(facetAddresses[1], address(dLoupe));
@@ -698,7 +698,7 @@ contract PantosHubProxyTest is PantosHubDeployer {
     function checkLoupeFacetAddressForSelectors(
         bytes4[] memory selectors,
         address expecterFacetAddress
-    ) public {
+    ) public view {
         for (uint256 i; i < selectors.length; i++) {
             address facetAddress = IDiamondLoupe(address(pantosHubDiamond))
                 .facetAddress(selectors[i]);
@@ -708,7 +708,7 @@ contract PantosHubProxyTest is PantosHubDeployer {
 
     function checkInitialCutFacets(
         IDiamondLoupe.Facet[] memory facets
-    ) public {
+    ) public view {
         assertEq(facets[0].facetAddress, address(dCutFacet));
         assertEq(facets[1].facetAddress, address(dLoupe));
         assertEq(facets[2].facetAddress, address(pantosRegistryFacet));
@@ -728,7 +728,7 @@ contract PantosHubProxyTest is PantosHubDeployer {
     function checkFacetsAfterTransferFacetV2Update(
         IDiamondLoupe.Facet[] memory facets,
         PantosTransferV2Facet transferFacetV2
-    ) public {
+    ) public view {
         assertEq(facets[0].facetAddress, address(dCutFacet));
         assertEq(facets[1].facetAddress, address(dLoupe));
         assertEq(facets[2].facetAddress, address(pantosRegistryFacet));

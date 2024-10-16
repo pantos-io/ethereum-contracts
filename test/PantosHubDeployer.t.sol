@@ -243,7 +243,7 @@ abstract contract PantosHubDeployer is PantosBaseTest {
         );
     }
 
-    function checkSupportedInterfaces() public {
+    function checkSupportedInterfaces() public view {
         IERC165 ierc165 = IERC165(address(pantosHubDiamond));
         assertTrue(ierc165.supportsInterface(type(IERC165).interfaceId));
         assertTrue(ierc165.supportsInterface(type(IDiamondCut).interfaceId));
@@ -254,7 +254,7 @@ abstract contract PantosHubDeployer is PantosBaseTest {
         bool paused,
         uint256 numberBlockchains,
         uint256 numberActiveBlockchains
-    ) private {
+    ) private view {
         checkSupportedInterfaces();
         assertEq(pantosHubProxy.paused(), paused);
         assertEq(pantosHubProxy.getNumberBlockchains(), numberBlockchains);
@@ -315,12 +315,12 @@ abstract contract PantosHubDeployer is PantosBaseTest {
     }
 
     // checks pre InitPantosHub state
-    function checkStatePantosHubAfterDeployment() public {
+    function checkStatePantosHubAfterDeployment() public view {
         checkStatePantosHub(true, 1, 1);
     }
 
     // checks state after InitPantosHub
-    function checkStatePantosHubAfterInit() public {
+    function checkStatePantosHubAfterInit() public view {
         checkStatePantosHub(false, 2, 2);
 
         assertEq(pantosHubProxy.getPantosToken(), PANTOS_TOKEN_ADDRESS);
@@ -627,14 +627,14 @@ abstract contract PantosHubDeployer is PantosBaseTest {
         slotValue = loadPantosHubSlotValue(startSlot + 3);
         address withdrawalAddress = toAddress(slotValue);
         slotValue = loadPantosHubSlotValue(startSlot + 4);
-        uint256 unregisterTime = uint256(slotValue);
+        uint256 withdrawalTime = uint256(slotValue);
         return
             PantosTypes.ServiceNodeRecord(
                 active,
                 url,
                 deposit,
                 withdrawalAddress,
-                unregisterTime
+                withdrawalTime
             );
     }
 

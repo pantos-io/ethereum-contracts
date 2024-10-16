@@ -127,15 +127,15 @@ contract PantosTokenMigratorTest is PantosBaseTest {
         pantosTokenMigrator.migrateTokens();
     }
 
-    function test_getOldTokenAddress() external {
+    function test_getOldTokenAddress() external view {
         assertEq(pantosTokenMigrator.getOldTokenAddress(), OLD_TOKEN_ADDRESS);
     }
 
-    function test_getNewTokenAddress() external {
+    function test_getNewTokenAddress() external view {
         assertEq(pantosTokenMigrator.getNewTokenAddress(), NEW_TOKEN_ADDRESS);
     }
 
-    function test_isTokenMigrationStarted_AfterDeploy() external {
+    function test_isTokenMigrationStarted_AfterDeploy() external view {
         assertFalse(pantosTokenMigrator.isTokenMigrationStarted());
     }
 

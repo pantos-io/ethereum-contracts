@@ -21,7 +21,7 @@ contract BitpandaEcosystemTokenTest is PantosBaseTokenTest {
         );
     }
 
-    function test_SetUpState() external {
+    function test_SetUpState() external view {
         assertEq(bestToken.balanceOf(SUPER_CRITICAL_OPS), INITIAL_SUPPLY_BEST);
         assertTrue(bestToken.paused());
         assertEq(bestToken.getOwner(), SUPER_CRITICAL_OPS);
@@ -116,19 +116,19 @@ contract BitpandaEcosystemTokenTest is PantosBaseTokenTest {
         onlyOwnerTest(address(bestToken), calldata_);
     }
 
-    function test_decimals() external {
+    function test_decimals() external view {
         assertEq(8, bestToken.decimals());
     }
 
-    function test_symbol() external {
+    function test_symbol() external view {
         assertEq("BEST", bestToken.symbol());
     }
 
-    function test_name() external {
+    function test_name() external view {
         assertEq("Bitpanda Ecosystem Token", bestToken.name());
     }
 
-    function test_getOwner() external {
+    function test_getOwner() external view {
         assertEq(token().getOwner(), SUPER_CRITICAL_OPS);
     }
 

@@ -49,7 +49,7 @@ interface IPantosRegistry {
     );
 
     /**
-     * @notice Event that is emitted when an already registerd blockchain
+     * @notice Event that is emitted when an already registered blockchain
      * is unregistered.
      *
      * @param blockchainId The id of the blockchain.
