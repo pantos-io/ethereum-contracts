@@ -15,7 +15,9 @@ abstract contract PantosBaseScript is Script {
         SOLANA, // 4 : Inactive & Non EVM
         POLYGON, // 5
         CRONOS, // 6
-        FANTOM, // 7
+        // Renamed from "FANTOM" to "SONIC" on 2024-10-16 due to
+        // network renaming
+        SONIC, // 7
         CELO, // 8
         AURORA // 9 : Decommissioned
     }
@@ -77,9 +79,9 @@ abstract contract PantosBaseScript is Script {
             120000,
             false
         );
-        _blockchains[BlockchainId.FANTOM] = Blockchain(
-            BlockchainId.FANTOM,
-            "FANTOM",
+        _blockchains[BlockchainId.SONIC] = Blockchain(
+            BlockchainId.SONIC,
+            "SONIC",
             24000,
             false
         );
@@ -110,17 +112,16 @@ abstract contract PantosBaseScript is Script {
         _chainIdToPantosBlockchainIdMapping[31339] = BlockchainId.AVALANCHE; // Local Avax dev
 
         _chainIdToPantosBlockchainIdMapping[137] = BlockchainId.POLYGON; // Polygon mainnet
-        _chainIdToPantosBlockchainIdMapping[80001] = BlockchainId.POLYGON; // Polygon mumbai testnet
-        _chainIdToPantosBlockchainIdMapping[80002] = BlockchainId.POLYGON; // Polygon amoy testnet
+        _chainIdToPantosBlockchainIdMapping[80002] = BlockchainId.POLYGON; // Polygon Amoy testnet
         _chainIdToPantosBlockchainIdMapping[31340] = BlockchainId.POLYGON; // Local Polygon dev
 
         _chainIdToPantosBlockchainIdMapping[25] = BlockchainId.CRONOS; // Cronos mainnet
         _chainIdToPantosBlockchainIdMapping[338] = BlockchainId.CRONOS; // Cronos testnet
         _chainIdToPantosBlockchainIdMapping[31341] = BlockchainId.CRONOS; // Local Cronos dev
 
-        _chainIdToPantosBlockchainIdMapping[250] = BlockchainId.FANTOM; // FANTOM mainnet
-        _chainIdToPantosBlockchainIdMapping[4002] = BlockchainId.FANTOM; // FANTOM testnet
-        _chainIdToPantosBlockchainIdMapping[31342] = BlockchainId.FANTOM; // Local FANTOM dev
+        // Not yet known: _chainIdToPantosBlockchainIdMapping[] = BlockchainId.SONIC; // Sonic mainnet
+        _chainIdToPantosBlockchainIdMapping[64165] = BlockchainId.SONIC; // Sonic testnet
+        _chainIdToPantosBlockchainIdMapping[31342] = BlockchainId.SONIC; // Local Sonic dev
 
         _chainIdToPantosBlockchainIdMapping[42220] = BlockchainId.CELO; // Celo mainnet
         _chainIdToPantosBlockchainIdMapping[44787] = BlockchainId.CELO; // Celo testnet

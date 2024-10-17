@@ -31,7 +31,8 @@ chains=(
     ["AVALANCHE"]=31339
     ["POLYGON"]=31340
     ["CRONOS"]=31341
-    ["FANTOM"]=31342
+    # Renamed from "FANTOM" to "SONIC" on 2024-10-16 due to network renaming
+    ["SONIC"]=31342
     ["CELO"]=31343
 )
 
@@ -43,7 +44,8 @@ ports=(
     ["AVALANCHE"]=8547
     ["POLYGON"]=8548
     ["CRONOS"]=8549
-    ["FANTOM"]=8550
+    # Renamed from "FANTOM" to "SONIC" on 2024-10-16 due to network renaming
+    ["SONIC"]=8550
     ["CELO"]=8551
 )
 
