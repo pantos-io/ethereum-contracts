@@ -15,6 +15,8 @@ abstract contract PantosBaseScript is Script {
         SOLANA, // 4 : Inactive & Non EVM
         POLYGON, // 5
         CRONOS, // 6
+        // Renamed from "FANTOM" to "SONIC" on 2024-10-16 due to
+        // network renaming
         SONIC, // 7
         CELO, // 8
         AURORA // 9 : Decommissioned
