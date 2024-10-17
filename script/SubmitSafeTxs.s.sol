@@ -4,10 +4,11 @@ pragma abicoder v2;
 
 /* solhint-disable no-console*/
 import {console} from "forge-std/console.sol";
-import {Script} from "forge-std/Script.sol";
 import {stdJson} from "forge-std/StdJson.sol";
 import {Safe} from "@safe/Safe.sol";
 import {Enum} from "@safe/common/Enum.sol";
+
+import {PantosBaseScript} from "./helpers/PantosBaseScript.s.sol";
 
 using stdJson for string;
 
@@ -23,7 +24,7 @@ using stdJson for string;
  *     --sender <sender> --rpc-url <rpc alias> --sig "run()" -vvvv\
  *    --slow
  */
-contract SubmitSafeTxs is Script {
+contract SubmitSafeTxs is PantosBaseScript {
     // This needs to be in alphabetical order!
     struct SafeTxDetail {
         uint256 chainId;
@@ -48,9 +49,10 @@ contract SubmitSafeTxs is Script {
 
     function run() external {
         // read transactions
+        string memory blockchainName = determineBlockchain().name;
         string memory path = string.concat(
-            vm.projectRoot(),
-            "/flat_output.json"
+            blockchainName,
+            "_flat_output.json"
         );
         SafeTxDetail[] memory safeTxDetails = readSafeTxDetails(path);
 
