@@ -5,13 +5,13 @@ pragma solidity 0.8.26;
 import {PantosCoinWrapper} from "../PantosCoinWrapper.sol";
 
 /**
- * @title Pantos-compatible token contract that wraps the Fantom
- * blockchain network's Fantom coin
+ * @title Pantos-compatible token contract that wraps the Polygon
+ * blockchain network's POL coin
  */
-contract PantosFantomWrapper is PantosCoinWrapper {
-    string private constant _NAME = "Fantom (Pantos)";
+contract PantosPolWrapper is PantosCoinWrapper {
+    string private constant _NAME = "POL (Pantos)";
 
-    string private constant _SYMBOL = "panFTM";
+    string private constant _SYMBOL = "panPOL";
 
     uint8 private constant _DECIMALS = 18;
 

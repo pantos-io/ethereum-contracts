@@ -279,10 +279,10 @@ contract DeployContracts is
             getContractAddress(Contract.PAN_ETH, false)
         );
         pantosWrappers[5] = PantosWrapper(
-            getContractAddress(Contract.PAN_FTM, false)
+            getContractAddress(Contract.PAN_S, false)
         );
         pantosWrappers[6] = PantosWrapper(
-            getContractAddress(Contract.PAN_MATIC, false)
+            getContractAddress(Contract.PAN_POL, false)
         );
     }
 

@@ -7,7 +7,7 @@ chains() {
         "AVALANCHE") echo 31339 ;;
         "POLYGON") echo 31340 ;;
         "CRONOS") echo 31341 ;;
-        "FANTOM") echo 31342 ;;
+        "SONIC") echo 31342 ;;
         "CELO") echo 31343 ;;
         *) echo "" ;;
     esac
@@ -31,7 +31,7 @@ CHAIN_ID=$(chains "$CHAIN")
 
 # Check if the provided chain is valid
 if [ -z "$CHAIN_ID" ]; then
-    echo "Error: Invalid chain '$CHAIN'. Valid options are: ETHEREUM, BNB_CHAIN, AVALANCHE, POLYGON, CRONOS, FANTOM, CELO"
+    echo "Error: Invalid chain '$CHAIN'. Valid options are: ETHEREUM, BNB_CHAIN, AVALANCHE, POLYGON, CRONOS, SONIC, CELO"
     exit 1
 fi
 

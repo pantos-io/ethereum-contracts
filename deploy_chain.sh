@@ -15,7 +15,7 @@ chains=(
     ["AVALANCHE"]=31339
     ["POLYGON"]=31340
     ["CRONOS"]=31341
-    ["FANTOM"]=31342
+    ["SONIC"]=31342
     ["CELO"]=31343
 )
 
@@ -27,7 +27,7 @@ ports=(
     ["AVALANCHE"]=8547
     ["POLYGON"]=8548
     ["CRONOS"]=8549
-    ["FANTOM"]=8550
+    ["SONIC"]=8550
     ["CELO"]=8551
 )
 

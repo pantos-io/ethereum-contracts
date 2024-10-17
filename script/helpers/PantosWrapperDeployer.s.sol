@@ -13,8 +13,8 @@ import {PantosBnbWrapper} from "../../src/wrappers/PantosBnbWrapper.sol";
 import {PantosCeloWrapper} from "../../src/wrappers/PantosCeloWrapper.sol";
 import {PantosCronosWrapper} from "../../src/wrappers/PantosCronosWrapper.sol";
 import {PantosEtherWrapper} from "../../src/wrappers/PantosEtherWrapper.sol";
-import {PantosFantomWrapper} from "../../src/wrappers/PantosFantomWrapper.sol";
-import {PantosMaticWrapper} from "../../src/wrappers/PantosMaticWrapper.sol";
+import {PantosPolWrapper} from "../../src/wrappers/PantosPolWrapper.sol";
+import {PantosSWrapper} from "../../src/wrappers/PantosSWrapper.sol";
 
 import {PantosBaseScript} from "./PantosBaseScript.s.sol";
 
@@ -55,14 +55,14 @@ abstract contract PantosWrapperDeployer is PantosBaseScript {
             address(accessController)
         );
 
-        native = blockchain.blockchainId == BlockchainId.FANTOM;
-        pantosWrappers[5] = new PantosFantomWrapper(
+        native = blockchain.blockchainId == BlockchainId.SONIC;
+        pantosWrappers[5] = new PantosSWrapper(
             native,
             address(accessController)
         );
 
         native = blockchain.blockchainId == BlockchainId.POLYGON;
-        pantosWrappers[6] = new PantosMaticWrapper(
+        pantosWrappers[6] = new PantosPolWrapper(
             native,
             address(accessController)
         );
