@@ -9,7 +9,8 @@ build:
 
 .PHONY: clean
 clean:
-	forge clean
+	@forge clean
+	@rm -r -f docs/
 
 .PHONY: format
 format:
@@ -33,6 +34,35 @@ coverage:
 .PHONY: snapshot
 snapshot:
 	forge snapshot
+
+.PHONY: docs
+docs:
+	@forge doc
+
+.PHONY: docs-graph
+docs-graph:
+	@for src_dir in $$(ls -d src/*/); do \
+		doc_dir=$$(echo $${src_dir} | sed -e 's/^src/docs\/graph/g'); \
+		mkdir -p $${doc_dir}; \
+	done
+	@for src_file in $$(find src/ -name *.sol); do \
+		doc_file=$$(echo $${src_file} | sed -e 's/^src/docs\/graph/g' | sed -e 's/sol$$/png/g'); \
+		npx surya graph $${src_file} | dot -Tpng > $${doc_file}; \
+	done
+
+.PHONY: docs-inheritance
+docs-inheritance:
+	@for src_dir in $$(ls -d src/*/); do \
+		doc_dir=$$(echo $${src_dir} | sed -e 's/^src/docs\/inheritance/g'); \
+		mkdir -p $${doc_dir}; \
+	done
+	@for src_file in $$(find src/ -name *.sol); do \
+		doc_file=$$(echo $${src_file} | sed -e 's/^src/docs\/inheritance/g' | sed -e 's/sol$$/png/g'); \
+		npx surya inheritance $${src_file} | dot -Tpng > $${doc_file}; \
+	done
+
+.PHONY: docs-all
+docs-all: docs docs-graph docs-inheritance
 
 # Slither and mythril latest versions are incompatible with each other
 .PHONY: analyze-slither
