@@ -252,11 +252,11 @@ contract PantosTokenWrapperTest is PantosBaseTest {
         onlyNativeTest(address(pantosTokenWrapper_), calldata_);
     }
 
-    function test_getWrappedToken() external {
+    function test_getWrappedToken() external view {
         assertEq(pantosTokenWrapper.getWrappedToken(), WRAPPED_TOKEN_ADDRESS);
     }
 
-    function test_isNative_WhenNative() external {
+    function test_isNative_WhenNative() external view {
         assertEq(pantosTokenWrapper.isNative(), true);
     }
 
@@ -272,15 +272,15 @@ contract PantosTokenWrapperTest is PantosBaseTest {
         assertEq(pantosTokenWrapper_.isNative(), false);
     }
 
-    function test_decimals() external {
+    function test_decimals() external view {
         assertEq(DECIMALS, pantosTokenWrapper.decimals());
     }
 
-    function test_symbol() external {
+    function test_symbol() external view {
         assertEq(SYMBOL, pantosTokenWrapper.symbol());
     }
 
-    function test_name() external {
+    function test_name() external view {
         assertEq(NAME, pantosTokenWrapper.name());
     }
 

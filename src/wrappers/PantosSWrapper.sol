@@ -5,13 +5,13 @@ pragma solidity 0.8.26;
 import {PantosCoinWrapper} from "../PantosCoinWrapper.sol";
 
 /**
- * @title Pantos-compatible token contract that wraps the Polygon
- * blockchain network's Matic coin
+ * @title Pantos-compatible token contract that wraps the Sonic
+ * blockchain network's S coin
  */
-contract PantosMaticWrapper is PantosCoinWrapper {
-    string private constant _NAME = "Matic (Pantos)";
+contract PantosSWrapper is PantosCoinWrapper {
+    string private constant _NAME = "S (Pantos)";
 
-    string private constant _SYMBOL = "panMATIC";
+    string private constant _SYMBOL = "panS";
 
     uint8 private constant _DECIMALS = 18;
 

@@ -1,4 +1,5 @@
 # Ignore all files except the ones we care about
+
 **
 
 !foundry.toml
@@ -9,3 +10,4 @@
 !.git
 !entrypoint.sh
 !deploy_chain.sh
+!safe-ledger

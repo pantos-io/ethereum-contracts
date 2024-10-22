@@ -503,7 +503,7 @@ contract PantosRegistryFacet is IPantosRegistry, PantosBaseFacet {
             "PantosHub: service node already registered"
         );
         require(
-            serviceNodeRecord.unregisterTime == 0,
+            serviceNodeRecord.withdrawalTime == 0,
             "PantosHub: service node must withdraw its deposit or cancel "
             "the unregistration"
         );
@@ -551,7 +551,9 @@ contract PantosRegistryFacet is IPantosRegistry, PantosBaseFacet {
 
         // Update the service node record
         serviceNodeRecord.active = false;
-        serviceNodeRecord.unregisterTime = block.timestamp;
+        serviceNodeRecord.withdrawalTime =
+            block.timestamp +
+            s.unbondingPeriodServiceNodeDeposit.currentValue;
         // Remove the service node address
         uint256 serviceNodeIndex = s.serviceNodeIndices[serviceNodeAddress];
         uint256 maxServiceNodeIndex = s.serviceNodes.length - 1;
@@ -579,7 +581,7 @@ contract PantosRegistryFacet is IPantosRegistry, PantosBaseFacet {
         PantosTypes.ServiceNodeRecord storage serviceNodeRecord = s
             .serviceNodeRecords[serviceNodeAddress];
         require(
-            serviceNodeRecord.unregisterTime != 0,
+            serviceNodeRecord.withdrawalTime != 0,
             "PantosHub: service node has no deposit to withdraw"
         );
         require(
@@ -590,14 +592,12 @@ contract PantosRegistryFacet is IPantosRegistry, PantosBaseFacet {
         );
         // slither-disable-next-line timestamp
         require(
-            block.timestamp >=
-                serviceNodeRecord.unregisterTime +
-                    s.unbondingPeriodServiceNodeDeposit.currentValue,
+            block.timestamp >= serviceNodeRecord.withdrawalTime,
             "PantosHub: the unbonding period has not elapsed"
         );
         uint256 deposit = serviceNodeRecord.deposit;
         // Update the service node record
-        serviceNodeRecord.unregisterTime = 0;
+        serviceNodeRecord.withdrawalTime = 0;
         serviceNodeRecord.deposit = 0;
         s.isServiceNodeUrlUsed[
             keccak256(bytes(serviceNodeRecord.url))
@@ -625,7 +625,7 @@ contract PantosRegistryFacet is IPantosRegistry, PantosBaseFacet {
         PantosTypes.ServiceNodeRecord storage serviceNodeRecord = s
             .serviceNodeRecords[serviceNodeAddress];
         require(
-            serviceNodeRecord.unregisterTime != 0,
+            serviceNodeRecord.withdrawalTime != 0,
             "PantosHub: service node is not in the unbonding period"
         );
         require(
@@ -635,7 +635,7 @@ contract PantosRegistryFacet is IPantosRegistry, PantosBaseFacet {
             "withdrawal address"
         );
         serviceNodeRecord.active = true;
-        serviceNodeRecord.unregisterTime = 0;
+        serviceNodeRecord.withdrawalTime = 0;
         s.serviceNodeIndices[serviceNodeAddress] = s.serviceNodes.length;
         s.serviceNodes.push(serviceNodeAddress);
         emit ServiceNodeRegistered(serviceNodeAddress);
@@ -957,7 +957,7 @@ contract PantosRegistryFacet is IPantosRegistry, PantosBaseFacet {
         PantosTypes.ServiceNodeRecord memory serviceNodeRecord = s
             .serviceNodeRecords[serviceNodeAddress];
         // slither-disable-next-line timestamp
-        return serviceNodeRecord.unregisterTime != 0;
+        return serviceNodeRecord.withdrawalTime != 0;
     }
 
     /**

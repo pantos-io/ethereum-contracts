@@ -47,8 +47,8 @@ import {SafeAddresses} from "./helpers/SafeAddresses.s.sol";
  *
  * 3. Simulate roleActions to be later signed by appropriate roles
  * forge script ./script/DeployContracts.s.sol --rpc-url <rpc alias> \
- *     -vvvv --sig "roleActions(uint256,address,address[],bool)" \
- *     <nextTransferId> <primaryValidator> <otherValidators> <writeSafeInfo>
+ *          -vvvv --sig "roleActions(uint256,address,address[])" \
+ *          <nextTransferId> <primaryValidator> <otherValidators>
  */
 contract DeployContracts is
     PantosBaseAddresses,
@@ -115,8 +115,7 @@ contract DeployContracts is
     function roleActions(
         uint256 nextTransferId,
         address primaryValidator,
-        address[] memory otherValidators,
-        bool writeSafeInfo
+        address[] memory otherValidators
     ) public {
         importAllContractAddresses();
         vm.broadcast(accessController.deployer());
@@ -160,9 +159,7 @@ contract DeployContracts is
         );
         initializePantosWrappers(pantosHub, pantosForwarder, pantosWrappers);
         vm.stopBroadcast();
-        if (writeSafeInfo) {
-            writeAllSafeInfo(accessController);
-        }
+        writeAllSafeInfo(accessController);
     }
 
     function exportAllContractAddresses(
@@ -279,10 +276,10 @@ contract DeployContracts is
             getContractAddress(Contract.PAN_ETH, false)
         );
         pantosWrappers[5] = PantosWrapper(
-            getContractAddress(Contract.PAN_FTM, false)
+            getContractAddress(Contract.PAN_S, false)
         );
         pantosWrappers[6] = PantosWrapper(
-            getContractAddress(Contract.PAN_MATIC, false)
+            getContractAddress(Contract.PAN_POL, false)
         );
     }
 

@@ -25,7 +25,7 @@ library PantosTypes {
         string url;
         uint256 deposit;
         address withdrawalAddress;
-        uint256 unregisterTime;
+        uint256 withdrawalTime;
     }
 
     struct TransferRequest {

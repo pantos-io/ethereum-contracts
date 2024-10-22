@@ -19,11 +19,15 @@ CMD ["echo 'Ready'"]
 
 FROM --platform=linux/amd64 ghcr.io/foundry-rs/foundry:latest AS deployed-contracts
 
-RUN apk add --no-cache jq bash
+RUN apk add --no-cache jq bash python3-dev build-base
 
 WORKDIR /root
 
 COPY --exclude=/app/.git* --from=build /app .
+
+RUN python3 -m venv safe-ledger/venv && \
+    source safe-ledger/venv/bin/activate && \
+    pip install -r safe-ledger/requirements.txt
 
 RUN ./deploy_chain.sh
 

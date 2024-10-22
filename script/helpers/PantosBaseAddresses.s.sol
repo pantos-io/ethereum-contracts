@@ -40,8 +40,8 @@ abstract contract PantosBaseAddresses is PantosBaseScript {
         PAN_CELO,
         PAN_CRO,
         PAN_ETH,
-        PAN_FTM,
-        PAN_MATIC
+        PAN_POL,
+        PAN_S
     }
 
     struct ContractInfo {
@@ -300,11 +300,11 @@ abstract contract PantosBaseAddresses is PantosBaseScript {
                     Contract.PAN_ETH
                 ] = _getPanETHContractInfo();
                 _otherChaincontractInfo[blockchainId][
-                    Contract.PAN_FTM
-                ] = _getPanFTMContractInfo();
+                    Contract.PAN_S
+                ] = _getPanSContractInfo();
                 _otherChaincontractInfo[blockchainId][
-                    Contract.PAN_MATIC
-                ] = _getPanMATICContractInfo();
+                    Contract.PAN_POL
+                ] = _getPanPOLContractInfo();
             }
         }
         _currentChainContractInfo[
@@ -378,13 +378,14 @@ abstract contract PantosBaseAddresses is PantosBaseScript {
             _getPanETHContractInfo(),
             address(0)
         );
-        _currentChainContractInfo[Contract.PAN_FTM] = CurrentChainContractInfo(
-            _getPanFTMContractInfo(),
+        _currentChainContractInfo[Contract.PAN_S] = CurrentChainContractInfo(
+            _getPanSContractInfo(),
             address(0)
         );
-        _currentChainContractInfo[
-            Contract.PAN_MATIC
-        ] = CurrentChainContractInfo(_getPanMATICContractInfo(), address(0));
+        _currentChainContractInfo[Contract.PAN_POL] = CurrentChainContractInfo(
+            _getPanPOLContractInfo(),
+            address(0)
+        );
         for (uint256 i; i < getContractsLength(); i++) {
             _keysToContracts[
                 _currentChainContractInfo[Contract(i)].contractInfo.key
@@ -596,29 +597,29 @@ abstract contract PantosBaseAddresses is PantosBaseScript {
         return panETHContractInfo;
     }
 
-    function _getPanFTMContractInfo()
+    function _getPanSContractInfo()
         private
         pure
         returns (ContractInfo memory)
     {
-        ContractInfo memory panFTMContractInfo = ContractInfo(
-            "panFTM",
+        ContractInfo memory panSContractInfo = ContractInfo(
+            "panS",
             address(0),
             true
         );
-        return panFTMContractInfo;
+        return panSContractInfo;
     }
 
-    function _getPanMATICContractInfo()
+    function _getPanPOLContractInfo()
         private
         pure
         returns (ContractInfo memory)
     {
-        ContractInfo memory panMATICContractInfo = ContractInfo(
-            "panMATIC",
+        ContractInfo memory panPOLContractInfo = ContractInfo(
+            "panPOL",
             address(0),
             true
         );
-        return panMATICContractInfo;
+        return panPOLContractInfo;
     }
 }
