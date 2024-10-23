@@ -328,7 +328,7 @@ contract PantosTokenWrapperTest is PantosBaseTest {
         pantosTokenWrapper.exposed_update(ADDRESS_ZERO, ADDRESS_ZERO, 0);
     }
 
-    function test_supportsInterface() virtual external {
+    function test_supportsInterface() external virtual {
         initializePantosTokenWrapper();
         bytes4[4] memory interfaceIds = [
             bytes4(0x01ffc9a7),

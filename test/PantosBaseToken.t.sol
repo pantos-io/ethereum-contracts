@@ -191,7 +191,7 @@ abstract contract PantosBaseTokenTest is PantosBaseTest {
         token().pantosTransfer(sender, receiver, amount);
     }
 
-    function test_supportsInterface() virtual external {
+    function test_supportsInterface() external virtual {
         initializeToken();
         bytes4[4] memory interfaceIds = [
             bytes4(0x01ffc9a7),

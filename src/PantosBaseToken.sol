@@ -139,18 +139,14 @@ abstract contract PantosBaseToken is IPantosToken, ERC20, Ownable, ERC165 {
     /**
      * @dev See {IERC165-supportsInterface}
      */
-    function supportsInterface(bytes4 interfaceId)
-        public
-        view
-        virtual
-        override(ERC165, IERC165)
-        returns (bool)
-    {
+    function supportsInterface(
+        bytes4 interfaceId
+    ) public view virtual override(ERC165, IERC165) returns (bool) {
         return
-        interfaceId == type(IPantosToken).interfaceId ||
-        interfaceId == type(ERC20).interfaceId ||
-        interfaceId == type(Ownable).interfaceId ||
-        super.supportsInterface(interfaceId);
+            interfaceId == type(IPantosToken).interfaceId ||
+            interfaceId == type(ERC20).interfaceId ||
+            interfaceId == type(Ownable).interfaceId ||
+            super.supportsInterface(interfaceId);
     }
 
     function _setPantosForwarder(

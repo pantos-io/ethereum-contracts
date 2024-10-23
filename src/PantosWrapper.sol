@@ -166,7 +166,9 @@ abstract contract PantosWrapper is
     /**
      * @dev See {IERC165-supportsInterface}
      */
-    function supportsInterface(bytes4 interfaceId)
+    function supportsInterface(
+        bytes4 interfaceId
+    )
         public
         view
         virtual
@@ -174,7 +176,7 @@ abstract contract PantosWrapper is
         returns (bool)
     {
         return
-           interfaceId == type(IPantosWrapper).interfaceId ||
+            interfaceId == type(IPantosWrapper).interfaceId ||
             interfaceId == type(ERC20Pausable).interfaceId ||
             super.supportsInterface(interfaceId);
     }

@@ -144,13 +144,9 @@ contract PantosToken is
     /**
      * @dev See {IERC165-supportsInterface}
      */
-    function supportsInterface(bytes4 interfaceId)
-        public
-        view
-        virtual
-        override(PantosBaseToken)
-        returns (bool)
-    {
+    function supportsInterface(
+        bytes4 interfaceId
+    ) public view virtual override(PantosBaseToken) returns (bool) {
         return
             interfaceId == type(ERC20Capped).interfaceId ||
             interfaceId == type(ERC20Pausable).interfaceId ||

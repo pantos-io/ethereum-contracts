@@ -167,7 +167,7 @@ contract PantosTokenTest is PantosBaseTokenTest {
         assertEq(pantosToken.getPantosForwarder(), ADDRESS_ZERO);
     }
 
-    function test_supportsInterface() override external {
+    function test_supportsInterface() external override {
         initializeToken();
         bytes4[6] memory interfaceIds = [
             bytes4(0x01ffc9a7),
