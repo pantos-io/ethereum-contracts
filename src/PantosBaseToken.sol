@@ -4,6 +4,8 @@ pragma solidity 0.8.26;
 
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
+import {IERC165} from "@openzeppelin/contracts/utils/introspection/IERC165.sol";
+import {ERC165} from "@openzeppelin/contracts/utils/introspection/ERC165.sol";
 
 import {IBEP20} from "./interfaces/IBEP20.sol";
 import {IPantosToken} from "./interfaces/IPantosToken.sol";
@@ -15,7 +17,7 @@ import {IPantosToken} from "./interfaces/IPantosToken.sol";
  * the IPantosToken interface. It is meant to be used as a base contract for
  * all Pantos-compatible token contracts.
  */
-abstract contract PantosBaseToken is IPantosToken, ERC20, Ownable {
+abstract contract PantosBaseToken is IPantosToken, ERC20, Ownable, ERC165 {
     uint8 private immutable _decimals;
 
     address private _pantosForwarder;
@@ -132,6 +134,23 @@ abstract contract PantosBaseToken is IPantosToken, ERC20, Ownable {
         returns (address)
     {
         return _pantosForwarder;
+    }
+
+    /**
+     * @dev See {IERC165-supportsInterface}
+     */
+    function supportsInterface(bytes4 interfaceId)
+        public
+        view
+        virtual
+        override(ERC165, IERC165)
+        returns (bool)
+    {
+        return
+        interfaceId == type(IPantosToken).interfaceId ||
+        interfaceId == type(ERC20).interfaceId ||
+        interfaceId == type(Ownable).interfaceId ||
+        super.supportsInterface(interfaceId);
     }
 
     function _setPantosForwarder(

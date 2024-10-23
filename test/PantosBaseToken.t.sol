@@ -3,9 +3,12 @@ pragma solidity 0.8.26;
 /* solhint-disable no-console*/
 
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
+import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 import {IERC20Errors} from "@openzeppelin/contracts/interfaces/draft-IERC6093.sol";
 import {console2} from "forge-std/console2.sol";
 
+import {IPantosToken} from "../src/interfaces/IPantosToken.sol";
 import {PantosBaseToken} from "../src/PantosBaseToken.sol";
 import {BitpandaEcosystemToken} from "../src/BitpandaEcosystemToken.sol";
 import {AccessController} from "../src/access/AccessController.sol";
@@ -186,5 +189,21 @@ abstract contract PantosBaseTokenTest is PantosBaseTest {
         vm.prank(PANTOS_FORWARDER_ADDRESS);
 
         token().pantosTransfer(sender, receiver, amount);
+    }
+
+    function test_supportsInterface() virtual external {
+        initializeToken();
+        bytes4[4] memory interfaceIds = [
+            bytes4(0x01ffc9a7),
+            type(IPantosToken).interfaceId,
+            type(ERC20).interfaceId,
+            type(Ownable).interfaceId
+        ];
+        for (uint256 i = 0; i < interfaceIds.length; i++) {
+            bytes4 interfaceId = interfaceIds[i];
+            assert(token().supportsInterface(interfaceId));
+        }
+
+        assert(!token().supportsInterface(0xffffffff));
     }
 }

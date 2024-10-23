@@ -3,6 +3,8 @@
 pragma solidity 0.8.26;
 import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import {ERC20Pausable} from "@openzeppelin/contracts/token/ERC20/extensions/ERC20Pausable.sol";
+import {IERC165} from "@openzeppelin/contracts/utils/introspection/IERC165.sol";
+import {ERC165} from "@openzeppelin/contracts/utils/introspection/ERC165.sol";
 
 import {PantosRBAC} from "./access/PantosRBAC.sol";
 import {PantosRoles} from "./access/PantosRoles.sol";
@@ -19,6 +21,7 @@ import {PantosBaseToken} from "./PantosBaseToken.sol";
  * coins on exactly one blockchain network.
  */
 abstract contract PantosWrapper is
+    ERC165,
     IPantosWrapper,
     PantosBaseToken,
     ERC20Pausable,
@@ -160,6 +163,21 @@ abstract contract PantosWrapper is
         require(false, "PantosWrapper: ownership cannot be transferred");
     }
 
+    /**
+     * @dev See {IERC165-supportsInterface}
+     */
+    function supportsInterface(bytes4 interfaceId)
+        public
+        view
+        virtual
+        override(ERC165, IERC165, PantosBaseToken)
+        returns (bool)
+    {
+        return
+           interfaceId == type(IPantosWrapper).interfaceId ||
+            interfaceId == type(ERC20Pausable).interfaceId ||
+            super.supportsInterface(interfaceId);
+    }
     /**
      * @dev See {ERC20-_update}.
      */
