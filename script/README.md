@@ -2,9 +2,9 @@
 
 One can use the Pantos scripts in the following cases:
 
-1. To do a deployment from scratch or update configurations of the system.
-    1. To do a deployment from scratch, use the ```DeployContracts.s.sol``` and ```RegisterExternalTokens.s.sol``` scripts.
-    2. To update the fee factors, use the ```UpdateFeeFactors.s.sol```.
+1. To do a deployment from scratch and initialize the system.
+    1. To do a deployment from scratch, use the ```DeployContracts.s.sol``` script.
+    2. To register the external tokens, use the ```RegisterExternalTokens.s.sol``` script.
 2. To redeploy a contract which is part of the Pantos system.
     1. PantosHub redeployment: If the PantosHub has changes, it is important to understand if those changes lead to storage collision (https://docs.openzeppelin.com/upgrades-plugins/1.x/proxies#storage-collisions-between-implementation-versions).
         1. If the PantosHub suffers storage collision, use the ```redeploy/RedeployHub.s.sol``` script.
@@ -13,6 +13,11 @@ One can use the Pantos scripts in the following cases:
     3. PantosHub and PantosForwarder redeployment (at the same time).
         1. If the PantosHub suffers storage collision, use the ```redeploy/RedeployHubAndForwarder.s.sol``` script.
         2. If the PantosHub did not suffer storage collision, use the ```redeploy/UpgradeHubAndRedeployForwarder.s.sol``` script.
+3. To update various parameters of the Pantos system.
+    1. To update the fee factors, use the ```UpdateFeeFactors.s.sol``` script.
+    2. To update the minimum deposit of the service nodes, use the ```UpdateMinimumDeposit.s.sol``` script.
+    3. To update the parameter update delay, use the ```UpdateParameterUpdateDelay.s.sol``` script.
+    4. To update the unbonding period of the service nodes deposit, use the ```UpdateUnbondingPeriod.s.sol``` script.
 
 ## How to run the scripts in a non-local environment
 
@@ -114,7 +119,25 @@ $ forge script ./script/RegisterExternalTokens.s.sol --rpc-url local-8545 -vvvv 
 ### UpdateFeeFactors
 
 ```bash
-$ forge script ./script/UpdateFeeFactors.s.sol --rpc-url local-8545 -vvvv --sig "roleActions(address,address)" 0x9fE46736679d2D9a65F0992F2272dE9f3c7fa6e0 0x68B1D87F95878fE05B998F19b66F4baba5De1aed
+$ forge script ./script/update/parameters/UpdateFeeFactors.s.sol --rpc-url local-8545 -vvvv --sig "roleActions(address,address)" 0x0165878A594ca255338adfa4d48449f69242Eb8F 0x2279B7A0a67DB372996a5FaB50D91eAA73d2eBe6
+```
+
+### UpdateMinimumDeposit
+
+```bash
+$ forge script ./script/update/parameters/UpdateMinimumDeposit.s.sol --rpc-url local-8545 -vvvv --sig "roleActions(uint256,address,address)" 1 0x0165878A594ca255338adfa4d48449f69242Eb8F 0x2279B7A0a67DB372996a5FaB50D91eAA73d2eBe6
+```
+
+### UpdateParameterUpdateDelay
+
+```bash
+$ forge script ./script/update/parameters/UpdateParameterUpdateDelay.s.sol --rpc-url local-8545 -vvvv --sig "roleActions(uint256,address,address)" 1 0x0165878A594ca255338adfa4d48449f69242Eb8F 0x2279B7A0a67DB372996a5FaB50D91eAA73d2eBe6
+```
+
+### UpdateUnbondingPeriod
+
+```bash
+$ forge script ./script/update/parameters/UpdateUnbondingPeriod.s.sol --rpc-url local-8545 -vvvv --sig "roleActions(address,address)" 1 0x0165878A594ca255338adfa4d48449f69242Eb8F 0x2279B7A0a67DB372996a5FaB50D91eAA73d2eBe6
 ```
 
 ### RedeployHub
