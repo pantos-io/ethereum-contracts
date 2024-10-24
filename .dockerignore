@@ -10,4 +10,6 @@
 !.git
 !entrypoint.sh
 !deploy_chain.sh
-!safe-ledger
+!safe-ledger/cli
+!safe-ledger/Makefile
+!safe-ledger/requirements.txt
