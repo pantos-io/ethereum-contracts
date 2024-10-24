@@ -193,6 +193,7 @@ register_tokens() {
             fi
         done
     done
+    cp "$ROOT_DIR/$chain-SAFE.json" "$chain_dir/$chain-SAFE.json"
 
     echo "Deployment for $chain completed."
 }

@@ -18,6 +18,8 @@ services:
           - ${DOCKER_REGISTRY-pantosio}/ethereum-node:${EXTRA_TAG-local}
     networks:
       pantos-ethereum:
+    ports:
+      - 8545:8545
     environment:
       CHAIN: ethereum
     volumes:
@@ -65,6 +67,8 @@ services:
           - ${DOCKER_REGISTRY-pantosio}/ethereum-node:${EXTRA_TAG-local}
     networks:
       pantos-ethereum:
+    ports:
+      - 8546:8545
     volumes:
       # Workaround so that we can also access the data locally
       # Without needing an additional container
