@@ -4,6 +4,11 @@ pragma solidity 0.8.26;
 
 import {console2} from "forge-std/console2.sol";
 
+import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
+import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
+import {ERC20Capped} from "@openzeppelin/contracts/token/ERC20/extensions/ERC20Capped.sol";
+import {ERC20Pausable} from "@openzeppelin/contracts/token/ERC20/extensions/ERC20Pausable.sol";
+
 import {IPantosToken} from "../src/interfaces/IPantosToken.sol";
 import {PantosBaseToken} from "../src/PantosBaseToken.sol";
 import {PantosToken} from "../src/PantosToken.sol";
@@ -160,6 +165,24 @@ contract PantosTokenTest is PantosBaseTokenTest {
         pantosToken.exposed_unsetPantosForwarder();
 
         assertEq(pantosToken.getPantosForwarder(), ADDRESS_ZERO);
+    }
+
+    function test_supportsInterface() external override {
+        initializeToken();
+        bytes4[6] memory interfaceIds = [
+            bytes4(0x01ffc9a7),
+            type(IPantosToken).interfaceId,
+            type(ERC20).interfaceId,
+            type(Ownable).interfaceId,
+            type(ERC20Capped).interfaceId,
+            type(ERC20Pausable).interfaceId
+        ];
+        for (uint256 i = 0; i < interfaceIds.length; i++) {
+            bytes4 interfaceId = interfaceIds[i];
+            assert(token().supportsInterface(interfaceId));
+        }
+
+        assert(!token().supportsInterface(0xffffffff));
     }
 
     function initializeToken() public override {

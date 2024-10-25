@@ -3,6 +3,7 @@
 pragma solidity 0.8.26;
 
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import {IERC165} from "@openzeppelin/contracts/utils/introspection/IERC165.sol";
 
 import {IBEP20} from "./IBEP20.sol";
 
@@ -13,7 +14,7 @@ import {IBEP20} from "./IBEP20.sol";
  * contracts, containing functions which are expected by the Pantos
  * multi-blockchain system.
  */
-interface IPantosToken is IERC20, IBEP20 {
+interface IPantosToken is IERC20, IBEP20, IERC165 {
     event PantosForwarderSet(address pantosForwarder);
 
     event PantosForwarderUnset();
