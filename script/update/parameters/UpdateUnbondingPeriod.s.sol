@@ -19,7 +19,7 @@ import {UpdateBase} from "./UpdateBase.s.sol";
  * at the Pantos Hub.
  *
  * @dev Usage
- * forge script ./script/UpdateUnbondingPeriod.s.sol --rpc-url <rpc alias>
+ * forge script ./script/update/parameters/UpdateUnbondingPeriod.s.sol --rpc-url <rpc alias>
  *      --sig "roleActions(uint256,address,address)" <newUnbondingPeriod> \
  *      <accessControllerAddress> <pantosHubProxy>
  */
@@ -47,14 +47,14 @@ contract UpdateUnbondingPeriod is PantosBaseScript, SafeAddresses, UpdateBase {
                 newUnbondingPeriod
             );
             console.log(
-                "Update of the unbonding period of service node ",
+                "Update of the unbonding period of service node "
                 "deposit initiated %s",
                 newUnbondingPeriod
             );
         } else if (updateState == UpdateBase.UpdateState.EXECUTE) {
             pantosHubProxy.executeUnbondingPeriodServiceNodeDepositUpdate();
             console.log(
-                "Update of the unbonding period of service node ",
+                "Update of the unbonding period of service node "
                 "deposit executed %s",
                 onChainUnbondingPeriod.pendingValue
             );

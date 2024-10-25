@@ -18,7 +18,7 @@ import {UpdateBase} from "./UpdateBase.s.sol";
  * @notice Update the minimum deposit of the service node at the Pantos Hub.
  *
  * @dev Usage
- * forge script ./script/UpdateMinimumDeposit.s.sol --rpc-url <rpc alias>
+ * forge script ./script/update/parameters/UpdateMinimumDeposit.s.sol --rpc-url <rpc alias>
  *      --sig "roleActions(uint256, address,address)" <newMinimumDeposit> \
  *      <accessControllerAddress> <pantosHubProxy>
  */
