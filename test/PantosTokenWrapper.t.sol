@@ -3,10 +3,13 @@ pragma solidity 0.8.26;
 /* solhint-disable no-console*/
 
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
+import {ERC20Pausable} from "@openzeppelin/contracts/token/ERC20/extensions/ERC20Pausable.sol";
 import {Pausable} from "@openzeppelin/contracts/utils/Pausable.sol";
 import {console2} from "forge-std/console2.sol";
 
 import {IPantosToken} from "../src/interfaces/IPantosToken.sol";
+import {IPantosWrapper} from "../src/interfaces/IPantosWrapper.sol";
 import {PantosWrapper} from "../src/PantosWrapper.sol";
 import {PantosTokenWrapper} from "../src/PantosTokenWrapper.sol";
 import {AccessController} from "../src/access/AccessController.sol";
@@ -323,6 +326,22 @@ contract PantosTokenWrapperTest is PantosBaseTest {
         vm.expectRevert(revertMessage);
 
         pantosTokenWrapper.exposed_update(ADDRESS_ZERO, ADDRESS_ZERO, 0);
+    }
+
+    function test_supportsInterface() external virtual {
+        initializePantosTokenWrapper();
+        bytes4[4] memory interfaceIds = [
+            bytes4(0x01ffc9a7),
+            type(IPantosWrapper).interfaceId,
+            type(ERC20).interfaceId,
+            type(ERC20Pausable).interfaceId
+        ];
+        for (uint256 i = 0; i < interfaceIds.length; i++) {
+            bytes4 interfaceId = interfaceIds[i];
+            assert(pantosTokenWrapper.supportsInterface(interfaceId));
+        }
+
+        assert(!pantosTokenWrapper.supportsInterface(0xffffffff));
     }
 
     function wrap(uint256 amount) public {
