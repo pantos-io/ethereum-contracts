@@ -116,8 +116,8 @@ docs-inheritance:
 	@for src_dir in $$(ls -d src/*/); do \
 		doc_dir=$$(echo $${src_dir} | sed -e 's/^src/${DOC_PATH}\/inheritance/g'); \
 		mkdir -p $${doc_dir}; \
-	done
-	@for src_file in $$(find src/ -name *.sol); do \
+	done; \
+	for src_file in $$(find src/ -name *.sol); do \
 		doc_file=$$(echo $${src_file} | sed -e 's/^src/${DOC_PATH}\/inheritance/g' | sed -e 's/sol$$/png/g'); \
 		npx surya inheritance $${src_file} | dot -Tpng > $${doc_file}; \
 	done
