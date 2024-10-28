@@ -18,7 +18,7 @@ import {UpdateBase} from "./UpdateBase.s.sol";
  * @notice Update the parameter update delay at the Pantos Hub.
  *
  * @dev Usage
- * forge script ./script/UpdateParameterUpdateDelay.s.sol --rpc-url <rpc alias>
+ * forge script ./script/update/parameters/UpdateParameterUpdateDelay.s.sol --rpc-url <rpc alias>
  *      --sig "roleActions(uint256,address,address)" <newParameterUpdateDelay> \
  *      <accessControllerAddress> <pantosHubProxy>
  */

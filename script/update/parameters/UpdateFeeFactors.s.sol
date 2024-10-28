@@ -18,7 +18,7 @@ import {UpdateBase} from "./UpdateBase.s.sol";
  * @notice Update the fee factors at the Pantos Hub.
  *
  * @dev Usage
- * forge script ./script/UpdateFeeFactors.s.sol --rpc-url <rpc alias>
+ * forge script ./script/update/parameters/UpdateFeeFactors.s.sol --rpc-url <rpc alias>
  *      --sig "roleActions(address,address)" <accessControllerAddress> \
  *      <pantosHubProxy>
  */

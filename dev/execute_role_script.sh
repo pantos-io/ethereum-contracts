@@ -40,7 +40,7 @@ args=("$@")
 script_name="${args[0]}"
 function_name="${args[1]}"
 function_arguments=("${args[2]}")
-roles_to_sign=("${args[3]}")
+roles_to_sign=(${args[3]})
 chain_name="${args[4]}"
 
 declare -A chains_to_port
@@ -66,25 +66,16 @@ chain_id="${chains_to_id[$chain_name]}"
 rpc_url="localhost:$chain_port"
 
 # Check if the docker stack is started
+stack_name=stack-ethereum-contracts
 compose_stacks=$(docker compose ls --filter "name=$stack_name" --format json | jq -r '.[].Name' | awk "/^$stack_name/ {print}"); 
 if [[ -z "$compose_stacks" ]]; then
     echo "Error: Docker stack '$stack_name' is not started."
     exit 1
-elif [[ "$compose_stacks" == *$'\n'* ]]; then
-    compose_stack=$(echo "$compose_stacks" | head -n 1)
-else 
-    compose_stack=$compose_stacks
 fi
 
-docker_compose_stack_name=stack-ethereum-contracts
 project_dir=".."
 script_dir="$project_dir/script"
 safe_ledger_dir="$project_dir/safe-ledger"
-if [[ "$chain_name" == "ETHEREUM" ]]; then
-    volume_dir="../data/$compose_stack/eth"
-elif [[ "$chain_name" == "BNB_CHAIN" ]]; then
-    volume_dir="../data/$compose_stack/bnb"
-fi
 broadcast_path="$project_dir/broadcast/$script_name/$chain_id/dry-run/${function_name%%(*}-latest.json"
 
 # Find the script file in the nested path within script_dir
@@ -124,7 +115,7 @@ fi
 forge script "$script_path" -vvv --rpc-url "$rpc_url" --sig $function_name $function_arguments
 
 python3 "$safe_ledger_dir/cli/safe-ledger.py" extend -i $broadcast_path \
-    -s "$volume_dir/$chain_name-SAFE.json" -o "./safe-transactions.json"
+    -s ../"$chain_name"-SAFE.json -o "./safe-transactions.json"
 
 for (( i=0; i<${#roles_to_sign[@]}; i++ )); do
     python3 "$safe_ledger_dir/cli/sign_with_cast_wallet.py" "${roles_to_sign[$i]}" \
@@ -141,4 +132,4 @@ forge script "$submit_safe_tx_script_path" --account gas_payer --password '' -vv
 rm ./full_output.json
 rm ./safe-transactions.json
 rm ../"$chain_name"_flat_output.json
-mv ../"$chain_name"-SAFE.json "$volume_dir/"$chain_name"-SAFE.json"
+rm ../"$chain_name"-SAFE.json
