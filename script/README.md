@@ -18,6 +18,11 @@ One can use the Pantos scripts in the following cases:
     2. To update the minimum deposit of the service nodes, use the ```UpdateMinimumDeposit.s.sol``` script.
     3. To update the parameter update delay, use the ```UpdateParameterUpdateDelay.s.sol``` script.
     4. To update the unbonding period of the service nodes deposit, use the ```UpdateUnbondingPeriod.s.sol``` script.
+4. To update the validators configuration.
+    1. To add a secondary validator, use the ```AddValidatorNode.s.sol``` script.
+    2. To remove a secondary validator, use the ```RemoveValidatorNode.s.sol``` script.
+    3. To update the minimum number of validator nodes required, use the ```SetMinValidatorNodeSignatures.s.sol``` script.
+    4. To update the primary validator, use the ```SetPrimaryValidatorNode.s.sol``` script.
 
 ## How to run the scripts in a non-local environment
 
@@ -137,7 +142,31 @@ $ forge script ./script/update/parameters/UpdateParameterUpdateDelay.s.sol --rpc
 ### UpdateUnbondingPeriod
 
 ```bash
-$ forge script ./script/update/parameters/UpdateUnbondingPeriod.s.sol --rpc-url local-8545 -vvvv --sig "roleActions(address,address)" 1 0x0165878A594ca255338adfa4d48449f69242Eb8F 0x2279B7A0a67DB372996a5FaB50D91eAA73d2eBe6
+$ forge script ./script/update/parameters/UpdateUnbondingPeriod.s.sol --rpc-url local-8545 -vvvv --sig "roleActions(uint256,address,address)" 1 0x0165878A594ca255338adfa4d48449f69242Eb8F 0x2279B7A0a67DB372996a5FaB50D91eAA73d2eBe6
+```
+
+### AddValidatorNode
+
+```bash
+$ forge script ./script/update/validators/AddValidatorNode.s.sol --rpc-url local-8545 -vvvv --sig "roleActions(address,address,address)" 0x9E7c67F9DE01a9ff5547f172a7d1119E62214667 0x0165878A594ca255338adfa4d48449f69242Eb8F 0x2279B7A0a67DB372996a5FaB50D91eAA73d2eBe6
+```
+
+### RemoveValidatorNode
+
+```bash
+$ forge script ./script/update/parameters/RemoveValidatorNode.s.sol --rpc-url local-8545 -vvvv --sig "roleActions(address,address,address)" 0x9E7c67F9DE01a9ff5547f172a7d1119E62214667 0x0165878A594ca255338adfa4d48449f69242Eb8F 0x2279B7A0a67DB372996a5FaB50D91eAA73d2eBe6
+```
+
+### SetMinValidatorNodeSignatures
+
+```bash
+$ forge script ./script/update/validators/SetMinValidatorNodeSignatures.s.sol --rpc-url local-8545 -vvvv --sig "roleActions(uint256,address,address)" 5 0x0165878A594ca255338adfa4d48449f69242Eb8F 0x2279B7A0a67DB372996a5FaB50D91eAA73d2eBe6
+```
+
+### SetPrimaryValidatorNode
+
+```bash
+$ forge script ./script/update/validators/SetPrimaryValidatorNode.s.sol --rpc-url local-8545 -vvvv --sig "roleActions(address,address,address)" 0x9E7c67F9DE01a9ff5547f172a7d1119E62214667 0x0165878A594ca255338adfa4d48449f69242Eb8F 0x2279B7A0a67DB372996a5FaB50D91eAA73d2eBe6
 ```
 
 ### RedeployHub
