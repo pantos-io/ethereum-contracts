@@ -3,14 +3,48 @@ INSTANCE_COUNT ?= 1
 DEV_MODE ?= false
 SHELL := $(shell which bash) -x
 
+LIB_PATH := lib
+OPENZEPPELIN_LIB_PATH := ${LIB_PATH}/openzeppelin-contracts
+
+JSON_PATH := out
+HUB_JSON_PATH := ${JSON_PATH}/IPantosHub.sol/IPantosHub.json
+FORWARDER_JSON_PATH := ${JSON_PATH}/IPantosForwarder.sol/IPantosForwarder.json
+TOKEN_JSON_PATH := ${JSON_PATH}/IPantosToken.sol/IPantosToken.json
+
+ABI_PATH := abis
+HUB_ABI_PATH := ${ABI_PATH}/pantos-hub.abi
+FORWARDER_ABI_PATH := ${ABI_PATH}/pantos-forwarder.abi
+TOKEN_ABI_PATH := ${ABI_PATH}/pantos-token.abi
+
+DOC_PATH := docs
+INTERFACE_DOC_PATH := ${DOC_PATH}/src/src/interfaces
+REGISTRY_DOC_PATH := ${INTERFACE_DOC_PATH}/IPantosRegistry.sol/interface.IPantosRegistry.md
+TRANSFER_DOC_PATH := ${INTERFACE_DOC_PATH}/IPantosTransfer.sol/interface.IPantosTransfer.md
+TOKEN_DOC_PATH := ${INTERFACE_DOC_PATH}/IPantosToken.sol/interface.IPantosToken.md
+BEP20_DOC_PATH := ${INTERFACE_DOC_PATH}/IBEP20.sol/interface.IBEP20.md
+
+OPENZEPPELIN_DOC_PATH := ${DOC_PATH}/openzeppelin
+ERC20_DOC_PATH := ${OPENZEPPELIN_DOC_PATH}/src/contracts/token/ERC20/IERC20.sol/interface.IERC20.md
+ERC165_DOC_PATH := ${OPENZEPPELIN_DOC_PATH}/src/contracts/utils/introspection/IERC165.sol/interface.IERC165.md
+
+ABI_DOC_PATH := ${DOC_PATH}/abis
+HUB_ABI_DOC_PATH := ${ABI_DOC_PATH}/pantos-hub-abi.md
+TOKEN_ABI_DOC_PATH := ${ABI_DOC_PATH}/pantos-token-abi.md
+
+TEMPLATE_PATH := templates
+HUB_ABI_DOC_TEMPLATE_PATH := ${TEMPLATE_PATH}/pantos-hub-abi.md
+TOKEN_ABI_DOC_TEMPLATE_PATH := ${TEMPLATE_PATH}/pantos-token-abi.md
+
 .PHONY: build
 build:
 	forge build
 
 .PHONY: clean
 clean:
-	@forge clean
-	@rm -r -f docs/
+	@forge clean; \
+	for path in "${ABI_PATH}" "${DOC_PATH}"; do \
+		rm -r -f "$${path}"; \
+	done
 
 .PHONY: format
 format:
@@ -35,34 +69,67 @@ coverage:
 snapshot:
 	forge snapshot
 
+.PHONY: abis
+abis: build
+	@set -e; \
+	mkdir -p "${ABI_PATH}"; \
+	jq '.abi' "${HUB_JSON_PATH}" > "${HUB_ABI_PATH}"; \
+	jq '.abi' "${FORWARDER_JSON_PATH}" > "${FORWARDER_ABI_PATH}"; \
+	jq '.abi' "${TOKEN_JSON_PATH}" > "${TOKEN_ABI_PATH}"
+
 .PHONY: docs
 docs:
 	@forge doc
 
+.PHONY: docs-abis
+docs-abis: abis docs docs-openzeppelin
+	@set -e; \
+	mkdir -p "${ABI_DOC_PATH}"; \
+	export PANTOS_REGISTRY_FUNCTIONS=$$(cat "${REGISTRY_DOC_PATH}" | sed '1,/## Functions/d' | sed '/## Events/,$$d'); \
+	export PANTOS_TRANSFER_FUNCTIONS=$$(cat "${TRANSFER_DOC_PATH}" | sed '1,/## Functions/d' | sed '/## Events/,$$d'); \
+	export PANTOS_REGISTRY_EVENTS=$$(cat "${REGISTRY_DOC_PATH}" | sed '1,/## Events/d'); \
+	export PANTOS_TRANSFER_EVENTS=$$(cat "${TRANSFER_DOC_PATH}" | sed '1,/## Events/d'); \
+	export PANTOS_HUB_ABI=$$(cat "${HUB_ABI_PATH}"); \
+	envsubst < "${HUB_ABI_DOC_TEMPLATE_PATH}" > "${HUB_ABI_DOC_PATH}"; \
+	export PANTOS_TOKEN_FUNCTIONS=$$(cat "${TOKEN_DOC_PATH}" | sed '1,/## Functions/d' | sed '/## Events/,$$d'); \
+	export ERC20_FUNCTIONS=$$(cat "${ERC20_DOC_PATH}" | sed '1,/## Functions/d' | sed '/## Events/,$$d'); \
+	export BEP20_FUNCTIONS=$$(cat "${BEP20_DOC_PATH}" | sed '1,/## Functions/d'); \
+	export ERC165_FUNCTIONS=$$(cat "${ERC165_DOC_PATH}" | sed '1,/## Functions/d'); \
+	export PANTOS_TOKEN_EVENTS=$$(cat "${TOKEN_DOC_PATH}" | sed '1,/## Events/d'); \
+	export ERC20_EVENTS=$$(cat "${ERC20_DOC_PATH}" | sed '1,/## Events/d'); \
+	export PANTOS_TOKEN_ABI=$$(cat "${TOKEN_ABI_PATH}"); \
+	envsubst < "${TOKEN_ABI_DOC_TEMPLATE_PATH}" > "${TOKEN_ABI_DOC_PATH}"
+
 .PHONY: docs-graph
 docs-graph:
 	@for src_dir in $$(ls -d src/*/); do \
-		doc_dir=$$(echo $${src_dir} | sed -e 's/^src/docs\/graph/g'); \
+		doc_dir=$$(echo $${src_dir} | sed -e 's/^src/${DOC_PATH}\/graph/g'); \
 		mkdir -p $${doc_dir}; \
-	done
-	@for src_file in $$(find src/ -name *.sol); do \
-		doc_file=$$(echo $${src_file} | sed -e 's/^src/docs\/graph/g' | sed -e 's/sol$$/png/g'); \
+	done; \
+	for src_file in $$(find src/ -name *.sol); do \
+		doc_file=$$(echo $${src_file} | sed -e 's/^src/${DOC_PATH}\/graph/g' | sed -e 's/sol$$/png/g'); \
 		npx surya graph $${src_file} | dot -Tpng > $${doc_file}; \
 	done
 
 .PHONY: docs-inheritance
 docs-inheritance:
 	@for src_dir in $$(ls -d src/*/); do \
-		doc_dir=$$(echo $${src_dir} | sed -e 's/^src/docs\/inheritance/g'); \
+		doc_dir=$$(echo $${src_dir} | sed -e 's/^src/${DOC_PATH}\/inheritance/g'); \
 		mkdir -p $${doc_dir}; \
 	done
 	@for src_file in $$(find src/ -name *.sol); do \
-		doc_file=$$(echo $${src_file} | sed -e 's/^src/docs\/inheritance/g' | sed -e 's/sol$$/png/g'); \
+		doc_file=$$(echo $${src_file} | sed -e 's/^src/${DOC_PATH}\/inheritance/g' | sed -e 's/sol$$/png/g'); \
 		npx surya inheritance $${src_file} | dot -Tpng > $${doc_file}; \
 	done
 
+.PHONY: docs-openzeppelin
+docs-openzeppelin:
+	# Output path only partially respected by "forge doc"
+	@forge doc --root ${OPENZEPPELIN_LIB_PATH} --out ${OPENZEPPELIN_DOC_PATH}; \
+	rm -r -f ${OPENZEPPELIN_LIB_PATH}/${OPENZEPPELIN_DOC_PATH}
+
 .PHONY: docs-all
-docs-all: docs docs-graph docs-inheritance
+docs-all: docs docs-abis docs-graph docs-inheritance docs-openzeppelin
 
 # Slither and mythril latest versions are incompatible with each other
 .PHONY: analyze-slither
