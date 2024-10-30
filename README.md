@@ -58,6 +58,31 @@ $ make coverage
 $ forge snapshot
 ```
 
+### ABIs
+
+```shell
+$ make abis
+```
+
+### Contract documentation
+
+```shell
+$ make docs
+```
+
+### ABI documentation
+
+```shell
+$ make docs-abis
+```
+
+### Contract control flow and inheritance graphs
+
+```shell
+$ make docs-graph
+$ make docs-inheritance
+```
+
 ### Docker
 
 **IMPORTANT**: This setup is meant for Docker Desktop. While you may be able to get the same configuration with a locally installed docker engine, we don't actively support this because of the variation amongst distributions.
