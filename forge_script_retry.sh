@@ -23,7 +23,7 @@ forge_args=("$@")
 
 # Step 1: Initial attempt to run the `forge script` without the --resume flag
 echo "Initial attempt: Running forge script with args: ${forge_args[*]}"
-forge script "${forge_args[@]}" 2>&1
+forge script "${forge_args[@]}"
 
 # Check if the script succeeded on the first attempt
 if [ $? -eq 0 ]; then
@@ -47,7 +47,7 @@ for ((attempts=1; attempts<=MAX_RETRIES; attempts++)); do
   echo "Retry attempt ${attempts} of ${MAX_RETRIES}: Running forge script with --resume."
 
   # Run the forge script with --resume and real-time output
-  forge script "${forge_args[@]}" 2>&1
+  forge script "${forge_args[@]}"
 
   # Check if the script succeeded during the retry
   if [ $? -eq 0 ]; then
