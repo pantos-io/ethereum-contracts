@@ -129,6 +129,11 @@ contract SafeAddresses is PantosBaseScript {
         writeSafeInfo(safeAddresses);
     }
 
+    function getRole(string memory roleName) public view returns (Role) {
+        require(_keysToRoles[roleName] != Role(0), "Role does not exist");
+        return _keysToRoles[roleName];
+    }
+
     function getRolesLength() public pure returns (uint256) {
         return uint256(type(Role).max) + 1;
     }
