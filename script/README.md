@@ -23,6 +23,11 @@ One can use the Pantos scripts in the following cases:
     2. To remove a secondary validator, use the ```RemoveValidatorNode.s.sol``` script.
     3. To update the minimum number of validator nodes required, use the ```SetMinValidatorNodeSignatures.s.sol``` script.
     4. To update the primary validator, use the ```SetPrimaryValidatorNode.s.sol``` script.
+5. To manage the Gnosis Safes.
+    1. To add an owner, use the ```SafeManagement.s.sol``` script.
+    2. To remove an owner, use the ```SafeManagement.s.sol``` script.
+    3. To swap an owner, use the ```SafeManagement.s.sol``` script.
+    4. To change the threshold, use the ```SafeManagement.s.sol``` script.
 
 ## How to run the scripts in a non-local environment
 
@@ -168,6 +173,31 @@ $ forge script ./script/update/validators/SetMinValidatorNodeSignatures.s.sol --
 ```bash
 $ forge script ./script/update/validators/SetPrimaryValidatorNode.s.sol --rpc-url local-8545 -vvvv --sig "roleActions(address,address,address)" 0x9E7c67F9DE01a9ff5547f172a7d1119E62214667 0x0165878A594ca255338adfa4d48449f69242Eb8F 0x2279B7A0a67DB372996a5FaB50D91eAA73d2eBe6
 ```
+
+### AddOwnerWithThreshold
+
+```bash
+$ forge script ./script/safes/SafeManagement.s.sol --rpc-url local-8545 -vvvv --sig "addOwnerWithThreshold(string,address,uint256)" super_critical_ops 0xd7a2bFf702D86394D79D791E12212B26dCaC834f 1
+```
+
+### RemoveOwnerWithThreshold
+
+```bash
+$ forge script ./script/safes/SafeManagement.s.sol --rpc-url local-8545 -vvvv --sig "removeOwnerWithThreshold(string,address,uint256)" super_critical_ops 0xd7a2bFf702D86394D79D791E12212B26dCaC834f 1
+```
+
+### SwapOwner
+
+```bash
+$ forge script ./script/safes/SafeManagement.s.sol --rpc-url local-8545 -vvvv --sig "swapOwner(string,address,address)" super_critical_ops 0xd7a2bFf702D86394D79D791E12212B26dCaC834f 0xE9c98b78b7714a6bcdD93f2F0e7A54B362BEa6cd 
+```
+
+### ChangeThreshold
+
+```bash
+$ forge script ./script/safes/SafeManagement.s.sol --rpc-url local-8545 -vvvv --sig "changeThreshold(string,uint256)" super_critical_ops 2
+```
+
 
 ### RedeployHub
 
