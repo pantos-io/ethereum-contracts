@@ -6,7 +6,7 @@ pragma abicoder v2;
 import {console} from "forge-std/console.sol";
 import {stdJson} from "forge-std/StdJson.sol";
 import {Safe} from "@safe/Safe.sol";
-import {Enum} from "@safe/common/Enum.sol";
+import {Enum} from "@safe/libraries/Enum.sol";
 
 import {PantosBaseScript} from "./helpers/PantosBaseScript.s.sol";
 
