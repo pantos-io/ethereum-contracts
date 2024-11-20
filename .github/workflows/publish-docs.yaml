@@ -1,0 +1,51 @@
+name: Publish Docs
+
+on:
+  workflow_call:
+    inputs:
+      tag:
+        description: 'Release tag'
+        required: true
+        type: string
+
+jobs:
+  publish-docs:
+    name: Publish Docs ${{ inputs.tag }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout Foundry Repository
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Checkout GitBook Repository
+        uses: actions/checkout@v4
+        with:
+          repository: pantos-io/docs
+          path: ./pantos-docs
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Install Foundry
+        uses: foundry-rs/foundry-toolchain@v1
+
+      - name: Generate ABI Documentation
+        run: |
+          make docs-abis
+
+      - name: Copy ABI Documentation
+        run: |
+          cp docs/abis/pantos-hub-abi.md ./pantos-docs/general/pantoshub-abi.md
+          cp docs/abis/pantos-token-abi.md ./pantos-docs/general/pantostoken-abi.md
+
+      - name: Update GitBook Repository
+        run: |
+          git config --global user.name "Don Pantos"
+          git config --global user.email "<>"
+          git add .
+          if [ -n "$(git status --porcelain)" ]; then
+            git commit -m "Ethereum ABIs ${{ inputs.tag }}"
+            git push --set-upstream origin main
+          fi
+        working-directory: ./pantos-docs
