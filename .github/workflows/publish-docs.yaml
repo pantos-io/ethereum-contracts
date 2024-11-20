@@ -46,7 +46,6 @@ jobs:
           git add .
           if [ -n "$(git status --porcelain)" ]; then
             git commit -m "Ethereum ABIs ${{ inputs.tag }}"
-            # git push --set-upstream origin main
-            echo "Ethereum ABIs ${{ inputs.tag }}"
+            git push --set-upstream origin main
           fi
         working-directory: ./pantos-docs
