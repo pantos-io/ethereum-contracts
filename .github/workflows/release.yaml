@@ -50,3 +50,11 @@ jobs:
       architecture: amd64
       environment: dockerhub
       extra_tag: ${{ github.event.release.prerelease && 'beta' || 'latest' }}
+
+  publish-docs:
+    name: Publish Docs
+    needs: [define-environment]
+    uses: ./.github/workflows/publish-docs.yaml
+    secrets: 'inherit'
+    with:
+      tag: ${{ github.event.release.tag_name }}
