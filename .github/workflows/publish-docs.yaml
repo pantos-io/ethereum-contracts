@@ -25,7 +25,7 @@ jobs:
         with:
           repository: pantos-io/docs
           path: ./pantos-docs
-          token: ${{ secrets.GH_TOKEN }}
+          token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Install Foundry
         uses: foundry-rs/foundry-toolchain@v1
