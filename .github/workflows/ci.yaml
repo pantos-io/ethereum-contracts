@@ -7,6 +7,13 @@ on:
   pull_request:
 
 jobs:
+  publish-docs:
+    name: Publish Docs
+    uses: ./.github/workflows/publish-docs.yaml
+    secrets: 'inherit'
+    with:
+      tag: 'vTEST'
+
   format-lint:
     name: Format and lint
     runs-on: ubuntu-latest
