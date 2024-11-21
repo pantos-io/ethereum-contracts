@@ -8,7 +8,7 @@ import {IPantosHub} from "../../../src/interfaces/IPantosHub.sol";
 import {PantosTypes} from "../../../src/interfaces/PantosTypes.sol";
 import {AccessController} from "../../../src/access/AccessController.sol";
 
-import {PantosBaseScript} from "../../helpers/PantosHubDeployer.s.sol";
+import {PantosBaseAddresses} from "./../../helpers/PantosBaseAddresses.s.sol";
 import {SafeAddresses} from "../../helpers/SafeAddresses.s.sol";
 import {UpdateBase} from "./UpdateBase.s.sol";
 
@@ -20,18 +20,20 @@ import {UpdateBase} from "./UpdateBase.s.sol";
  *
  * @dev Usage
  * forge script ./script/update/parameters/UpdateUnbondingPeriod.s.sol --rpc-url <rpc alias>
- *      --sig "roleActions(uint256,address,address)" <newUnbondingPeriod> \
- *      <accessControllerAddress> <pantosHubProxy>
+ *      --sig "roleActions(uint256)" <newUnbondingPeriod>
  */
-contract UpdateUnbondingPeriod is PantosBaseScript, SafeAddresses, UpdateBase {
-    function roleActions(
-        uint256 newUnbondingPeriod,
-        address accessControllerAddress,
-        address pantosHubProxyAddress
-    ) public {
-        IPantosHub pantosHubProxy = IPantosHub(pantosHubProxyAddress);
+contract UpdateUnbondingPeriod is
+    PantosBaseAddresses,
+    SafeAddresses,
+    UpdateBase
+{
+    function roleActions(uint256 newUnbondingPeriod) public {
+        readContractAddresses(determineBlockchain());
+        IPantosHub pantosHubProxy = IPantosHub(
+            getContractAddress(Contract.HUB_PROXY, false)
+        );
         AccessController accessController = AccessController(
-            accessControllerAddress
+            getContractAddress(Contract.ACCESS_CONTROLLER, false)
         );
         vm.startBroadcast(accessController.mediumCriticalOps());
 

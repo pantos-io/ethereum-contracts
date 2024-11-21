@@ -8,7 +8,7 @@ import {IPantosHub} from "../../../src/interfaces/IPantosHub.sol";
 import {PantosTypes} from "../../../src/interfaces/PantosTypes.sol";
 import {AccessController} from "../../../src/access/AccessController.sol";
 
-import {PantosBaseScript} from "../../helpers/PantosHubDeployer.s.sol";
+import {PantosBaseAddresses} from "./../../helpers/PantosBaseAddresses.s.sol";
 import {SafeAddresses} from "../../helpers/SafeAddresses.s.sol";
 import {UpdateBase} from "./UpdateBase.s.sol";
 
@@ -19,18 +19,20 @@ import {UpdateBase} from "./UpdateBase.s.sol";
  *
  * @dev Usage
  * forge script ./script/update/parameters/UpdateMinimumDeposit.s.sol --rpc-url <rpc alias>
- *      --sig "roleActions(uint256, address,address)" <newMinimumDeposit> \
- *      <accessControllerAddress> <pantosHubProxy>
+ *      --sig "roleActions(uint256)" <newMinimumDeposit>
  */
-contract UpdateMinimumDeposit is PantosBaseScript, SafeAddresses, UpdateBase {
-    function roleActions(
-        uint256 newMinimumDeposit,
-        address accessControllerAddress,
-        address pantosHubProxyAddress
-    ) public {
-        IPantosHub pantosHubProxy = IPantosHub(pantosHubProxyAddress);
+contract UpdateMinimumDeposit is
+    PantosBaseAddresses,
+    SafeAddresses,
+    UpdateBase
+{
+    function roleActions(uint256 newMinimumDeposit) public {
+        readContractAddresses(determineBlockchain());
+        IPantosHub pantosHubProxy = IPantosHub(
+            getContractAddress(Contract.HUB_PROXY, false)
+        );
         AccessController accessController = AccessController(
-            accessControllerAddress
+            getContractAddress(Contract.ACCESS_CONTROLLER, false)
         );
         vm.startBroadcast(accessController.mediumCriticalOps());
         PantosTypes.UpdatableUint256

@@ -129,49 +129,49 @@ $ forge script ./script/RegisterExternalTokens.s.sol --rpc-url local-8545 -vvvv 
 ### UpdateFeeFactors
 
 ```bash
-$ forge script ./script/update/parameters/UpdateFeeFactors.s.sol --rpc-url local-8545 -vvvv --sig "roleActions(address,address)" 0x0165878A594ca255338adfa4d48449f69242Eb8F 0x2279B7A0a67DB372996a5FaB50D91eAA73d2eBe6
+$ forge script ./script/update/parameters/UpdateFeeFactors.s.sol --rpc-url local-8545 -vvvv --sig "roleActions()"
 ```
 
 ### UpdateMinimumDeposit
 
 ```bash
-$ forge script ./script/update/parameters/UpdateMinimumDeposit.s.sol --rpc-url local-8545 -vvvv --sig "roleActions(uint256,address,address)" 1 0x0165878A594ca255338adfa4d48449f69242Eb8F 0x2279B7A0a67DB372996a5FaB50D91eAA73d2eBe6
+$ forge script ./script/update/parameters/UpdateMinimumDeposit.s.sol --rpc-url local-8545 -vvvv --sig "roleActions(uint256)" 1
 ```
 
 ### UpdateParameterUpdateDelay
 
 ```bash
-$ forge script ./script/update/parameters/UpdateParameterUpdateDelay.s.sol --rpc-url local-8545 -vvvv --sig "roleActions(uint256,address,address)" 1 0x0165878A594ca255338adfa4d48449f69242Eb8F 0x2279B7A0a67DB372996a5FaB50D91eAA73d2eBe6
+$ forge script ./script/update/parameters/UpdateParameterUpdateDelay.s.sol --rpc-url local-8545 -vvvv --sig "roleActions(uint256)" 1
 ```
 
 ### UpdateUnbondingPeriod
 
 ```bash
-$ forge script ./script/update/parameters/UpdateUnbondingPeriod.s.sol --rpc-url local-8545 -vvvv --sig "roleActions(uint256,address,address)" 1 0x0165878A594ca255338adfa4d48449f69242Eb8F 0x2279B7A0a67DB372996a5FaB50D91eAA73d2eBe6
+$ forge script ./script/update/parameters/UpdateUnbondingPeriod.s.sol --rpc-url local-8545 -vvvv --sig "roleActions(uint256)" 1
 ```
 
 ### AddValidatorNode
 
 ```bash
-$ forge script ./script/update/validators/AddValidatorNode.s.sol --rpc-url local-8545 -vvvv --sig "roleActions(address,address,address)" 0x9E7c67F9DE01a9ff5547f172a7d1119E62214667 0x0165878A594ca255338adfa4d48449f69242Eb8F 0x2279B7A0a67DB372996a5FaB50D91eAA73d2eBe6
+$ forge script ./script/update/validators/AddValidatorNode.s.sol --rpc-url local-8545 -vvvv --sig "roleActions(address)" 0x9E7c67F9DE01a9ff5547f172a7d1119E62214667
 ```
 
 ### RemoveValidatorNode
 
 ```bash
-$ forge script ./script/update/parameters/RemoveValidatorNode.s.sol --rpc-url local-8545 -vvvv --sig "roleActions(address,address,address)" 0x9E7c67F9DE01a9ff5547f172a7d1119E62214667 0x0165878A594ca255338adfa4d48449f69242Eb8F 0x2279B7A0a67DB372996a5FaB50D91eAA73d2eBe6
+$ forge script ./script/update/parameters/RemoveValidatorNode.s.sol --rpc-url local-8545 -vvvv --sig "roleActions(address)" 0x9E7c67F9DE01a9ff5547f172a7d1119E62214667
 ```
 
 ### SetMinValidatorNodeSignatures
 
 ```bash
-$ forge script ./script/update/validators/SetMinValidatorNodeSignatures.s.sol --rpc-url local-8545 -vvvv --sig "roleActions(uint256,address,address)" 5 0x0165878A594ca255338adfa4d48449f69242Eb8F 0x2279B7A0a67DB372996a5FaB50D91eAA73d2eBe6
+$ forge script ./script/update/validators/SetMinValidatorNodeSignatures.s.sol --rpc-url local-8545 -vvvv --sig "roleActions(uint256)" 5
 ```
 
 ### SetPrimaryValidatorNode
 
 ```bash
-$ forge script ./script/update/validators/SetPrimaryValidatorNode.s.sol --rpc-url local-8545 -vvvv --sig "roleActions(address,address,address)" 0x9E7c67F9DE01a9ff5547f172a7d1119E62214667 0x0165878A594ca255338adfa4d48449f69242Eb8F 0x2279B7A0a67DB372996a5FaB50D91eAA73d2eBe6
+$ forge script ./script/update/validators/SetPrimaryValidatorNode.s.sol --rpc-url local-8545 -vvvv --sig "roleActions(address)" 0x9E7c67F9DE01a9ff5547f172a7d1119E62214667
 ```
 
 ### AddOwnerWithThreshold

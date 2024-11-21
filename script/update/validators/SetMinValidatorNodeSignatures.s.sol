@@ -17,20 +17,20 @@ import {SafeAddresses} from "./../../helpers/SafeAddresses.s.sol";
  *
  * @dev Usage
  * forge script ./script/update/parameters/SetMinValidatorNodeSignatures.s.sol --rpc-url <rpc alias>
- *      --sig "roleActions(address,address,uint256)" <newMinimumThreshold> \
- *      <accessControllerAddress> <pantosForwarder>
+ *      --sig "roleActions(uint256)" <newMinimumThreshold>
  */
 contract SetMinValidatorNodeSignatures is PantosBaseAddresses, SafeAddresses {
     AccessController accessController;
     PantosForwarder public pantosForwarder;
 
-    function roleActions(
-        uint256 newMinimumThreshold,
-        address accessController_,
-        address pantosForwarder_
-    ) public {
-        accessController = AccessController(accessController_);
-        pantosForwarder = PantosForwarder(pantosForwarder_);
+    function roleActions(uint256 newMinimumThreshold) public {
+        readContractAddresses(determineBlockchain());
+        accessController = AccessController(
+            getContractAddress(Contract.ACCESS_CONTROLLER, false)
+        );
+        pantosForwarder = PantosForwarder(
+            getContractAddress(Contract.FORWARDER, false)
+        );
 
         require(
             newMinimumThreshold > 0,

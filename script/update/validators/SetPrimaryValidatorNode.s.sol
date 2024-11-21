@@ -17,20 +17,18 @@ import {SafeAddresses} from "./../../helpers/SafeAddresses.s.sol";
  *
  * @dev Usage
  * forge script ./script/update/parameters/SetPrimaryValidatorNode.s.sol --rpc-url <rpc alias>
- *      --sig "roleActions(address,address,address)" <newPirmaryValidatorNode> \
- *      <accessControllerAddress> <pantosHubProxy>
+ *      --sig "roleActions(address)" <newPirmaryValidatorNode>
  */
 contract SetPrimaryValidatorNode is PantosBaseAddresses, SafeAddresses {
     AccessController accessController;
     IPantosHub public pantosHub;
 
-    function roleActions(
-        address newPirmaryValidatorNode,
-        address accessController_,
-        address pantosHub_
-    ) public {
-        accessController = AccessController(accessController_);
-        pantosHub = IPantosHub(pantosHub_);
+    function roleActions(address newPirmaryValidatorNode) public {
+        readContractAddresses(determineBlockchain());
+        accessController = AccessController(
+            getContractAddress(Contract.ACCESS_CONTROLLER, false)
+        );
+        pantosHub = IPantosHub(getContractAddress(Contract.HUB_PROXY, false));
 
         address oldPrimaryValidatorNode = pantosHub.getPrimaryValidatorNode();
         if (oldPrimaryValidatorNode == newPirmaryValidatorNode) {
