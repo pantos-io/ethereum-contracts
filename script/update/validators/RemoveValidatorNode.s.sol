@@ -18,25 +18,23 @@ import {SafeAddresses} from "./../../helpers/SafeAddresses.s.sol";
  * @dev Usage
  * 1. Remove a validator node.
  * forge script ./script/update/validators/RemoveValidatorNode.s.sol --rpc-url <rpc alias>
- *      --sig "roleActions(address,address,address)" <validatorNode> \
- *      <accessControllerAddress>  <pantosForwarder>
+ *      --sig "roleActions(address)" <validatorNode>
  * 2. Remove a validator node and change the minimum threshold of validator nodes.
  * forge script ./script/update/validators/RemoveValidatorNode.s.sol --rpc-url <rpc alias>
- *      --sig "roleActions(address,address,address)" <validatorNode> \
- *      <newMinimumThreshold> <accessControllerAddress>  <pantosForwarder>
+ *      --sig "roleActions(address,uint256)" <validatorNode> <newMinimumThreshold>
  */
 contract RemoveValidatorNode is PantosBaseAddresses, SafeAddresses {
     AccessController accessController;
     PantosForwarder public pantosForwarder;
 
-    function roleActions(
-        address validatorNode,
-        address accessController_,
-        address pantosForwarder_
-    ) public {
-        accessController = AccessController(accessController_);
-        pantosForwarder = PantosForwarder(pantosForwarder_);
-        console.log("pantos forwarder address: %s", pantosForwarder_);
+    function roleActions(address validatorNode) public {
+        readContractAddresses(determineBlockchain());
+        accessController = AccessController(
+            getContractAddress(Contract.ACCESS_CONTROLLER, false)
+        );
+        pantosForwarder = PantosForwarder(
+            getContractAddress(Contract.FORWARDER, false)
+        );
 
         address[] memory validatorNodes = pantosForwarder.getValidatorNodes();
         bool found = false;
@@ -66,12 +64,15 @@ contract RemoveValidatorNode is PantosBaseAddresses, SafeAddresses {
 
     function roleActions(
         address validatorNode,
-        uint256 newMinimumThreshold,
-        address accessController_,
-        address pantosForwarder_
+        uint256 newMinimumThreshold
     ) public {
-        accessController = AccessController(accessController_);
-        pantosForwarder = PantosForwarder(pantosForwarder_);
+        readContractAddresses(determineBlockchain());
+        accessController = AccessController(
+            getContractAddress(Contract.ACCESS_CONTROLLER, false)
+        );
+        pantosForwarder = PantosForwarder(
+            getContractAddress(Contract.FORWARDER, false)
+        );
 
         require(
             newMinimumThreshold > 0,

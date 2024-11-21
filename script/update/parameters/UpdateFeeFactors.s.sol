@@ -8,7 +8,7 @@ import {IPantosHub} from "../../../src/interfaces/IPantosHub.sol";
 import {PantosTypes} from "../../../src/interfaces/PantosTypes.sol";
 import {AccessController} from "../../../src/access/AccessController.sol";
 
-import {PantosBaseScript} from "../../helpers/PantosHubDeployer.s.sol";
+import {PantosBaseAddresses} from "./../../helpers/PantosBaseAddresses.s.sol";
 import {SafeAddresses} from "../../helpers/SafeAddresses.s.sol";
 import {UpdateBase} from "./UpdateBase.s.sol";
 
@@ -19,17 +19,16 @@ import {UpdateBase} from "./UpdateBase.s.sol";
  *
  * @dev Usage
  * forge script ./script/update/parameters/UpdateFeeFactors.s.sol --rpc-url <rpc alias>
- *      --sig "roleActions(address,address)" <accessControllerAddress> \
- *      <pantosHubProxy>
+ *      --sig "roleActions()"
  */
-contract UpdateFeeFactors is PantosBaseScript, SafeAddresses, UpdateBase {
-    function roleActions(
-        address accessControllerAddress,
-        address pantosHubProxyAddress
-    ) public {
-        IPantosHub pantosHubProxy = IPantosHub(pantosHubProxyAddress);
+contract UpdateFeeFactors is PantosBaseAddresses, SafeAddresses, UpdateBase {
+    function roleActions() public {
+        readContractAddresses(determineBlockchain());
+        IPantosHub pantosHubProxy = IPantosHub(
+            getContractAddress(Contract.HUB_PROXY, false)
+        );
         AccessController accessController = AccessController(
-            accessControllerAddress
+            getContractAddress(Contract.ACCESS_CONTROLLER, false)
         );
         vm.startBroadcast(accessController.mediumCriticalOps());
 
