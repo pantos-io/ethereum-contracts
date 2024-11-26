@@ -35,6 +35,21 @@ contract SafeAddresses is PantosBaseScript {
 
     Blockchain private thisBlockchain;
 
+    modifier onlyValidRoleName(string memory roleName) {
+        bool isValidRoleName = false;
+        for (uint256 i = 0; i < getRolesLength(); i++) {
+            if (
+                keccak256(abi.encodePacked(_roleInfo[Role(i)].key)) ==
+                keccak256(abi.encodePacked(roleName))
+            ) {
+                isValidRoleName = true;
+                break;
+            }
+        }
+        require(isValidRoleName, "Invalid role name");
+        _;
+    }
+
     function getRoleAddress(Role role) public view returns (address) {
         address roleAddress = _roleInfo[role].address_;
         require(roleAddress != address(0), "Error: Address is zero");
@@ -129,8 +144,9 @@ contract SafeAddresses is PantosBaseScript {
         writeSafeInfo(safeAddresses);
     }
 
-    function getRole(string memory roleName) public view returns (Role) {
-        require(_keysToRoles[roleName] != Role(0), "Role does not exist");
+    function getRole(
+        string memory roleName
+    ) public view onlyValidRoleName(roleName) returns (Role) {
         return _keysToRoles[roleName];
     }
 

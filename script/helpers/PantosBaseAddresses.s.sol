@@ -24,6 +24,7 @@ import {PantosBaseScript} from "./PantosBaseScript.s.sol";
 
 abstract contract PantosBaseAddresses is PantosBaseScript {
     enum Contract {
+        GENERIC,
         HUB_PROXY,
         HUB_INIT,
         DIAMOND_CUT_FACET,
@@ -67,9 +68,9 @@ abstract contract PantosBaseAddresses is PantosBaseScript {
     string private constant _contractSerializer = "address";
 
     mapping(BlockchainId => mapping(Contract => ContractInfo))
-        private _otherChaincontractInfo;
+        internal _otherChaincontractInfo;
     mapping(Contract => CurrentChainContractInfo)
-        private _currentChainContractInfo;
+        internal _currentChainContractInfo;
     mapping(string => Contract) internal _keysToContracts;
 
     Blockchain private thisBlockchain;
