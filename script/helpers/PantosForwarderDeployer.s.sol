@@ -34,6 +34,7 @@ abstract contract PantosForwarderDeployer is PantosBaseScript {
         PantosForwarder pantosForwarder,
         IPantosHub pantosHubProxy,
         PantosToken pantosToken,
+        uint256 minimumValidatorNodeSignatures,
         address[] memory validatorNodeAddresses
     ) public {
         // Set the hub, PAN token, and validator node addresses
@@ -58,11 +59,11 @@ abstract contract PantosForwarderDeployer is PantosBaseScript {
         }
 
         pantosForwarder.setMinimumValidatorNodeSignatures(
-            Constants.MINIMUM_VALIDATOR_NODE_SIGNATURES
+            minimumValidatorNodeSignatures
         );
         console.log(
             "PantosForwarder.setMinimumValidatorNodeSignatures(%s)",
-            vm.toString(Constants.MINIMUM_VALIDATOR_NODE_SIGNATURES)
+            vm.toString(minimumValidatorNodeSignatures)
         );
 
         // Unpause the forwarder contract after initialization
