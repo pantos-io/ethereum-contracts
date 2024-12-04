@@ -187,9 +187,9 @@ docker: check-swarm-init
                 echo "$$STACK_NAME-$$service-1 is healthy"; \
             fi; \
 			if [ "$$(docker inspect --format='{{.State.Health.Status}}' $$STACK_NAME-$$service-1)" == "unhealthy" ]; then \
-				echo "Service $service is unhealthy" \
-				docker logs $STACK_NAME-$service-1 \
-			fi \
+				echo "Service $$STACK_NAME-$$service-1 is not healthy, status: $$status"; \
+				docker logs $$STACK_NAME-$$service-1; \
+			fi; \
             dir=$$DATA_PATH/$$service; \
             echo "Copying data from $$service to $$dir"; \
             mkdir -p $$dir; \
