@@ -19,6 +19,7 @@ avax-testnet = "https://api-eu1.tatum.io/v3/blockchain/node/AVAX/${TATUM_API_KEY
 polygon-testnet = "https://api-eu1.tatum.io/v3/blockchain/node/MATIC/${TATUM_API_KEY}"
 cronos-testnet = "https://api-eu1.tatum.io/v3/blockchain/node/CRO/${TATUM_API_KEY}"
 sonic-testnet = "https://rpc.testnet.soniclabs.com/"
+sonic-blaze-testnet = "https://rpc.blaze.soniclabs.com"
 celo-testnet = "https://alfajores-forno.celo-testnet.org"
 local-8545 = "http://127.0.0.1:8545"
 local-8546 = "http://127.0.0.1:8546"
