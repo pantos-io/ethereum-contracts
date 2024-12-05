@@ -48,7 +48,8 @@ import {SafeAddresses} from "./helpers/SafeAddresses.s.sol";
  * 3. Simulate roleActions to be later signed by appropriate roles
  * forge script ./script/DeployContracts.s.sol --rpc-url <rpc alias> \
  *          -vvvv --sig "roleActions(uint256,address,address[])" \
- *          <nextTransferId> <primaryValidator> <otherValidators>
+ *          <nextTransferId> <primaryValidator> <otherValidators> \
+ *          <minimumRequiredValidatorSignatures>
  */
 contract DeployContracts is
     PantosBaseAddresses,
@@ -115,7 +116,8 @@ contract DeployContracts is
     function roleActions(
         uint256 nextTransferId,
         address primaryValidator,
-        address[] memory otherValidators
+        address[] memory otherValidators,
+        uint256 minimum_validator_node_signatures
     ) public {
         importAllContractAddresses();
         vm.broadcast(accessController.deployer());
@@ -150,7 +152,8 @@ contract DeployContracts is
             pantosForwarder,
             pantosHub,
             pantosToken,
-            validatorNodeAddresses
+            validatorNodeAddresses,
+            minimum_validator_node_signatures
         );
         initializeBitpandaEcosystemToken(
             bitpandaEcosystemToken,

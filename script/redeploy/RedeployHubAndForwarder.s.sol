@@ -120,7 +120,8 @@ contract RedeployHubAndForwarder is
             newPantosForwarder,
             newPantosHub,
             pantosToken,
-            validatorNodeAddresses
+            validatorNodeAddresses,
+            oldForwarder.getMinimumValidatorNodeSignatures()
         );
 
         // Pause old forwarder

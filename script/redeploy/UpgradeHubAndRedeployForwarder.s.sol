@@ -105,7 +105,8 @@ contract UpgradeHubAndRedeployForwarder is
             newPantosForwarder,
             pantosHub,
             pantosToken,
-            validatorNodeAddresses
+            validatorNodeAddresses,
+            oldForwarder.getMinimumValidatorNodeSignatures()
         );
         vm.stopBroadcast();
 

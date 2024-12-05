@@ -72,7 +72,8 @@ contract RedeployForwarder is
             newPantosForwarder,
             pantosHub,
             PantosToken(pantosHub.getPantosToken()),
-            validatorNodeAddresses
+            validatorNodeAddresses,
+            oldForwarder.getMinimumValidatorNodeSignatures()
         );
         vm.stopBroadcast();
 
