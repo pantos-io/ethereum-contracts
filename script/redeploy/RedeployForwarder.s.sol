@@ -64,14 +64,19 @@ contract RedeployForwarder is
             pantosHub.getPantosForwarder()
         );
 
+        uint256 minimumValidatorNodeSignatures = tryGetMinimumValidatorNodeSignatures(
+                oldForwarder
+            );
         address[] memory validatorNodeAddresses = tryGetValidatorNodes(
             oldForwarder
         );
+
         vm.startBroadcast(accessController.superCriticalOps());
         initializePantosForwarder(
             newPantosForwarder,
             pantosHub,
             PantosToken(pantosHub.getPantosToken()),
+            minimumValidatorNodeSignatures,
             validatorNodeAddresses
         );
         vm.stopBroadcast();

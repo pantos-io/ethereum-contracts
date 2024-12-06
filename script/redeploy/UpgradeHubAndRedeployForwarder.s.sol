@@ -96,6 +96,9 @@ contract UpgradeHubAndRedeployForwarder is
         );
         vm.stopBroadcast();
 
+        uint256 minimumValidatorNodeSignatures = tryGetMinimumValidatorNodeSignatures(
+                oldForwarder
+            );
         address[] memory validatorNodeAddresses = tryGetValidatorNodes(
             oldForwarder
         );
@@ -105,6 +108,7 @@ contract UpgradeHubAndRedeployForwarder is
             newPantosForwarder,
             pantosHub,
             pantosToken,
+            minimumValidatorNodeSignatures,
             validatorNodeAddresses
         );
         vm.stopBroadcast();
