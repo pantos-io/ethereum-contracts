@@ -91,6 +91,7 @@ docs-abis: abis docs docs-openzeppelin
 	export PANTOS_TRANSFER_EVENTS=$$(cat "${TRANSFER_DOC_PATH}" | sed '1,/## Events/d'); \
 	export PANTOS_HUB_ABI=$$(cat "${HUB_ABI_PATH}"); \
 	envsubst < "${HUB_ABI_DOC_TEMPLATE_PATH}" > "${HUB_ABI_DOC_PATH}"; \
+	sed -i 's/\[\([^][]*\)\]([^()]*)/\1/g' "${HUB_ABI_DOC_PATH}"; \
 	export PANTOS_TOKEN_FUNCTIONS=$$(cat "${TOKEN_DOC_PATH}" | sed '1,/## Functions/d' | sed '/## Events/,$$d'); \
 	export ERC20_FUNCTIONS=$$(cat "${ERC20_DOC_PATH}" | sed '1,/## Functions/d' | sed '/## Events/,$$d'); \
 	export BEP20_FUNCTIONS=$$(cat "${BEP20_DOC_PATH}" | sed '1,/## Functions/d'); \
@@ -98,7 +99,8 @@ docs-abis: abis docs docs-openzeppelin
 	export PANTOS_TOKEN_EVENTS=$$(cat "${TOKEN_DOC_PATH}" | sed '1,/## Events/d'); \
 	export ERC20_EVENTS=$$(cat "${ERC20_DOC_PATH}" | sed '1,/## Events/d'); \
 	export PANTOS_TOKEN_ABI=$$(cat "${TOKEN_ABI_PATH}"); \
-	envsubst < "${TOKEN_ABI_DOC_TEMPLATE_PATH}" > "${TOKEN_ABI_DOC_PATH}"
+	envsubst < "${TOKEN_ABI_DOC_TEMPLATE_PATH}" > "${TOKEN_ABI_DOC_PATH}"; \
+	sed -i 's/\[\([^][]*\)\]([^()]*)/\1/g' "${TOKEN_ABI_DOC_PATH}"
 
 .PHONY: docs-graph
 docs-graph:
