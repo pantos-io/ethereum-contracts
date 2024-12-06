@@ -19,7 +19,7 @@ import {SafeAddresses} from "./helpers/SafeAddresses.s.sol";
  *
  * @dev Usage
  * Deploy by any gas paying account:
- * forge script ./script/DeployContracts.s.sol --account <account> \
+ * forge script ./script/DeploySafe.s.sol --account <account> \
  *     --sender <sender> --rpc-url <rpc alias> --slow --force --sig \
  *     "deploySafes(address[], uint256, address[], uint256, address[], \
  *     uint256, address[], uint256)" \
