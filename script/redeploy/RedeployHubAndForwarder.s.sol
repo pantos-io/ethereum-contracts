@@ -112,16 +112,20 @@ contract RedeployHubAndForwarder is
             oldPantosHub.getPrimaryValidatorNode()
         );
 
+        uint256 minimumValidatorNodeSignatures = tryGetMinimumValidatorNodeSignatures(
+                oldForwarder
+            );
         address[] memory validatorNodeAddresses = tryGetValidatorNodes(
             oldForwarder
         );
+
         vm.broadcast(accessController.superCriticalOps());
         initializePantosForwarder(
             newPantosForwarder,
             newPantosHub,
             pantosToken,
-            validatorNodeAddresses,
-            oldForwarder.getMinimumValidatorNodeSignatures()
+            minimumValidatorNodeSignatures,
+            validatorNodeAddresses
         );
 
         // Pause old forwarder

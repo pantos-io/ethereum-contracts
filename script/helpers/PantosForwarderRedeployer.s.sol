@@ -17,6 +17,23 @@ interface IOldPantosForwarder {
 }
 
 abstract contract PantosForwarderRedeployer is PantosForwarderDeployer {
+    function tryGetMinimumValidatorNodeSignatures(
+        PantosForwarder oldForwarder
+    ) public view returns (uint256) {
+        uint256 minimumValidatorNodeSignatures;
+        try oldForwarder.getMinimumValidatorNodeSignatures() returns (
+            uint256 result
+        ) {
+            minimumValidatorNodeSignatures = result;
+        } catch {
+            console.log(
+                "Method getMinimumValidatorNodeSignatures() not available"
+            );
+            minimumValidatorNodeSignatures = 1;
+        }
+        return minimumValidatorNodeSignatures;
+    }
+
     function tryGetValidatorNodes(
         PantosForwarder oldForwarder
     ) public returns (address[] memory) {
