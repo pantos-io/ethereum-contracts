@@ -117,8 +117,7 @@ contract DeployContracts is
         uint256 nextTransferId,
         uint256 minimumValidatorNodeSignatures,
         address primaryValidator,
-        address[] memory otherValidators,
-        uint256 minimum_validator_node_signatures
+        address[] memory otherValidators
     ) public {
         importAllContractAddresses();
         vm.broadcast(accessController.deployer());
