@@ -119,8 +119,8 @@ abstract contract PantosBaseScript is Script {
         _chainIdToPantosBlockchainIdMapping[338] = BlockchainId.CRONOS; // Cronos testnet
         _chainIdToPantosBlockchainIdMapping[31341] = BlockchainId.CRONOS; // Local Cronos dev
 
-        // Not yet known: _chainIdToPantosBlockchainIdMapping[] = BlockchainId.SONIC; // Sonic mainnet
-        _chainIdToPantosBlockchainIdMapping[64165] = BlockchainId.SONIC; // Sonic testnet
+        _chainIdToPantosBlockchainIdMapping[146] = BlockchainId.SONIC; // Sonic mainnet
+        _chainIdToPantosBlockchainIdMapping[57054] = BlockchainId.SONIC; // Sonic testnet
         _chainIdToPantosBlockchainIdMapping[31342] = BlockchainId.SONIC; // Local Sonic dev
 
         _chainIdToPantosBlockchainIdMapping[42220] = BlockchainId.CELO; // Celo mainnet
