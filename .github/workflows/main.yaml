@@ -13,6 +13,7 @@ jobs:
       tag: development
       architecture: amd64
       environment: main
+      cache_enabled: true
 
   test:
     needs: publish-docker

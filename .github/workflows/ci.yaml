@@ -93,7 +93,6 @@ jobs:
         run: |
           mkdir export
           make docker-build ARGS='--set "*.cache-from=type=gha" \
-            --set "*.cache-to=type=gha,mode=max" \
             --set "*.platform=linux/${{ matrix.arch }}" \
             --builder ${{ steps.buildx.outputs.name }} \
             --set "eth.output=type=tar,dest=export/eth.tar"'
@@ -181,7 +180,6 @@ jobs:
         working-directory: ${{ env.PANTOS_ETHEREUM_CONTRACTS }}
         run: |
           make docker-build ARGS='--set "*.cache-from=type=gha" \
-            --set "*.cache-to=type=gha,mode=max" \
             --set "*.platform=linux/${{ matrix.arch }}" \
             --builder ${{ steps.buildx.outputs.name }} \
             --load'
