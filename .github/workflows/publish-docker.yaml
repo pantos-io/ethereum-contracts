@@ -20,6 +20,11 @@ on:
         required: false
         type: string
         default: ""
+      cache_enabled:
+        description: 'Enable caching'
+        required: false
+        type: boolean
+        default: false
     secrets:
       DOCKERHUB_USERNAME:
         description: 'Docker Hub username'
@@ -51,14 +56,6 @@ jobs:
         uses: docker/setup-buildx-action@d70bba72b1f3fd22344832f00baa16ece964efeb # v3.3.0
         id: buildx
 
-      - name: Cache Docker layers
-        uses: actions/cache@v3
-        with:
-          path: /tmp/.buildx-cache
-          key: ${{ runner.os }}-buildx-v1.0-service-node-${{ github.sha }}
-          restore-keys: |
-            ${{ runner.os }}-buildx-v1.0-service-node-
-
       - name: Login to Docker Hub
         uses: docker/login-action@0d4c9c5ea7693da7b068278f7b52bda2a190a446 # v3.2.0
         with:
@@ -79,8 +76,7 @@ jobs:
             export EXTRA_TAG=$DOCKER_TAG
           fi
           docker buildx bake \
-            --set "*.cache-from=type=local,src=/tmp/.buildx-cache" \
-            --set "*.cache-to=type=local,dest=/tmp/.buildx-cache-new" \
+            --set "*.cache-from=type=gha" ${{ inputs.cache_enabled && '--set "*.cache-to=type=gha,mode=max"' || '' }} \
             --set "*.platform=linux/${{ inputs.architecture }}" \
             --builder ${{ steps.buildx.outputs.name }} \
             --sbom=true \
@@ -108,8 +104,3 @@ jobs:
         env:
           DOCKER_TAG: ${{ inputs.tag }}
           COSIGN_EXPERIMENTAL: "true"
-
-      - name: Move cache
-        run: |
-          rm -rf /tmp/.buildx-cache
-          mv /tmp/.buildx-cache-new /tmp/.buildx-cache
