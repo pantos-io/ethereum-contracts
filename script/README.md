@@ -19,10 +19,11 @@ One can use the Pantos scripts in the following cases:
     3. To update the parameter update delay, use the ```UpdateParameterUpdateDelay.s.sol``` script.
     4. To update the unbonding period of the service nodes deposit, use the ```UpdateUnbondingPeriod.s.sol``` script.
 4. To update the validators configuration.
-    1. To add a secondary validator, use the ```AddValidatorNode.s.sol``` script.
-    2. To remove a secondary validator, use the ```RemoveValidatorNode.s.sol``` script.
-    3. To update the minimum number of validator nodes required, use the ```SetMinValidatorNodeSignatures.s.sol``` script.
-    4. To update the primary validator, use the ```SetPrimaryValidatorNode.s.sol``` script.
+    1. To replace a secondary validator, use the ```ReplaceValidatorNode.s.sol``` script.
+    2. To add a secondary validator, use the ```AddValidatorNode.s.sol``` script.
+    3. To remove a secondary validator, use the ```RemoveValidatorNode.s.sol``` script.
+    4. To update the minimum number of validator nodes required, use the ```SetMinValidatorNodeSignatures.s.sol``` script.
+    5. To update the primary validator, use the ```SetPrimaryValidatorNode.s.sol``` script.
 5. To manage the Gnosis Safes.
     1. To add an owner, use the ```SafeManagement.s.sol``` script.
     2. To remove an owner, use the ```SafeManagement.s.sol``` script.
@@ -150,6 +151,12 @@ $ forge script ./script/update/parameters/UpdateParameterUpdateDelay.s.sol --rpc
 
 ```bash
 $ forge script ./script/update/parameters/UpdateUnbondingPeriod.s.sol --rpc-url local-8545 -vvvv --sig "roleActions(uint256)" 1
+```
+
+### ReplaceValidatorNode
+
+```bash
+$ forge script ./script/update/validators/ReplaceValidatorNode.s.sol --rpc-url local-8545 -vvvv --sig "roleActions(address,address)" 0x9E7c67F9DE01a9ff5547f172a7d1119E62214667 0xA93937e73B964B81eac024cBB38626bA972ee986
 ```
 
 ### AddValidatorNode
