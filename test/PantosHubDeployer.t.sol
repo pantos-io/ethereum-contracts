@@ -182,6 +182,7 @@ abstract contract PantosHubDeployer is PantosBaseTest {
         pantosHubProxy.setPantosForwarder(PANTOS_FORWARDER_ADDRESS);
         pantosHubProxy.setPrimaryValidatorNode(validatorAddress);
         pantosHubProxy.setPantosToken(PANTOS_TOKEN_ADDRESS);
+        pantosHubProxy.setProtocolVersion(PROTOCOL_VERSION);
         vm.stopPrank();
 
         registerOtherBlockchainAtPantosHub();
@@ -353,12 +354,13 @@ abstract contract PantosHubDeployer is PantosBaseTest {
         pure
         returns (bytes4[] memory)
     {
-        bytes4[] memory selectors = new bytes4[](50);
+        bytes4[] memory selectors = new bytes4[](52);
         uint i = 0;
 
         selectors[i++] = IPantosRegistry.setPantosForwarder.selector;
         selectors[i++] = IPantosRegistry.setPantosToken.selector;
         selectors[i++] = IPantosRegistry.setPrimaryValidatorNode.selector;
+        selectors[i++] = IPantosRegistry.setProtocolVersion.selector;
         selectors[i++] = IPantosRegistry.registerBlockchain.selector;
         selectors[i++] = IPantosRegistry.unregisterBlockchain.selector;
         selectors[i++] = IPantosRegistry.updateBlockchainName.selector;
@@ -403,6 +405,7 @@ abstract contract PantosHubDeployer is PantosBaseTest {
         selectors[i++] = IPantosRegistry.getPantosForwarder.selector;
         selectors[i++] = IPantosRegistry.getPantosToken.selector;
         selectors[i++] = IPantosRegistry.getPrimaryValidatorNode.selector;
+        selectors[i++] = IPantosRegistry.getProtocolVersion.selector;
         selectors[i++] = IPantosRegistry.getNumberBlockchains.selector;
         selectors[i++] = IPantosRegistry.getNumberActiveBlockchains.selector;
         selectors[i++] = IPantosRegistry.getCurrentBlockchainId.selector;

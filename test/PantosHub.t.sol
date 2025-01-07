@@ -259,6 +259,35 @@ contract PantosHubTest is PantosHubDeployer {
         onlyRoleTest(address(pantosHubProxy), calldata_);
     }
 
+    function test_setProtocolVersion() external {
+        vm.expectEmit(address(pantosHubProxy));
+        emit IPantosRegistry.ProtocolVersionUpdated(PROTOCOL_VERSION);
+
+        vm.prank(SUPER_CRITICAL_OPS);
+        pantosHubProxy.setProtocolVersion(PROTOCOL_VERSION);
+
+        assertEq(pantosHubProxy.getProtocolVersion(), PROTOCOL_VERSION);
+    }
+
+    function test_setProtocolVersion_WhenNotPaused() public {
+        initializePantosHub();
+        bytes memory calldata_ = abi.encodeWithSelector(
+            IPantosRegistry.setProtocolVersion.selector,
+            PROTOCOL_VERSION
+        );
+
+        whenPausedTest(address(pantosHubProxy), calldata_);
+    }
+
+    function test_setProtocolVersion_ByNonSuperCriticalOps() external {
+        bytes memory calldata_ = abi.encodeWithSelector(
+            IPantosRegistry.setProtocolVersion.selector,
+            PROTOCOL_VERSION
+        );
+
+        onlyRoleTest(address(pantosHubProxy), calldata_);
+    }
+
     function test_registerBlockchain() external {
         vm.expectEmit();
         emit IPantosRegistry.BlockchainRegistered(
@@ -3221,6 +3250,12 @@ contract PantosHubTest is PantosHubDeployer {
         initializePantosHub();
 
         assertEq(validatorAddress, pantosHubProxy.getPrimaryValidatorNode());
+    }
+
+    function test_getProtocolVersion() external {
+        initializePantosHub();
+
+        assertEq(PROTOCOL_VERSION, pantosHubProxy.getProtocolVersion());
     }
 
     function test_getNumberBlockchains() external view {

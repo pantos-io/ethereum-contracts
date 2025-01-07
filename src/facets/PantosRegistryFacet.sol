@@ -105,6 +105,20 @@ contract PantosRegistryFacet is IPantosRegistry, PantosBaseFacet {
     }
 
     /**
+     * @dev See {IPantosRegistry-setProtocolVersion}.
+     */
+    function setProtocolVersion(
+        bytes32 protocolVersion
+    ) external override whenPaused onlyRole(PantosRoles.SUPER_CRITICAL_OPS) {
+        require(
+            protocolVersion != bytes32(0),
+            "PantosHub: protocol version must not be zero"
+        );
+        s.protocolVersion = protocolVersion;
+        emit ProtocolVersionUpdated(protocolVersion);
+    }
+
+    /**
      * @dev See {IPantosRegistry-registerBlockchain}.
      */
     function registerBlockchain(
@@ -774,6 +788,13 @@ contract PantosRegistryFacet is IPantosRegistry, PantosBaseFacet {
      */
     function getPrimaryValidatorNode() public view override returns (address) {
         return s.primaryValidatorNodeAddress;
+    }
+
+    /**
+     * @dev See {IPantosRegistry-getProtocolVersion}.
+     */
+    function getProtocolVersion() public view override returns (bytes32) {
+        return s.protocolVersion;
     }
 
     /**

@@ -36,6 +36,15 @@ interface IPantosRegistry {
     event PrimaryValidatorNodeUpdated(address primaryValidatorNodeAddress);
 
     /**
+     * @notice Event that is emitted when the supported Pantos protocol
+     * version is updated.
+     *
+     * @param protocolVersion The supported Pantos protocol version as a
+     * semantic version number.
+     */
+    event ProtocolVersionUpdated(bytes32 protocolVersion);
+
+    /**
      * @notice Event that is emitted when a new blockchain is
      * registered.
      *
@@ -237,6 +246,17 @@ interface IPantosRegistry {
     function setPrimaryValidatorNode(
         address primaryValidatorNodeAddress
     ) external;
+
+    /**
+     * @notice Update the supported Pantos protocol version.
+     *
+     * @param protocolVersion The supported Pantos protocol version as a
+     * semantic version number.
+     *
+     * @dev The function can only be called by the super critical ops
+     * role and only if the contract is paused.
+     */
+    function setProtocolVersion(bytes32 protocolVersion) external;
 
     /**
      * @notice Used by the super critical ops role to register a new
@@ -569,6 +589,12 @@ interface IPantosRegistry {
      * @return The address of the primary validator node.
      */
     function getPrimaryValidatorNode() external view returns (address);
+
+    /**
+     * @return The supported Pantos protocol version as a semantic
+     * version number.
+     */
+    function getProtocolVersion() external view returns (bytes32);
 
     /**
      * @notice Returns the number of blockchains registered with the Pantos Hub.
