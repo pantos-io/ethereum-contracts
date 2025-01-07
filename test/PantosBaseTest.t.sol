@@ -14,6 +14,21 @@ import {AccessController} from "../src/access/AccessController.sol";
 
 abstract contract PantosBaseTest is Test {
     uint8 public constant MAJOR_PROTOCOL_VERSION = 0;
+    uint8 public constant MINOR_PROTOCOL_VERSION = 1;
+    uint8 public constant PATCH_PROTOCOL_VERSION = 0;
+    bytes32 public immutable PROTOCOL_VERSION =
+        bytes32(
+            abi.encodePacked(
+                string.concat(
+                    vm.toString(MAJOR_PROTOCOL_VERSION),
+                    ".",
+                    vm.toString(MINOR_PROTOCOL_VERSION),
+                    ".",
+                    vm.toString(PATCH_PROTOCOL_VERSION)
+                )
+            )
+        );
+
     uint256 public constant BLOCK_TIMESTAMP = 1000;
     uint256 public constant SERVICE_NODE_DEPOSIT_UNBONDING_PERIOD = 604800;
     uint256 public constant MINIMUM_SERVICE_NODE_DEPOSIT = 10 ** 5 * 10 ** 8;

@@ -34,4 +34,5 @@ struct PantosHubStorage {
     PantosTypes.UpdatableUint256 parameterUpdateDelay;
     PantosTypes.UpdatableUint256 unbondingPeriodServiceNodeDeposit;
     mapping(bytes32 => bool) isServiceNodeUrlUsed;
+    bytes32 protocolVersion;
 }

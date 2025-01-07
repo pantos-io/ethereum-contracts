@@ -232,6 +232,32 @@ abstract contract PantosHubDeployer is PantosBaseScript {
             );
         }
 
+        bytes32 protocolVersion = bytes32(
+            abi.encodePacked(
+                string.concat(
+                    vm.toString(Constants.MAJOR_PROTOCOL_VERSION),
+                    ".",
+                    vm.toString(Constants.MINOR_PROTOCOL_VERSION),
+                    ".",
+                    vm.toString(Constants.PATCH_PROTOCOL_VERSION)
+                )
+            )
+        );
+        bytes32 currentProtocolVersion = pantosHub.getProtocolVersion();
+        if (currentProtocolVersion != protocolVersion) {
+            pantosHub.setProtocolVersion(protocolVersion);
+            console.log(
+                "PantosHub.setProtocolVersion(%s)",
+                vm.toString(protocolVersion)
+            );
+        } else {
+            console.log(
+                "PantosHub: protocol version already set, "
+                "skipping setProtocolVersion(%s)",
+                vm.toString(protocolVersion)
+            );
+        }
+
         Blockchain memory blockchain = determineBlockchain();
 
         // Register the other blockchains
@@ -469,12 +495,13 @@ abstract contract PantosHubDeployer is PantosBaseScript {
         pure
         returns (bytes4[] memory)
     {
-        bytes4[] memory selectors = new bytes4[](50);
+        bytes4[] memory selectors = new bytes4[](52);
         uint i = 0;
 
         selectors[i++] = IPantosRegistry.setPantosForwarder.selector;
         selectors[i++] = IPantosRegistry.setPantosToken.selector;
         selectors[i++] = IPantosRegistry.setPrimaryValidatorNode.selector;
+        selectors[i++] = IPantosRegistry.setProtocolVersion.selector;
         selectors[i++] = IPantosRegistry.registerBlockchain.selector;
         selectors[i++] = IPantosRegistry.unregisterBlockchain.selector;
         selectors[i++] = IPantosRegistry.updateBlockchainName.selector;
@@ -519,6 +546,7 @@ abstract contract PantosHubDeployer is PantosBaseScript {
         selectors[i++] = IPantosRegistry.getPantosForwarder.selector;
         selectors[i++] = IPantosRegistry.getPantosToken.selector;
         selectors[i++] = IPantosRegistry.getPrimaryValidatorNode.selector;
+        selectors[i++] = IPantosRegistry.getProtocolVersion.selector;
         selectors[i++] = IPantosRegistry.getNumberBlockchains.selector;
         selectors[i++] = IPantosRegistry.getNumberActiveBlockchains.selector;
         selectors[i++] = IPantosRegistry.getCurrentBlockchainId.selector;
