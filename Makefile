@@ -73,6 +73,14 @@ snapshot:
 abis: build
 	@set -e; \
 	mkdir -p "${ABI_PATH}"; \
+	jq '.abi' "${HUB_JSON_PATH}" > "${HUB_ABI_PATH}"; \
+	jq '.abi' "${FORWARDER_JSON_PATH}" > "${FORWARDER_ABI_PATH}"; \
+	jq '.abi' "${TOKEN_JSON_PATH}" > "${TOKEN_ABI_PATH}"
+
+.PHONY: abis-compact
+abis-compact: build
+	@set -e; \
+	mkdir -p "${ABI_PATH}"; \
 	jq -c '.abi' "${HUB_JSON_PATH}" > "${HUB_ABI_PATH}"; \
 	jq -c '.abi' "${FORWARDER_JSON_PATH}" > "${FORWARDER_ABI_PATH}"; \
 	jq -c '.abi' "${TOKEN_JSON_PATH}" > "${TOKEN_ABI_PATH}"
