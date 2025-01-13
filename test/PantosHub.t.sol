@@ -1766,7 +1766,8 @@ contract PantosHubTest is PantosHubDeployer {
         vm.expectEmit();
         emit IPantosRegistry.ServiceNodeRegistered(
             SERVICE_NODE_ADDRESS,
-            SERVICE_NODE_URL
+            SERVICE_NODE_URL,
+            MINIMUM_SERVICE_NODE_DEPOSIT
         );
         vm.expectCall(
             PANTOS_TOKEN_ADDRESS,
@@ -2227,6 +2228,12 @@ contract PantosHubTest is PantosHubDeployer {
     {
         registerServiceNode();
         unregisterServiceNode();
+        vm.expectEmit();
+        emit IPantosRegistry.ServiceNodeRegistered(
+            SERVICE_NODE_ADDRESS,
+            SERVICE_NODE_URL,
+            MINIMUM_SERVICE_NODE_DEPOSIT
+        );
         vm.prank(SERVICE_NODE_WITHDRAWAL_ADDRESS);
 
         pantosHubProxy.cancelServiceNodeUnregistration(SERVICE_NODE_ADDRESS);
@@ -2250,6 +2257,12 @@ contract PantosHubTest is PantosHubDeployer {
     function test_cancelServiceNodeUnregistration_ByServiceNode() external {
         registerServiceNode();
         unregisterServiceNode();
+        vm.expectEmit();
+        emit IPantosRegistry.ServiceNodeRegistered(
+            SERVICE_NODE_ADDRESS,
+            SERVICE_NODE_URL,
+            MINIMUM_SERVICE_NODE_DEPOSIT
+        );
         vm.prank(SERVICE_NODE_ADDRESS);
 
         pantosHubProxy.cancelServiceNodeUnregistration(SERVICE_NODE_ADDRESS);

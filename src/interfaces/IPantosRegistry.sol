@@ -120,8 +120,13 @@ interface IPantosRegistry {
      *
      * @param serviceNode The address of the new service node.
      * @param url The url of the service node.
+     * @param deposit The deposit of the service node.
      */
-    event ServiceNodeRegistered(address serviceNode, string url);
+    event ServiceNodeRegistered(
+        address serviceNode,
+        string url,
+        uint256 deposit
+    );
 
     /**
      * @notice Event that is emitted when a registered service node is
