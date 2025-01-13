@@ -538,7 +538,7 @@ contract PantosRegistryFacet is IPantosRegistry, PantosBaseFacet {
         s.serviceNodeIndices[serviceNodeAddress] = s.serviceNodes.length;
         s.serviceNodes.push(serviceNodeAddress);
         s.isServiceNodeUrlUsed[urlHash] = true;
-        emit ServiceNodeRegistered(serviceNodeAddress, url);
+        emit ServiceNodeRegistered(serviceNodeAddress, url, deposit);
         // Transfer the service node deposit to this contract
         require(
             IPantosToken(s.pantosToken).transferFrom(
@@ -663,7 +663,11 @@ contract PantosRegistryFacet is IPantosRegistry, PantosBaseFacet {
         serviceNodeRecord.withdrawalTime = 0;
         s.serviceNodeIndices[serviceNodeAddress] = s.serviceNodes.length;
         s.serviceNodes.push(serviceNodeAddress);
-        emit ServiceNodeRegistered(serviceNodeAddress, serviceNodeRecord.url);
+        emit ServiceNodeRegistered(
+            serviceNodeAddress,
+            serviceNodeRecord.url,
+            serviceNodeRecord.deposit
+        );
     }
 
     /**
