@@ -247,6 +247,50 @@ interface IPantosRegistry {
     event ParameterUpdateDelayUpdateExecuted(uint256 newParameterUpdateDelay);
 
     /**
+     * @notice Event that is emitted when a hash is commited.
+     *
+     * @param committer The address of the entity which has comitted a hash.
+     * @param hash The hash that has been comitted.
+     */
+    event HashCommited(address committer, bytes32 hash);
+
+    /**
+     * @notice Event that is emitted when the commitment wait period value is
+     * updated.
+     *
+     * @param commitmentWaitPeriod The new commitment wait period value.
+     */
+    event CommitmentWaitPeriodUpdated(uint256 commitmentWaitPeriod);
+
+    /**
+     * @notice Used by a user/service node to commit a hash, which can be used
+     * by a different function to verify provided data against.
+     *
+     * @param hash The hash to be committed.
+     *
+     * @dev If you have a function, where public data exposure might lead to
+     * front-running attacks, you can use this function to commit a hash of the
+     * data. The hash can be verified later on, to ensure the data was not
+     * tampered with.
+     */
+    function commitHash(bytes32 hash) external;
+
+    /**
+     * @notice Sets the commitment wait period value.
+     *
+     * @dev The function can only be called by the super critical ops role
+     * and only if the contract is paused.
+     */
+    function setCommitmentWaitPeriod(uint256 commitmentWaitPeriod) external;
+
+    /**
+     * @notice Returns the commitment wait period value.
+     *
+     * @return The commitment wait period value.
+     */
+    function getCommitmentWaitPeriod() external view returns (uint256);
+
+    /**
      * @notice Pauses the Pantos Hub.
      *
      * @dev The function can only be called by the pauser role

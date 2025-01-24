@@ -17,4 +17,6 @@ library Constants {
     uint256 public constant INITIAL_SUPPLY_BEST = (10 ** 9) * (10 ** 8);
 
     uint256 public constant PARAMETER_UPDATE_DELAY = 3 days;
+
+    uint256 public constant COMMITMENT_WAIT_PERIOD = 10; // blocks
 }

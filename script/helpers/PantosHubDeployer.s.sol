@@ -258,6 +258,23 @@ abstract contract PantosHubDeployer is PantosBaseScript {
             );
         }
 
+        uint256 currentCommitWaitPeriod = pantosHub.getCommitmentWaitPeriod();
+        if (currentCommitWaitPeriod != Constants.COMMITMENT_WAIT_PERIOD) {
+            pantosHub.setCommitmentWaitPeriod(
+                Constants.COMMITMENT_WAIT_PERIOD
+            );
+            console.log(
+                "PantosHub.setCommitmentWaitPeriod(%s)",
+                vm.toString(Constants.COMMITMENT_WAIT_PERIOD)
+            );
+        } else {
+            console.log(
+                "PantosHub: commitment wait period already set, "
+                "skipping setCommitmentWaitPeriod(%s)",
+                vm.toString(Constants.COMMITMENT_WAIT_PERIOD)
+            );
+        }
+
         Blockchain memory blockchain = determineBlockchain();
 
         // Register the other blockchains
@@ -495,7 +512,7 @@ abstract contract PantosHubDeployer is PantosBaseScript {
         pure
         returns (bytes4[] memory)
     {
-        bytes4[] memory selectors = new bytes4[](52);
+        bytes4[] memory selectors = new bytes4[](55);
         uint i = 0;
 
         selectors[i++] = IPantosRegistry.setPantosForwarder.selector;
@@ -580,6 +597,9 @@ abstract contract PantosHubDeployer is PantosBaseScript {
         selectors[i++] = IPantosRegistry.pause.selector;
         selectors[i++] = IPantosRegistry.unpause.selector;
         selectors[i++] = IPantosRegistry.paused.selector;
+        selectors[i++] = IPantosRegistry.commitHash.selector;
+        selectors[i++] = IPantosRegistry.setCommitmentWaitPeriod.selector;
+        selectors[i++] = IPantosRegistry.getCommitmentWaitPeriod.selector;
 
         require(
             _calculateInterfaceId(selectors) ==

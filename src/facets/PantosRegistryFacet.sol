@@ -17,6 +17,37 @@ import {PantosBaseFacet} from "./PantosBaseFacet.sol";
  */
 contract PantosRegistryFacet is IPantosRegistry, PantosBaseFacet {
     /**
+     * @dev See {IPantosRegistry-commitHash}.
+     */
+    function commitHash(bytes32 hash) external override whenNotPaused {
+        s.commitments[msg.sender].hash = hash;
+        s.commitments[msg.sender].blockNumber = block.number;
+        emit HashCommited(msg.sender, hash);
+    }
+
+    /**
+     * @dev See {IPantosRegistry-setCommitmentWaitPeriod}.
+     */
+    function setCommitmentWaitPeriod(
+        uint256 commitmentWaitPeriod
+    ) external override whenPaused onlyRole(PantosRoles.SUPER_CRITICAL_OPS) {
+        s.commitmentWaitPeriod = commitmentWaitPeriod;
+        emit CommitmentWaitPeriodUpdated(commitmentWaitPeriod);
+    }
+
+    /**
+     * @dev See {IPantosRegistry-getCommitmentWaitPeriod}.
+     */
+    function getCommitmentWaitPeriod()
+        external
+        view
+        override
+        returns (uint256)
+    {
+        return s.commitmentWaitPeriod;
+    }
+
+    /**
      * @dev See {IPantosRegistry-pause}.
      */
     function pause()
@@ -504,6 +535,15 @@ contract PantosRegistryFacet is IPantosRegistry, PantosBaseFacet {
             "PantosHub: caller is not the service node or the "
             "withdrawal address"
         );
+        _verifyCommitment(
+            abi.encodePacked(
+                serviceNodeAddress,
+                withdrawalAddress,
+                url,
+                msg.sender
+            )
+        );
+
         require(
             bytes(url).length > 0,
             "PantosHub: service node URL must not be empty"
@@ -762,6 +802,7 @@ contract PantosRegistryFacet is IPantosRegistry, PantosBaseFacet {
             bytes(url).length > 0,
             "PantosHub: service node URL must not be empty"
         );
+
         bytes32 urlHash = keccak256(bytes(url));
         // slither-disable-next-line timestamp
         require(
@@ -775,6 +816,9 @@ contract PantosRegistryFacet is IPantosRegistry, PantosBaseFacet {
             serviceNodeRecord.active,
             "PantosHub: service node must be active"
         );
+
+        _verifyCommitment(abi.encodePacked(url, msg.sender));
+
         s.isServiceNodeUrlUsed[
             keccak256(bytes(serviceNodeRecord.url))
         ] = false;
@@ -1013,6 +1057,25 @@ contract PantosRegistryFacet is IPantosRegistry, PantosBaseFacet {
      */
     function paused() external view returns (bool) {
         return s.paused;
+    }
+
+    function _verifyCommitment(bytes memory data) private {
+        require(
+            s.commitments[msg.sender].hash != bytes32(0),
+            "PantosHub: "
+            "service node must have made a commitment"
+        );
+        bytes32 computedHash = keccak256(abi.encodePacked(data));
+        require(
+            s.commitments[msg.sender].hash == computedHash,
+            "PantosHub: Commitment does not match"
+        );
+        require(
+            s.commitments[msg.sender].blockNumber + s.commitmentWaitPeriod <=
+                block.number,
+            "PantosHub: Commitment period has not elapsed"
+        );
+        delete s.commitments[msg.sender];
     }
 
     function _initializeUpdatableUint256(
