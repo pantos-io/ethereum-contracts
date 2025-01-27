@@ -283,6 +283,10 @@ contract PantosForwarder is IPantosForwarder, EIP712, Pausable, PantosRBAC {
         // transfer fails to ensure that the service node gets paid
         bool succeeded;
         bytes memory tokenData;
+        require(
+            gasleft() * 63 >= 64 * PANDAS_TOKEN_TRANSFER_GAS,
+            "PantosForwarder: Not enough gas for `pantosTransfer` call provided"
+        );
         (succeeded, tokenData) = request.token.excessivelySafeCall(
             PANDAS_TOKEN_TRANSFER_GAS,
             0,
@@ -329,6 +333,10 @@ contract PantosForwarder is IPantosForwarder, EIP712, Pausable, PantosRBAC {
         // transfer fails to ensure that the service node gets paid
         bool succeeded;
         bytes memory sourceTokenData;
+        require(
+            gasleft() * 63 >= 64 * PANDAS_TOKEN_TRANSFER_GAS,
+            "PantosForwarder: Not enough gas for `pantosTransferFrom` call provided"
+        );
         (succeeded, sourceTokenData) = request.sourceToken.excessivelySafeCall(
             PANDAS_TOKEN_TRANSFER_FROM_GAS,
             0,
