@@ -1159,6 +1159,7 @@ contract PantosHubTest is PantosHubDeployer {
         vm.expectEmit();
         emit IPantosRegistry.ExternalTokenUnregistered(
             PANDAS_TOKEN_ADDRESS,
+            EXTERNAL_PANDAS_TOKEN_ADDRESS,
             uint256(otherBlockchain.blockchainId)
         );
         vm.expectEmit();
@@ -1188,6 +1189,7 @@ contract PantosHubTest is PantosHubDeployer {
         vm.expectEmit();
         emit IPantosRegistry.ExternalTokenUnregistered(
             PANDAS_TOKEN_ADDRESS,
+            EXTERNAL_PANDAS_TOKEN_ADDRESS,
             uint256(otherBlockchain.blockchainId)
         );
         vm.expectEmit();
@@ -1221,6 +1223,7 @@ contract PantosHubTest is PantosHubDeployer {
         vm.expectEmit();
         emit IPantosRegistry.ExternalTokenUnregistered(
             PANDAS_TOKEN_ADDRESS,
+            EXTERNAL_PANDAS_TOKEN_ADDRESS,
             uint256(otherBlockchain.blockchainId)
         );
         vm.expectEmit();
@@ -1573,6 +1576,7 @@ contract PantosHubTest is PantosHubDeployer {
         vm.expectEmit();
         emit IPantosRegistry.ExternalTokenUnregistered(
             PANDAS_TOKEN_ADDRESS,
+            EXTERNAL_PANDAS_TOKEN_ADDRESS,
             uint256(otherBlockchain.blockchainId)
         );
 
@@ -1595,6 +1599,7 @@ contract PantosHubTest is PantosHubDeployer {
         vm.expectEmit();
         emit IPantosRegistry.ExternalTokenUnregistered(
             PANDAS_TOKEN_ADDRESS,
+            EXTERNAL_PANDAS_TOKEN_ADDRESS,
             uint256(otherBlockchain.blockchainId)
         );
 
@@ -1623,6 +1628,7 @@ contract PantosHubTest is PantosHubDeployer {
         vm.expectEmit();
         emit IPantosRegistry.ExternalTokenUnregistered(
             PANDAS_TOKEN_ADDRESS,
+            EXTERNAL_PANDAS_TOKEN_ADDRESS,
             uint256(otherBlockchain.blockchainId)
         );
 
@@ -1758,7 +1764,11 @@ contract PantosHubTest is PantosHubDeployer {
         );
         vm.prank(SERVICE_NODE_ADDRESS);
         vm.expectEmit();
-        emit IPantosRegistry.ServiceNodeRegistered(SERVICE_NODE_ADDRESS);
+        emit IPantosRegistry.ServiceNodeRegistered(
+            SERVICE_NODE_ADDRESS,
+            SERVICE_NODE_URL,
+            MINIMUM_SERVICE_NODE_DEPOSIT
+        );
         vm.expectCall(
             PANTOS_TOKEN_ADDRESS,
             abi.encodeWithSelector(
@@ -1915,7 +1925,10 @@ contract PantosHubTest is PantosHubDeployer {
     function test_unregisterServiceNode() external {
         registerServiceNode();
         vm.expectEmit();
-        emit IPantosRegistry.ServiceNodeUnregistered(SERVICE_NODE_ADDRESS);
+        emit IPantosRegistry.ServiceNodeUnregistered(
+            SERVICE_NODE_ADDRESS,
+            SERVICE_NODE_URL
+        );
         vm.prank(SERVICE_NODE_ADDRESS);
 
         pantosHubProxy.unregisterServiceNode(SERVICE_NODE_ADDRESS);
@@ -2215,6 +2228,12 @@ contract PantosHubTest is PantosHubDeployer {
     {
         registerServiceNode();
         unregisterServiceNode();
+        vm.expectEmit();
+        emit IPantosRegistry.ServiceNodeRegistered(
+            SERVICE_NODE_ADDRESS,
+            SERVICE_NODE_URL,
+            MINIMUM_SERVICE_NODE_DEPOSIT
+        );
         vm.prank(SERVICE_NODE_WITHDRAWAL_ADDRESS);
 
         pantosHubProxy.cancelServiceNodeUnregistration(SERVICE_NODE_ADDRESS);
@@ -2238,6 +2257,12 @@ contract PantosHubTest is PantosHubDeployer {
     function test_cancelServiceNodeUnregistration_ByServiceNode() external {
         registerServiceNode();
         unregisterServiceNode();
+        vm.expectEmit();
+        emit IPantosRegistry.ServiceNodeRegistered(
+            SERVICE_NODE_ADDRESS,
+            SERVICE_NODE_URL,
+            MINIMUM_SERVICE_NODE_DEPOSIT
+        );
         vm.prank(SERVICE_NODE_ADDRESS);
 
         pantosHubProxy.cancelServiceNodeUnregistration(SERVICE_NODE_ADDRESS);
@@ -2492,7 +2517,10 @@ contract PantosHubTest is PantosHubDeployer {
         registerServiceNode();
         vm.prank(SERVICE_NODE_ADDRESS);
         vm.expectEmit();
-        emit IPantosRegistry.ServiceNodeUrlUpdated(SERVICE_NODE_ADDRESS);
+        emit IPantosRegistry.ServiceNodeUrlUpdated(
+            SERVICE_NODE_ADDRESS,
+            newSERVICE_NODE_URL
+        );
 
         pantosHubProxy.updateServiceNodeUrl(newSERVICE_NODE_URL);
 

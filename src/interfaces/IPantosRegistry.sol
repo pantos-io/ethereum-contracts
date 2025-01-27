@@ -65,38 +65,86 @@ interface IPantosRegistry {
      */
     event BlockchainUnregistered(uint256 blockchainId);
 
+    /**
+     * @notice Event that is emitted when the name of a registered
+     * blockchain is updated.
+     *
+     * @param blockchainId The id of the blockchain.
+     */
     event BlockchainNameUpdated(uint256 blockchainId);
 
+    /**
+     * @notice Event that is emitted when a token is registered.
+     *
+     * @param token The address of the registered token.
+     */
     event TokenRegistered(address token);
 
+    /**
+     * @notice Event that is emitted when a token is unregistered.
+     *
+     * @param token The address of the registered token.
+     */
     event TokenUnregistered(address token);
 
-    event ExternalTokenRegistered(address token, uint256 blockchainId);
+    /**
+     * @notice Event that is emitted when an external token is registered.
+     *
+     * @param token The address of the token registered in the Pantos Hub.
+     * @param externalToken The address of the token registered on the
+     * external blockchain.
+     * @param blockchainId The id of the blockchain on which the external
+     * token is deployed.
+     */
+    event ExternalTokenRegistered(
+        address token,
+        string externalToken,
+        uint256 blockchainId
+    );
 
-    event ExternalTokenUnregistered(address token, uint256 blockchainId);
+    /**
+     * @notice Event that is emitted when an external token is unregistered.
+     *
+     * @param token The address of the token registered in the Pantos Hub.
+     * @param blockchainId The id of the blockchain on which the external
+     * token is deployed.
+     */
+    event ExternalTokenUnregistered(
+        address token,
+        string externalToken,
+        uint256 blockchainId
+    );
 
     /**
      * @notice Event that is emitted when a new service node is registered.
      *
      * @param serviceNode The address of the new service node.
+     * @param url The url of the service node.
+     * @param deposit The deposit of the service node.
      */
-    event ServiceNodeRegistered(address serviceNode);
+    event ServiceNodeRegistered(
+        address serviceNode,
+        string url,
+        uint256 deposit
+    );
 
     /**
      * @notice Event that is emitted when a registered service node is
      * unregistered.
      *
      * @param serviceNode The address of the registered service node.
+     * @param url The url of the service node.
      */
-    event ServiceNodeUnregistered(address serviceNode);
+    event ServiceNodeUnregistered(address serviceNode, string url);
 
     /**
      * @notice Event that is emitted when a registered service node url is
      * updated.
      *
      * @param serviceNode The address of the registered service node.
+     * @param url The new url of the service node.
      */
-    event ServiceNodeUrlUpdated(address serviceNode);
+    event ServiceNodeUrlUpdated(address serviceNode, string url);
 
     /**
      * @notice Event that is emitted when an update of the unbonding

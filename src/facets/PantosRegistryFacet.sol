@@ -392,7 +392,11 @@ contract PantosRegistryFacet is IPantosRegistry, PantosBaseFacet {
                     storage externalTokenRecord = externalTokenRecords[i];
                 if (externalTokenRecord.active) {
                     externalTokenRecord.active = false;
-                    emit ExternalTokenUnregistered(token, i);
+                    emit ExternalTokenUnregistered(
+                        token,
+                        externalTokenRecord.externalToken,
+                        i
+                    );
                 }
             }
         }
@@ -450,7 +454,7 @@ contract PantosRegistryFacet is IPantosRegistry, PantosBaseFacet {
         // Store the external token record
         externalTokenRecord.active = true;
         externalTokenRecord.externalToken = externalToken;
-        emit ExternalTokenRegistered(token, blockchainId);
+        emit ExternalTokenRegistered(token, externalToken, blockchainId);
     }
 
     /**
@@ -476,7 +480,11 @@ contract PantosRegistryFacet is IPantosRegistry, PantosBaseFacet {
         );
         // Update the external token record
         externalTokenRecord.active = false;
-        emit ExternalTokenUnregistered(token, blockchainId);
+        emit ExternalTokenUnregistered(
+            token,
+            externalTokenRecord.externalToken,
+            blockchainId
+        );
     }
 
     /**
@@ -530,7 +538,7 @@ contract PantosRegistryFacet is IPantosRegistry, PantosBaseFacet {
         s.serviceNodeIndices[serviceNodeAddress] = s.serviceNodes.length;
         s.serviceNodes.push(serviceNodeAddress);
         s.isServiceNodeUrlUsed[urlHash] = true;
-        emit ServiceNodeRegistered(serviceNodeAddress);
+        emit ServiceNodeRegistered(serviceNodeAddress, url, deposit);
         // Transfer the service node deposit to this contract
         require(
             IPantosToken(s.pantosToken).transferFrom(
@@ -582,7 +590,10 @@ contract PantosRegistryFacet is IPantosRegistry, PantosBaseFacet {
             s.serviceNodes[serviceNodeIndex] = otherServiceNodeAddress;
         }
         s.serviceNodes.pop();
-        emit ServiceNodeUnregistered(serviceNodeAddress);
+        emit ServiceNodeUnregistered(
+            serviceNodeAddress,
+            serviceNodeRecord.url
+        );
     }
 
     /**
@@ -652,7 +663,11 @@ contract PantosRegistryFacet is IPantosRegistry, PantosBaseFacet {
         serviceNodeRecord.withdrawalTime = 0;
         s.serviceNodeIndices[serviceNodeAddress] = s.serviceNodes.length;
         s.serviceNodes.push(serviceNodeAddress);
-        emit ServiceNodeRegistered(serviceNodeAddress);
+        emit ServiceNodeRegistered(
+            serviceNodeAddress,
+            serviceNodeRecord.url,
+            serviceNodeRecord.deposit
+        );
     }
 
     /**
@@ -766,7 +781,7 @@ contract PantosRegistryFacet is IPantosRegistry, PantosBaseFacet {
         s.isServiceNodeUrlUsed[urlHash] = true;
         // Update the stored service node URL
         serviceNodeRecord.url = url;
-        emit ServiceNodeUrlUpdated(msg.sender);
+        emit ServiceNodeUrlUpdated(msg.sender, url);
     }
 
     /**

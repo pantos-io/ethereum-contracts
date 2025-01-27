@@ -14,7 +14,7 @@ import {AccessController} from "../src/access/AccessController.sol";
 
 abstract contract PantosBaseTest is Test {
     uint8 public constant MAJOR_PROTOCOL_VERSION = 0;
-    uint8 public constant MINOR_PROTOCOL_VERSION = 1;
+    uint8 public constant MINOR_PROTOCOL_VERSION = 2;
     uint8 public constant PATCH_PROTOCOL_VERSION = 0;
     bytes32 public immutable PROTOCOL_VERSION =
         bytes32(
