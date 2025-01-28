@@ -171,7 +171,10 @@ jobs:
       - name: Check docker config and disable live reload
         working-directory: ${{ env.PANTOS_ETHEREUM_CONTRACTS }}
         run: |
-          cat /etc/docker/daemon.json
+          FILE=/etc/docker/daemon.json
+          if [[ -f "$FILE" ]]; then
+            touch $FILE
+          fi
           echo '{ "live-restore": false }' | sudo tee /etc/docker/daemon.json
           sudo systemctl reload docker
           make check-swarm-init
