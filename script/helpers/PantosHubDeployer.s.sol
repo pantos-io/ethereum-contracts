@@ -175,7 +175,8 @@ abstract contract PantosHubDeployer is PantosBaseScript {
         IPantosHub pantosHub,
         PantosForwarder pantosForwarder,
         PantosToken pantosToken,
-        address primaryValidatorNodeAddress
+        address primaryValidatorNodeAddress,
+        uint256 commitmentWaitPeriod
     ) public {
         require(
             pantosHub.paused(),
@@ -259,19 +260,17 @@ abstract contract PantosHubDeployer is PantosBaseScript {
         }
 
         uint256 currentCommitWaitPeriod = pantosHub.getCommitmentWaitPeriod();
-        if (currentCommitWaitPeriod != Constants.COMMITMENT_WAIT_PERIOD) {
-            pantosHub.setCommitmentWaitPeriod(
-                Constants.COMMITMENT_WAIT_PERIOD
-            );
+        if (currentCommitWaitPeriod != commitmentWaitPeriod) {
+            pantosHub.setCommitmentWaitPeriod(commitmentWaitPeriod);
             console.log(
                 "PantosHub.setCommitmentWaitPeriod(%s)",
-                vm.toString(Constants.COMMITMENT_WAIT_PERIOD)
+                vm.toString(commitmentWaitPeriod)
             );
         } else {
             console.log(
                 "PantosHub: commitment wait period already set, "
                 "skipping setCommitmentWaitPeriod(%s)",
-                vm.toString(Constants.COMMITMENT_WAIT_PERIOD)
+                vm.toString(commitmentWaitPeriod)
             );
         }
 

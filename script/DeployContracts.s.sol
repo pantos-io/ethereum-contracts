@@ -115,6 +115,7 @@ contract DeployContracts is
 
     function roleActions(
         uint256 nextTransferId,
+        uint256 commitmentWaitPeriod,
         uint256 minimumValidatorNodeSignatures,
         address primaryValidator,
         address[] memory otherValidators
@@ -136,7 +137,8 @@ contract DeployContracts is
             pantosHub,
             pantosForwarder,
             pantosToken,
-            primaryValidator
+            primaryValidator,
+            commitmentWaitPeriod
         );
 
         // all validator node addresses

@@ -82,6 +82,10 @@ contract PantosRegistryFacet is IPantosRegistry, PantosBaseFacet {
             s.primaryValidatorNodeAddress != address(0),
             "PantosHub: primary validator node has not been set"
         );
+        require(
+            s.commitmentWaitPeriod != 0,
+            "PantosHub: commitment wait period has not been set"
+        );
         s.paused = false;
         emit Unpaused(msg.sender);
     }

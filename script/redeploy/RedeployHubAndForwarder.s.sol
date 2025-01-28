@@ -84,6 +84,7 @@ contract RedeployHubAndForwarder is
 
         initializePantosHubRedeployer(oldPantosHub);
         uint256 nextTransferId = oldPantosHub.getNextTransferId();
+        uint256 commitmentWaitPeriod = oldPantosHub.getCommitmentWaitPeriod();
         PantosForwarder oldForwarder = PantosForwarder(
             oldPantosHub.getPantosForwarder()
         );
@@ -109,7 +110,8 @@ contract RedeployHubAndForwarder is
             newPantosHub,
             newPantosForwarder,
             pantosToken,
-            oldPantosHub.getPrimaryValidatorNode()
+            oldPantosHub.getPrimaryValidatorNode(),
+            commitmentWaitPeriod
         );
 
         uint256 minimumValidatorNodeSignatures = tryGetMinimumValidatorNodeSignatures(
