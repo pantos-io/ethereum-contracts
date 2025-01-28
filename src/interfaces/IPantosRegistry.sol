@@ -562,7 +562,7 @@ interface IPantosRegistry {
      * Before the service node calls the registerServiceNode function, it has
      * to call the commitHash function to submit a hash of the following
      * parameters:
-     * hash=keccak25(abi.encodePacked(serviceNodeAddress, 
+     * hash=keccak25(abi.encodePacked(serviceNodeAddress,
      *  withdrawalAddress, url, msg.sender))
      * Only after the commitment wait period has elapsed (number of blocks
      * can be retrieved from getCommitmentWaitPeriod()), the service node
