@@ -1,8 +1,8 @@
 #syntax=docker/dockerfile:1.7.0-labs
 # SPDX-License-Identifier: GPL-3.0-only
-FROM ghcr.io/foundry-rs/foundry:stable AS build
+FROM --platform=linux/amd64 ghcr.io/foundry-rs/foundry:v0.3.0 AS build
 
-RUN apt-get update && apt-get install -y bash git
+RUN apk add --no-cache bash
 
 WORKDIR /app
 
@@ -17,16 +17,16 @@ RUN forge build
 ENTRYPOINT ["sh", "-c"]
 CMD ["echo 'Ready'"]
 
-FROM ghcr.io/foundry-rs/foundry:stable AS deployed-contracts
+FROM --platform=linux/amd64 ghcr.io/foundry-rs/foundry:v0.3.0 AS deployed-contracts
 
-RUN apt-get update && apt-get install -y jq bash python3-dev build-essential python3-venv netcat
+RUN apk add --no-cache jq bash python3-dev build-base
 
 WORKDIR /root
 
 COPY --exclude=/app/.git* --from=build /app .
 
 RUN python3 -m venv safe-ledger/venv && \
-    . safe-ledger/venv/bin/activate && \
+    source safe-ledger/venv/bin/activate && \
     pip install -r safe-ledger/requirements.txt
 
 RUN ./deploy_chain.sh
@@ -34,7 +34,7 @@ RUN ./deploy_chain.sh
 ENTRYPOINT ["anvil"]
 CMD ["--load-state", "anvil-state-ETHEREUM.json", "--chain-id", "31337"]
 
-FROM ghcr.io/foundry-rs/foundry:stable AS blockchain-node
+FROM --platform=linux/amd64 ghcr.io/foundry-rs/foundry:v0.3.0 AS blockchain-node
 
 COPY --from=deployed-contracts /root/data-static /data-static/
 COPY ./entrypoint.sh /root/entrypoint.sh
