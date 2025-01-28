@@ -446,6 +446,12 @@ abstract contract PantosHubDeployer is PantosBaseTest {
         selectors[i++] = IPantosRegistry.setCommitmentWaitPeriod.selector;
         selectors[i++] = IPantosRegistry.getCommitmentWaitPeriod.selector;
 
+        require(
+            _calculateInterfaceId(selectors) ==
+                type(IPantosRegistry).interfaceId,
+            " Interface has changed, update getPantosRegistrySelectors()"
+        );
+
         return selectors;
     }
 
@@ -463,6 +469,13 @@ abstract contract PantosHubDeployer is PantosBaseTest {
         selectors[5] = IPantosTransfer.verifyTransferFrom.selector;
         selectors[6] = IPantosTransfer.verifyTransferTo.selector;
         selectors[7] = IPantosTransfer.getNextTransferId.selector;
+
+        require(
+            _calculateInterfaceId(selectors) ==
+                type(IPantosTransfer).interfaceId,
+            " Interface has changed, update getPantosTransferSelectors()"
+        );
+
         return selectors;
     }
 
@@ -720,5 +733,15 @@ abstract contract PantosHubDeployer is PantosBaseTest {
                 pendingValue,
                 updateTime
             );
+    }
+
+    function _calculateInterfaceId(
+        bytes4[] memory selectors
+    ) private pure returns (bytes4) {
+        bytes4 id = bytes4(0);
+        for (uint i; i < selectors.length; i++) {
+            id = id ^ selectors[i];
+        }
+        return id;
     }
 }
