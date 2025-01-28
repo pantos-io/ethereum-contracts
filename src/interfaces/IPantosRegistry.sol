@@ -559,6 +559,14 @@ interface IPantosRegistry {
      * after the unregistration and the elapse of the unbonding period.
      * The service node is required to be registered at the Pantos Hub in
      * order to be able to transfer tokens between blockchains.
+     * Before the service node calls the registerServiceNode function, it has
+     * to call the commitHash function to submit a hash of the following
+     * parameters:
+     * hash=keccak25(abi.encodePacked(serviceNodeAddress, 
+     *  withdrawalAddress, url, msg.sender))
+     * Only after the commitment wait period has elapsed (number of blocks
+     * can be retrieved from getCommitmentWaitPeriod()), the service node
+     * can call the registerServiceNode function with the parameters.
      * If the service node was unregistered, this function can be called
      * only if the deposit has already been withdrawn. If the service node
      * intends to register again after an uregistration but the deposit has
@@ -660,6 +668,12 @@ interface IPantosRegistry {
      * @dev The function is only callable by a service node itself.
      * The service node is required to provide a new unique url under which it
      * is reachable.
+     * Before the service node calls the updateServiceNodeUrl function, it has
+     * to call the commitHash function to submit a hash of the following
+     * parameters: hash=keccak25(abi.encodePacked(url, msg.sender))
+     * Only after the commitment wait period has elapsed (number of blocks
+     * can be retrieved from getCommitmentWaitPeriod()), the service node
+     * can call the updateServiceNodeUrl function with the parameters.
      */
     function updateServiceNodeUrl(string calldata url) external;
 
