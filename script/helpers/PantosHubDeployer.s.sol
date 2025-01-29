@@ -175,7 +175,8 @@ abstract contract PantosHubDeployer is PantosBaseScript {
         IPantosHub pantosHub,
         PantosForwarder pantosForwarder,
         PantosToken pantosToken,
-        address primaryValidatorNodeAddress
+        address primaryValidatorNodeAddress,
+        uint256 commitmentWaitPeriod
     ) public {
         require(
             pantosHub.paused(),
@@ -255,6 +256,21 @@ abstract contract PantosHubDeployer is PantosBaseScript {
                 "PantosHub: protocol version already set, "
                 "skipping setProtocolVersion(%s)",
                 vm.toString(protocolVersion)
+            );
+        }
+
+        uint256 currentCommitWaitPeriod = pantosHub.getCommitmentWaitPeriod();
+        if (currentCommitWaitPeriod != commitmentWaitPeriod) {
+            pantosHub.setCommitmentWaitPeriod(commitmentWaitPeriod);
+            console.log(
+                "PantosHub.setCommitmentWaitPeriod(%s)",
+                vm.toString(commitmentWaitPeriod)
+            );
+        } else {
+            console.log(
+                "PantosHub: commitment wait period already set, "
+                "skipping setCommitmentWaitPeriod(%s)",
+                vm.toString(commitmentWaitPeriod)
             );
         }
 
@@ -495,7 +511,7 @@ abstract contract PantosHubDeployer is PantosBaseScript {
         pure
         returns (bytes4[] memory)
     {
-        bytes4[] memory selectors = new bytes4[](52);
+        bytes4[] memory selectors = new bytes4[](55);
         uint i = 0;
 
         selectors[i++] = IPantosRegistry.setPantosForwarder.selector;
@@ -580,6 +596,9 @@ abstract contract PantosHubDeployer is PantosBaseScript {
         selectors[i++] = IPantosRegistry.pause.selector;
         selectors[i++] = IPantosRegistry.unpause.selector;
         selectors[i++] = IPantosRegistry.paused.selector;
+        selectors[i++] = IPantosRegistry.commitHash.selector;
+        selectors[i++] = IPantosRegistry.setCommitmentWaitPeriod.selector;
+        selectors[i++] = IPantosRegistry.getCommitmentWaitPeriod.selector;
 
         require(
             _calculateInterfaceId(selectors) ==

@@ -88,6 +88,7 @@ contract RedeployHub is
         initializePantosHubRedeployer(oldPantosHub);
 
         uint256 nextTransferId = oldPantosHub.getNextTransferId();
+        uint256 commitmentWaitPeriod = oldPantosHub.getCommitmentWaitPeriod();
 
         vm.startBroadcast(accessController.pauser());
         pausePantosHub(oldPantosHub);
@@ -112,7 +113,8 @@ contract RedeployHub is
             newPantosHub,
             pantosForwarder,
             PantosToken(oldPantosHub.getPantosToken()),
-            oldPantosHub.getPrimaryValidatorNode()
+            oldPantosHub.getPrimaryValidatorNode(),
+            commitmentWaitPeriod
         );
         vm.stopBroadcast();
 

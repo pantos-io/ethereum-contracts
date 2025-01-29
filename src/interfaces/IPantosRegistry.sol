@@ -247,6 +247,50 @@ interface IPantosRegistry {
     event ParameterUpdateDelayUpdateExecuted(uint256 newParameterUpdateDelay);
 
     /**
+     * @notice Event that is emitted when a hash is commited.
+     *
+     * @param committer The address of the entity which has comitted a hash.
+     * @param hash The hash that has been comitted.
+     */
+    event HashCommited(address committer, bytes32 hash);
+
+    /**
+     * @notice Event that is emitted when the commitment wait period value is
+     * updated.
+     *
+     * @param commitmentWaitPeriod The new commitment wait period value.
+     */
+    event CommitmentWaitPeriodUpdated(uint256 commitmentWaitPeriod);
+
+    /**
+     * @notice Used by a user/service node to commit a hash, which can be used
+     * by a different function to verify provided data against.
+     *
+     * @param hash The hash to be committed.
+     *
+     * @dev If you have a function, where public data exposure might lead to
+     * front-running attacks, you can use this function to commit a hash of the
+     * data. The hash can be verified later on, to ensure the data was not
+     * tampered with.
+     */
+    function commitHash(bytes32 hash) external;
+
+    /**
+     * @notice Sets the commitment wait period value.
+     *
+     * @dev The function can only be called by the super critical ops role
+     * and only if the contract is paused.
+     */
+    function setCommitmentWaitPeriod(uint256 commitmentWaitPeriod) external;
+
+    /**
+     * @notice Returns the commitment wait period value.
+     *
+     * @return The commitment wait period value.
+     */
+    function getCommitmentWaitPeriod() external view returns (uint256);
+
+    /**
      * @notice Pauses the Pantos Hub.
      *
      * @dev The function can only be called by the pauser role
@@ -515,6 +559,14 @@ interface IPantosRegistry {
      * after the unregistration and the elapse of the unbonding period.
      * The service node is required to be registered at the Pantos Hub in
      * order to be able to transfer tokens between blockchains.
+     * Before the service node calls the registerServiceNode function, it has
+     * to call the commitHash function to submit a hash of the following
+     * parameters:
+     * hash=keccak25(abi.encodePacked(serviceNodeAddress,
+     *  withdrawalAddress, url, msg.sender))
+     * Only after the commitment wait period has elapsed (number of blocks
+     * can be retrieved from getCommitmentWaitPeriod()), the service node
+     * can call the registerServiceNode function with the parameters.
      * If the service node was unregistered, this function can be called
      * only if the deposit has already been withdrawn. If the service node
      * intends to register again after an uregistration but the deposit has
@@ -616,6 +668,12 @@ interface IPantosRegistry {
      * @dev The function is only callable by a service node itself.
      * The service node is required to provide a new unique url under which it
      * is reachable.
+     * Before the service node calls the updateServiceNodeUrl function, it has
+     * to call the commitHash function to submit a hash of the following
+     * parameters: hash=keccak25(abi.encodePacked(url, msg.sender))
+     * Only after the commitment wait period has elapsed (number of blocks
+     * can be retrieved from getCommitmentWaitPeriod()), the service node
+     * can call the updateServiceNodeUrl function with the parameters.
      */
     function updateServiceNodeUrl(string calldata url) external;
 

@@ -19,6 +19,8 @@ contract PantosHubTest is PantosHubDeployer {
         address(uint160(uint256(keccak256("PandasTokenOwner"))));
     AccessController public accessController;
 
+    bytes32 constant DUMMY_COMMIT_HASH = keccak256("commit");
+
     function setUp() public {
         vm.warp(BLOCK_TIMESTAMP);
         accessController = deployAccessController();
@@ -1753,6 +1755,18 @@ contract PantosHubTest is PantosHubDeployer {
         );
     }
 
+    function test_commitHash() external {
+        initializePantosHub();
+
+        vm.prank(SERVICE_NODE_ADDRESS);
+        vm.expectEmit();
+        emit IPantosRegistry.HashCommited(
+            SERVICE_NODE_ADDRESS,
+            DUMMY_COMMIT_HASH
+        );
+        pantosHubProxy.commitHash(DUMMY_COMMIT_HASH);
+    }
+
     function test_registerServiceNode() external {
         initializePantosHub();
         mockIerc20_transferFrom(
@@ -1762,6 +1776,16 @@ contract PantosHubTest is PantosHubDeployer {
             MINIMUM_SERVICE_NODE_DEPOSIT,
             true
         );
+        vm.prank(SERVICE_NODE_ADDRESS);
+        submitCommitHash(
+            abi.encodePacked(
+                SERVICE_NODE_ADDRESS,
+                SERVICE_NODE_WITHDRAWAL_ADDRESS,
+                SERVICE_NODE_URL,
+                SERVICE_NODE_ADDRESS
+            )
+        );
+
         vm.prank(SERVICE_NODE_ADDRESS);
         vm.expectEmit();
         emit IPantosRegistry.ServiceNodeRegistered(
@@ -1830,14 +1854,81 @@ contract PantosHubTest is PantosHubDeployer {
         );
     }
 
+    function test_registerServiceNode_WithoutCommitment() external {
+        initializePantosHub();
+        vm.prank(SERVICE_NODE_ADDRESS);
+        vm.expectRevert("PantosHub: service node must have made a commitment");
+
+        pantosHubProxy.registerServiceNode(
+            SERVICE_NODE_ADDRESS,
+            SERVICE_NODE_URL,
+            MINIMUM_SERVICE_NODE_DEPOSIT,
+            SERVICE_NODE_WITHDRAWAL_ADDRESS
+        );
+    }
+
+    function test_registerServiceNode_WithWrongRevealData() external {
+        initializePantosHub();
+
+        vm.prank(SERVICE_NODE_ADDRESS);
+        pantosHubProxy.commitHash(DUMMY_COMMIT_HASH);
+
+        vm.prank(SERVICE_NODE_ADDRESS);
+        vm.expectRevert("PantosHub: Commitment does not match");
+
+        pantosHubProxy.registerServiceNode(
+            SERVICE_NODE_ADDRESS,
+            SERVICE_NODE_URL,
+            MINIMUM_SERVICE_NODE_DEPOSIT,
+            SERVICE_NODE_WITHDRAWAL_ADDRESS
+        );
+    }
+
+    function test_registerServiceNode_CommitmentPhaseNotElapsed() external {
+        initializePantosHub();
+
+        vm.prank(SERVICE_NODE_ADDRESS);
+        bytes32 commit = calculateCommitHash(
+            abi.encodePacked(
+                SERVICE_NODE_ADDRESS,
+                SERVICE_NODE_WITHDRAWAL_ADDRESS,
+                SERVICE_NODE_URL,
+                SERVICE_NODE_ADDRESS
+            )
+        );
+        pantosHubProxy.commitHash(commit);
+
+        vm.prank(SERVICE_NODE_ADDRESS);
+        vm.expectRevert("PantosHub: Commitment period has not elapsed");
+        pantosHubProxy.registerServiceNode(
+            SERVICE_NODE_ADDRESS,
+            SERVICE_NODE_URL,
+            MINIMUM_SERVICE_NODE_DEPOSIT,
+            SERVICE_NODE_WITHDRAWAL_ADDRESS
+        );
+    }
+
     function test_registerServiceNode_WithEmptyUrl() external {
         initializePantosHub();
+
+        string memory emptyUrl = "";
+
+        vm.prank(SERVICE_NODE_ADDRESS);
+        submitCommitHash(
+            abi.encodePacked(
+                SERVICE_NODE_ADDRESS,
+                SERVICE_NODE_WITHDRAWAL_ADDRESS,
+                emptyUrl,
+                SERVICE_NODE_ADDRESS
+            )
+        );
+
         vm.prank(SERVICE_NODE_ADDRESS);
         vm.expectRevert("PantosHub: service node URL must not be empty");
 
         pantosHubProxy.registerServiceNode(
             SERVICE_NODE_ADDRESS,
-            "",
+            emptyUrl,
             MINIMUM_SERVICE_NODE_DEPOSIT,
             SERVICE_NODE_WITHDRAWAL_ADDRESS
         );
@@ -1845,7 +1936,19 @@ contract PantosHubTest is PantosHubDeployer {
 
     function test_registerServiceNode_WithNotUniqueUrl() external {
         registerServiceNode();
+
         address newSERVICE_NODE_ADDRESS = address(123);
+
+        vm.prank(newSERVICE_NODE_ADDRESS);
+        submitCommitHash(
+            abi.encodePacked(
+                newSERVICE_NODE_ADDRESS,
+                newSERVICE_NODE_ADDRESS,
+                SERVICE_NODE_URL,
+                newSERVICE_NODE_ADDRESS
+            )
+        );
+
         vm.prank(newSERVICE_NODE_ADDRESS);
         vm.expectRevert("PantosHub: service node URL must be unique");
 
@@ -1859,6 +1962,17 @@ contract PantosHubTest is PantosHubDeployer {
 
     function test_registerServiceNode_WithNotEnoughDeposit() external {
         initializePantosHub();
+
+        vm.prank(SERVICE_NODE_ADDRESS);
+        submitCommitHash(
+            abi.encodePacked(
+                SERVICE_NODE_ADDRESS,
+                SERVICE_NODE_WITHDRAWAL_ADDRESS,
+                SERVICE_NODE_URL,
+                SERVICE_NODE_ADDRESS
+            )
+        );
+
         vm.prank(SERVICE_NODE_ADDRESS);
         vm.expectRevert(
             "PantosHub: deposit must be >= minimum service node deposit"
@@ -1876,12 +1990,25 @@ contract PantosHubTest is PantosHubDeployer {
         external
     {
         registerServiceNode();
+
+        string memory newUrl = string.concat(SERVICE_NODE_URL, "/new/path/");
+
+        vm.prank(SERVICE_NODE_ADDRESS);
+        submitCommitHash(
+            abi.encodePacked(
+                SERVICE_NODE_ADDRESS,
+                SERVICE_NODE_WITHDRAWAL_ADDRESS,
+                newUrl,
+                SERVICE_NODE_ADDRESS
+            )
+        );
+
         vm.prank(SERVICE_NODE_ADDRESS);
         vm.expectRevert("PantosHub: service node already registered");
 
         pantosHubProxy.registerServiceNode(
             SERVICE_NODE_ADDRESS,
-            string.concat(SERVICE_NODE_URL, "/new/path/"),
+            newUrl,
             MINIMUM_SERVICE_NODE_DEPOSIT,
             SERVICE_NODE_WITHDRAWAL_ADDRESS
         );
@@ -1893,6 +2020,18 @@ contract PantosHubTest is PantosHubDeployer {
         registerServiceNode();
         vm.prank(SERVICE_NODE_ADDRESS);
         pantosHubProxy.unregisterServiceNode(SERVICE_NODE_ADDRESS);
+
+        string memory newUrl = string.concat(SERVICE_NODE_URL, "extra");
+        vm.prank(SERVICE_NODE_ADDRESS);
+        submitCommitHash(
+            abi.encodePacked(
+                SERVICE_NODE_ADDRESS,
+                SERVICE_NODE_WITHDRAWAL_ADDRESS,
+                newUrl,
+                SERVICE_NODE_ADDRESS
+            )
+        );
+
         vm.prank(SERVICE_NODE_ADDRESS);
         vm.expectRevert(
             "PantosHub: service node must withdraw its "
@@ -1901,7 +2040,7 @@ contract PantosHubTest is PantosHubDeployer {
 
         pantosHubProxy.registerServiceNode(
             SERVICE_NODE_ADDRESS,
-            string.concat(SERVICE_NODE_URL, "extra"),
+            newUrl,
             MINIMUM_SERVICE_NODE_DEPOSIT,
             SERVICE_NODE_WITHDRAWAL_ADDRESS
         );
@@ -1911,6 +2050,17 @@ contract PantosHubTest is PantosHubDeployer {
         registerServiceNode();
         vm.prank(SERVICE_NODE_ADDRESS);
         pantosHubProxy.unregisterServiceNode(SERVICE_NODE_ADDRESS);
+
+        vm.prank(SERVICE_NODE_ADDRESS);
+        submitCommitHash(
+            abi.encodePacked(
+                SERVICE_NODE_ADDRESS,
+                SERVICE_NODE_WITHDRAWAL_ADDRESS,
+                SERVICE_NODE_URL,
+                SERVICE_NODE_ADDRESS
+            )
+        );
+
         vm.prank(SERVICE_NODE_ADDRESS);
         vm.expectRevert("PantosHub: service node URL must be unique");
 
@@ -2515,6 +2665,12 @@ contract PantosHubTest is PantosHubDeployer {
     function test_updateServiceNodeUrl() external {
         string memory newSERVICE_NODE_URL = "new service node url";
         registerServiceNode();
+
+        vm.prank(SERVICE_NODE_ADDRESS);
+        submitCommitHash(
+            abi.encodePacked(newSERVICE_NODE_URL, SERVICE_NODE_ADDRESS)
+        );
+
         vm.prank(SERVICE_NODE_ADDRESS);
         vm.expectEmit();
         emit IPantosRegistry.ServiceNodeUrlUpdated(
@@ -2564,9 +2720,50 @@ contract PantosHubTest is PantosHubDeployer {
         );
     }
 
+    function test_updateServiceNodeUrl_WithoutCommitment() external {
+        registerServiceNode();
+        vm.expectRevert("PantosHub: service node must have made a commitment");
+
+        vm.prank(SERVICE_NODE_ADDRESS);
+        pantosHubProxy.updateServiceNodeUrl(
+            string.concat(SERVICE_NODE_URL, "extra")
+        );
+    }
+
+    function test_updateServiceNodeUrl_WithWrongRevealData() external {
+        registerServiceNode();
+
+        vm.prank(SERVICE_NODE_ADDRESS);
+        pantosHubProxy.commitHash(DUMMY_COMMIT_HASH);
+
+        vm.expectRevert("PantosHub: Commitment does not match");
+        vm.prank(SERVICE_NODE_ADDRESS);
+        pantosHubProxy.updateServiceNodeUrl(
+            string.concat(SERVICE_NODE_URL, "extra")
+        );
+    }
+
+    function test_updateServiceNodeUrl_WithCommitmentWaitPeriodNotElapsed()
+        external
+    {
+        registerServiceNode();
+        string memory newUrl = string.concat(SERVICE_NODE_URL, "extra");
+
+        bytes32 commitment = calculateCommitHash(
+            abi.encodePacked(newUrl, SERVICE_NODE_ADDRESS)
+        );
+
+        vm.prank(SERVICE_NODE_ADDRESS);
+        pantosHubProxy.commitHash(commitment);
+
+        vm.expectRevert("PantosHub: Commitment period has not elapsed");
+        vm.prank(SERVICE_NODE_ADDRESS);
+        pantosHubProxy.updateServiceNodeUrl(newUrl);
+    }
+
     function test_updateServiceNodeUrl_WithSameUrlWhenNotActive() external {
         registerServiceNode();
-        unregisterServiceNode();
+
         vm.expectRevert("PantosHub: service node URL must be unique");
 
         pantosHubProxy.updateServiceNodeUrl(SERVICE_NODE_URL);
@@ -3663,6 +3860,18 @@ contract PantosHubTest is PantosHubDeployer {
         );
     }
 
+    function calculateCommitHash(
+        bytes memory data
+    ) public pure returns (bytes32) {
+        return keccak256(data);
+    }
+
+    function submitCommitHash(bytes memory data) public {
+        bytes32 commit = calculateCommitHash(data);
+        pantosHubProxy.commitHash(commit);
+        vm.roll(block.number + COMMIT_WAIT_PERIOD);
+    }
+
     function registerToken(address tokenAddress, address tokenOwner) public {
         initializePantosHub();
         mockPandasToken_getOwner(tokenAddress, tokenOwner);
@@ -3704,6 +3913,20 @@ contract PantosHubTest is PantosHubDeployer {
             MINIMUM_SERVICE_NODE_DEPOSIT,
             true
         );
+
+        bytes32 commitHash = calculateCommitHash(
+            abi.encodePacked(
+                serviceNodeAddress,
+                SERVICE_NODE_WITHDRAWAL_ADDRESS,
+                serviceNodeUrl,
+                serviceNodeAddress
+            )
+        );
+
+        vm.prank(serviceNodeAddress);
+        pantosHubProxy.commitHash(commitHash);
+
+        vm.roll(block.number + COMMIT_WAIT_PERIOD);
         vm.prank(serviceNodeAddress);
         pantosHubProxy.registerServiceNode(
             serviceNodeAddress,

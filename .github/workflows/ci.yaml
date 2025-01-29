@@ -57,7 +57,7 @@ jobs:
         run: forge snapshot --check
 
       - name: Run forge coverage
-        run: NO_COLOR=1 forge coverage --ir-minimum --report summary >> $GITHUB_STEP_SUMMARY
+        run: NO_COLOR=1 forge coverage --report summary >> $GITHUB_STEP_SUMMARY
         
   docker-build:
     name: Build Docker images

@@ -30,6 +30,8 @@ abstract contract PantosHubDeployer is PantosBaseTest {
         address(uint160(uint256(keccak256("ServiceNodeWithdrawalAddress"))));
     address constant TRANSFER_SENDER =
         address(uint160(uint256(keccak256("TransferSender"))));
+    bytes32 constant COMMITMENT_HASH = keccak256("commitmentHash");
+    uint256 constant COMMIT_WAIT_PERIOD = 10;
 
     bool initialized = false;
     PantosHubProxy pantosHubDiamond;
@@ -183,6 +185,7 @@ abstract contract PantosHubDeployer is PantosBaseTest {
         pantosHubProxy.setPrimaryValidatorNode(validatorAddress);
         pantosHubProxy.setPantosToken(PANTOS_TOKEN_ADDRESS);
         pantosHubProxy.setProtocolVersion(PROTOCOL_VERSION);
+        pantosHubProxy.setCommitmentWaitPeriod(COMMIT_WAIT_PERIOD);
         vm.stopPrank();
 
         registerOtherBlockchainAtPantosHub();
@@ -354,7 +357,7 @@ abstract contract PantosHubDeployer is PantosBaseTest {
         pure
         returns (bytes4[] memory)
     {
-        bytes4[] memory selectors = new bytes4[](52);
+        bytes4[] memory selectors = new bytes4[](55);
         uint i = 0;
 
         selectors[i++] = IPantosRegistry.setPantosForwarder.selector;
@@ -439,6 +442,15 @@ abstract contract PantosHubDeployer is PantosBaseTest {
         selectors[i++] = IPantosRegistry.pause.selector;
         selectors[i++] = IPantosRegistry.unpause.selector;
         selectors[i++] = IPantosRegistry.paused.selector;
+        selectors[i++] = IPantosRegistry.commitHash.selector;
+        selectors[i++] = IPantosRegistry.setCommitmentWaitPeriod.selector;
+        selectors[i++] = IPantosRegistry.getCommitmentWaitPeriod.selector;
+
+        require(
+            _calculateInterfaceId(selectors) ==
+                type(IPantosRegistry).interfaceId,
+            " Interface has changed, update getPantosRegistrySelectors()"
+        );
 
         return selectors;
     }
@@ -457,6 +469,13 @@ abstract contract PantosHubDeployer is PantosBaseTest {
         selectors[5] = IPantosTransfer.verifyTransferFrom.selector;
         selectors[6] = IPantosTransfer.verifyTransferTo.selector;
         selectors[7] = IPantosTransfer.getNextTransferId.selector;
+
+        require(
+            _calculateInterfaceId(selectors) ==
+                type(IPantosTransfer).interfaceId,
+            " Interface has changed, update getPantosTransferSelectors()"
+        );
+
         return selectors;
     }
 
@@ -714,5 +733,15 @@ abstract contract PantosHubDeployer is PantosBaseTest {
                 pendingValue,
                 updateTime
             );
+    }
+
+    function _calculateInterfaceId(
+        bytes4[] memory selectors
+    ) private pure returns (bytes4) {
+        bytes4 id = bytes4(0);
+        for (uint i; i < selectors.length; i++) {
+            id = id ^ selectors[i];
+        }
+        return id;
     }
 }

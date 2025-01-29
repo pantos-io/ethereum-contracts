@@ -122,7 +122,7 @@ deploy_for_chain() {
         --sig "deploy(uint256,uint256)" 10000000000000000 10000000000000000 --broadcast -vvv
 
     forge script "$ROOT_DIR/script/DeployContracts.s.sol" --chain-id $chain_id --rpc-url http://127.0.0.1:$port \
-        --sig "roleActions(uint256,uint256,address,address[])" 0 1 0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266 []
+        --sig "roleActions(uint256,uint256,uint256,address,address[])" 0 10 1 0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266 []
 
     sign_safe_transactions "DeployContracts" "roleActions" "$chain" "$chain_id" "deployer" "super_critical_ops"
 

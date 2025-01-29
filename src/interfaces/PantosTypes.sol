@@ -165,4 +165,9 @@ library PantosTypes {
         uint256 pendingValue;
         uint256 updateTime;
     }
+
+    struct Commitment {
+        bytes32 hash;
+        uint256 blockNumber;
+    }
 }

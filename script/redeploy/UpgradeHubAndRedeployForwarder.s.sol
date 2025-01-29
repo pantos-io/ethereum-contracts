@@ -73,6 +73,9 @@ contract UpgradeHubAndRedeployForwarder is
         importContractAddresses();
         IPantosHub pantosHub = IPantosHub(address(pantosHubProxy));
         console.log("PantosHub", address(pantosHub));
+
+        uint256 commitmentWaitPeriod = pantosHub.getCommitmentWaitPeriod();
+
         // Ensuring PantosHub is paused at the time of diamond cut
         vm.startBroadcast(accessController.pauser());
         pausePantosHub(pantosHub);
@@ -92,7 +95,8 @@ contract UpgradeHubAndRedeployForwarder is
             pantosHub,
             newPantosForwarder,
             pantosToken,
-            pantosHub.getPrimaryValidatorNode()
+            pantosHub.getPrimaryValidatorNode(),
+            commitmentWaitPeriod
         );
         vm.stopBroadcast();
 

@@ -589,6 +589,29 @@ contract PantosForwarderTest is PantosBaseTest {
         assertEq(tokenData, "");
     }
 
+    function test_verifyAndForwardTransfer_NotEnoughGasFromServiceNodeProvided()
+        external
+        parameterizedTest(validatorCounts)
+    {
+        initializePantosForwarder();
+        PantosTypes.TransferRequest memory request = transferRequest();
+        bytes32 digest = getDigest(request);
+        bytes memory signature = sign(testWallet, digest);
+        setupMockAndExpectFor_verifyAndForwardTransferLight(request);
+        vm.prank(PANTOS_HUB_ADDRESS);
+        vm.expectRevert(
+            "PantosForwarder: Not enough gas for `pantosTransfer` call provided"
+        );
+
+        bool succeeded;
+        bytes32 tokenData;
+        (succeeded, tokenData) = pantosForwarder.verifyAndForwardTransfer{
+            gas: 60000
+        }(request, signature);
+
+        assertFalse(succeeded);
+    }
+
     function test_verifyAndForwardTransfer_PandasTokenFailure()
         external
         parameterizedTest(validatorCounts)
@@ -785,6 +808,41 @@ contract PantosForwarderTest is PantosBaseTest {
 
         assertTrue(succeeded);
         assertEq(sourceTokenData, "");
+    }
+
+    function test_verifyAndForwardTransferFrom_NotEnoughGasFromServiceNodeProvided()
+        external
+        parameterizedTest(validatorCounts)
+    {
+        initializePantosForwarder();
+        PantosTypes.TransferFromRequest memory request = transferFromRequest();
+        bytes32 digest = getDigest(request);
+        bytes memory signature = sign(testWallet, digest);
+        uint256 sourceBlockchainFactor = 2;
+        uint256 destinationBlockchainFactor = 2;
+
+        setupMockAndExpectFor_verifyAndForwardTransferFromLight(
+            request,
+            sourceBlockchainFactor,
+            destinationBlockchainFactor
+        );
+        vm.prank(PANTOS_HUB_ADDRESS);
+        vm.expectRevert(
+            "PantosForwarder: Not enough gas for `pantosTransferFrom` call provided"
+        );
+
+        bool succeeded;
+        bytes32 sourceTokenData;
+
+        (succeeded, sourceTokenData) = pantosForwarder
+            .verifyAndForwardTransferFrom{gas: 60000}(
+            sourceBlockchainFactor,
+            destinationBlockchainFactor,
+            request,
+            signature
+        );
+
+        assertFalse(succeeded);
     }
 
     function test_verifyAndForwardTransferFrom_PandasTokenFailure()
@@ -1395,6 +1453,44 @@ contract PantosForwarderTest is PantosBaseTest {
             request.sender,
             request.serviceNode,
             request.fee,
+            true,
+            ""
+        );
+    }
+
+    function setupMockAndExpectFor_verifyAndForwardTransferLight(
+        PantosTypes.TransferRequest memory request
+    ) public {
+        mockAndExpectPantosHub_getCurrentBlockchainId(
+            thisBlockchain.blockchainId
+        );
+        mockAndExpectPantosBaseToken_pantosTransfer(
+            PANTOS_TOKEN_ADDRESS,
+            request.sender,
+            request.serviceNode,
+            request.fee,
+            true,
+            ""
+        );
+    }
+
+    function setupMockAndExpectFor_verifyAndForwardTransferFromLight(
+        PantosTypes.TransferFromRequest memory request,
+        uint256 sourceBlockchainFactor,
+        uint256 destinationBlockchainFactor
+    ) public {
+        mockAndExpectPantosHub_getCurrentBlockchainId(
+            thisBlockchain.blockchainId
+        );
+        uint256 totalFactor = sourceBlockchainFactor +
+            destinationBlockchainFactor;
+        uint256 serviceNodeFee = (sourceBlockchainFactor * request.fee) /
+            totalFactor;
+        mockAndExpectPantosBaseToken_pantosTransfer(
+            PANTOS_TOKEN_ADDRESS,
+            request.sender,
+            request.serviceNode,
+            serviceNodeFee,
             true,
             ""
         );
