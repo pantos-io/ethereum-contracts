@@ -4,6 +4,7 @@
     libs = ["lib"]
     solc = "0.8.26"
     evm_version = "paris"
+    optimizer = true
     # Gives access to deploy script to read/write to filesystem
     fs_permissions = [{ access = "read-write", path = "./"}]
 
