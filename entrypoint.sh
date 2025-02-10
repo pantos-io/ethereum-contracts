@@ -47,4 +47,4 @@ for dir in /data /data2; do
 done
 
 # Pass all remaining parameters to anvil
-anvil --load-state "/data/anvil-state-$CHAIN.json" --host "0.0.0.0" --config-out /data/accounts --chain-id "${CHAIN_ID}" "$@"
+anvil --load-state "/data/anvil-state-$CHAIN.json" --block-time 4 --host "0.0.0.0" --config-out /data/accounts --chain-id "${CHAIN_ID}" "$@"
