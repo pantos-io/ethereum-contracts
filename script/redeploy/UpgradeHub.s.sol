@@ -53,7 +53,12 @@ contract UpgradeHub is PantosBaseAddresses, SafeAddresses, PantosHubDeployer {
         IPantosHub pantosHub = IPantosHub(address(pantosHubProxy));
         console.log("PantosHub", address(pantosHub));
 
-        uint256 commitmentWaitPeriod = pantosHub.getCommitmentWaitPeriod();
+        uint256 commitmentWaitPeriod;
+        try pantosHub.getCommitmentWaitPeriod() returns (uint256 hubCommitmentWaitPeriod) {
+            commitmentWaitPeriod = hubCommitmentWaitPeriod;
+        } catch {
+            commitmentWaitPeriod = 10;
+        }
 
         // Ensuring PantosHub is paused at the time of diamond cut
         vm.startBroadcast(accessController.pauser());
