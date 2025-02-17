@@ -5,6 +5,8 @@
     solc = "0.8.26"
     evm_version = "paris"
     optimizer = true
+    optimizer_runs = 200
+    allow_internal_expect_revert = true
     # Gives access to deploy script to read/write to filesystem
     fs_permissions = [{ access = "read-write", path = "./"}]
 
